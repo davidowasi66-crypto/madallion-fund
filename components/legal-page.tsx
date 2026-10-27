@@ -1,0 +1,5 @@
+import Link from 'next/link'
+
+export default function LegalPage({ title, label, sections }: { title: string; label: string; sections: string[] }) {
+  return <main className="min-h-screen bg-[#f4f8f3] px-5 py-8 text-[#101d1a] sm:px-8"><div className="mx-auto max-w-3xl"><Link href="/" className="font-bold text-[#0b4537]">Madallion fund</Link><div className="mt-20"><p className="text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">{label}</p><h1 className="mt-3 text-5xl font-semibold tracking-[-.06em] text-[#0b4537]">{title}</h1><p className="mt-4 text-sm text-[#829088]">Last updated October 2026</p></div><div className="mt-12 space-y-5">{sections.map((section, index) => <section key={index} className="glass-panel rounded-2xl p-6 text-sm leading-7 text-[#60716b]"><p>{section}</p></section>)}</div><p className="mt-10 text-xs leading-5 text-[#829088]">Questions? Contact the Madallion fund team. This page is for general information and does not replace professional advice.</p></div></main>
+}

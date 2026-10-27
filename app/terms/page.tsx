@@ -1,0 +1,2 @@
+import LegalPage from '@/components/legal-page'
+export default function TermsPage() { return <LegalPage title="Terms of use" label="Legal" sections={['By using Madallion fund, you agree to use the platform lawfully and provide accurate information.','Investment products carry risk. Past performance, projected returns, and examples are not guarantees. Review plan-specific terms before committing capital.','We may update these terms when our services, regulations, or risk controls change. Continued use after an update means you accept the revised terms.']} /> }

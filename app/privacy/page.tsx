@@ -1,0 +1,2 @@
+import LegalPage from '@/components/legal-page'
+export default function PrivacyPage() { return <LegalPage title="Privacy policy" label="Legal" sections={['We collect information needed to create accounts, support investors, prevent fraud, and meet legal obligations.','We limit access to personal information, retain it only as needed, and do not sell personal data.','You can contact us to ask about access, correction, or deletion of your personal information, subject to applicable law.']} /> }
