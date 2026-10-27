@@ -25,6 +25,6 @@ body { margin: 0; background: var(--background); color: var(--foreground); font-
 button, a, input { -webkit-tap-highlight-color: transparent; }
 button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid rgba(117,185,92,.45); outline-offset: 3px; }
 
-.glass-panel { background: rgba(255,255,255,.62); border: 1px solid rgba(255,255,255,.72); box-shadow: 0 24px 70px rgba(25,78,53,.12), inset 0 1px 0 rgba(255,255,255,.7); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); }
+.glass-panel { background: linear-gradient(135deg, rgba(255,255,255,.72), rgba(255,255,255,.42)); border: 1px solid rgba(255,255,255,.8); box-shadow: 0 24px 70px rgba(25,78,53,.12), inset 0 1px 0 rgba(255,255,255,.8); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); }
 
 @media (max-width: 640px) { .glass-panel { box-shadow: 0 16px 40px rgba(25,78,53,.1), inset 0 1px 0 rgba(255,255,255,.7); } }
