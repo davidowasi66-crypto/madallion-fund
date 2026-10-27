@@ -3,8 +3,8 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'v0 App',
-  description: 'Created with v0',
+  title: 'Madallion fund — Thoughtful investing for Nigeria',
+  description: 'Build wealth with thoughtfully designed investment plans, transparent returns, and a team that keeps you informed at every step.',
   generator: 'v0.app',
   icons: {
     icon: [
