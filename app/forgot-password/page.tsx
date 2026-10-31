@@ -1,2 +1,28 @@
-import Link from 'next/link'
-export default function ForgotPasswordPage() { return <main className="flex min-h-screen items-center justify-center bg-[#f4f8f3] px-5 py-10"><div className="w-full max-w-md"><Link href="/" className="font-bold text-[#0b4537]">Madallion fund</Link><div className="glass-panel mt-10 rounded-3xl p-7 sm:p-9"><p className="text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">Account recovery</p><h1 className="mt-3 text-4xl font-semibold tracking-[-.06em] text-[#0b4537]">Reset your password.</h1><form className="mt-8 space-y-4"><label className="block text-sm font-semibold text-[#0b4537]">Email<input required type="email" className="mt-2 w-full rounded-xl border border-[#ceddd2] bg-white/70 px-4 py-3" /></label><button className="w-full rounded-xl bg-[#0b4537] py-3.5 text-sm font-semibold text-white">Send reset link</button></form><Link href="/login" className="mt-6 block text-center text-sm font-semibold text-[#0b4537]">Back to login</Link></div></div></main> }
+"use client"
+
+import Link from "next/link"
+import { FormEvent, useState } from "react"
+import { xanoRequestReset } from "@/lib/xano-auth"
+
+export default function ForgotPasswordPage() {
+  const [email, setEmail] = useState("")
+  const [sent, setSent] = useState(false)
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError("")
+    setLoading(true)
+    try {
+      await xanoRequestReset(email)
+      setSent(true)
+    } catch {
+      setError("We could not send the reset link. Please try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return <main className="auth-page"><div className="auth-card"><Link href="/login" className="auth-back">← Back to sign in</Link><p className="eyebrow">Account recovery</p><h1>Reset your password</h1>{sent ? <><p className="auth-copy">If an account exists for that email, a reset link is on its way.</p><Link href="/login" className="primary-button button-link">Return to sign in</Link></> : <><p className="auth-copy">Enter your email and we&apos;ll send a secure reset link.</p><form onSubmit={handleSubmit} className="auth-form"><label>Email<input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></label>{error && <p className="form-error" role="alert">{error}</p>}<button className="primary-button" disabled={loading}>{loading ? "Sending…" : "Send reset link"}</button></form></>}</div></main>
+}

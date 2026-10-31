@@ -1,5 +1,32 @@
-'use client'
-import Link from 'next/link'
-import { useState } from 'react'
+"use client"
 
-export default function RegisterPage() { const [submitted, setSubmitted] = useState(false); return <main className="flex min-h-screen items-center justify-center bg-[#f4f8f3] px-5 py-10 text-[#101d1a]"><div className="w-full max-w-md"><Link href="/" className="font-bold text-[#0b4537]">Madallion fund</Link><div className="glass-panel mt-10 rounded-3xl p-7 sm:p-9"><p className="text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">Create account</p><h1 className="mt-3 text-4xl font-semibold tracking-[-.06em] text-[#0b4537]">Start with clarity.</h1>{submitted ? <div className="mt-8 rounded-2xl bg-[#eaf7e9] p-5 text-sm leading-6 text-[#286343]">Thanks. Your account request has been received. We&apos;ll follow up with the next steps.</div> : <form className="mt-8 space-y-4" onSubmit={e => { e.preventDefault(); setSubmitted(true) }}><label className="block text-sm font-semibold text-[#0b4537]">Full name<input required className="mt-2 w-full rounded-xl border border-[#ceddd2] bg-white/70 px-4 py-3 outline-none" /></label><label className="block text-sm font-semibold text-[#0b4537]">Email<input required type="email" className="mt-2 w-full rounded-xl border border-[#ceddd2] bg-white/70 px-4 py-3 outline-none" /></label><label className="block text-sm font-semibold text-[#0b4537]">Password<input required minLength={8} type="password" className="mt-2 w-full rounded-xl border border-[#ceddd2] bg-white/70 px-4 py-3 outline-none" /></label><button className="w-full rounded-xl bg-[#0b4537] py-3.5 text-sm font-semibold text-white">Create account</button></form>}<p className="mt-6 text-center text-sm text-[#708079]">Already have an account? <Link href="/login" className="font-semibold text-[#0b4537]">Log in</Link></p></div></div></main> }
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { FormEvent, useState } from "react"
+import { saveXanoSession, xanoSignup } from "@/lib/xano-auth"
+
+export default function RegisterPage() {
+  const router = useRouter()
+  const [name, setName] = useState("")
+  const [email, setEmail] = useState("")
+  const [password, setPassword] = useState("")
+  const [error, setError] = useState("")
+  const [loading, setLoading] = useState(false)
+
+  async function handleSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    setError("")
+    setLoading(true)
+    try {
+      const session = await xanoSignup(name, email, password)
+      saveXanoSession(session)
+      router.push("/dashboard")
+    } catch {
+      setError("We could not create your account. Check your details and try again.")
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return <main className="auth-page"><div className="auth-card"><Link href="/" className="auth-back">← Back to home</Link><p className="eyebrow">Start building</p><h1>Create your account</h1><p className="auth-copy">Join the private community building toward consistent returns.</p><form onSubmit={handleSubmit} className="auth-form"><label>Full name<input required value={name} onChange={(e) => setName(e.target.value)} /></label><label>Email<input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></label><label>Password<input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} /></label>{error && <p className="form-error" role="alert">{error}</p>}<button className="primary-button" disabled={loading}>{loading ? "Creating account…" : "Create account"}</button></form><p className="auth-legal">By continuing, you agree to our <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy Policy</Link>.</p><p className="auth-footer">Already a member? <Link href="/login">Sign in</Link></p></div></main>
+}
