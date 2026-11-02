@@ -7,43 +7,154 @@ const endpoints = {
   requestReset: "/api:r2YmAApr/reset/request-reset-link",
 } as const
 
-function endpoint(path: string) {
-  if (!XANO_BASE_URL) throw new Error("Xano is not configured")
-  return `${XANO_BASE_URL.replace(/\/$/, "")}${path}`
+const STORAGE_KEYS = {
+  authToken: "madallion_auth_token",
+  userId: "madallion_user_id",
+} as const
+
+export function getXanoBaseUrl() {
+  return (process.env.NEXT_PUBLIC_XANO_BASE_URL ?? process.env.XANO_BASE_URL ?? "").replace(/\/$/, "")
 }
 
-async function parseResponse(response: Response) {
-  const body = await response.json().catch(() => null)
-  if (!response.ok) throw new Error(body?.message || "Request failed")
-  return body
-}
+export function getXanoSession() {
+  if (typeof window === "undefined") return null
 
-export async function xanoLogin(email: string, password: string) {
-  const response = await fetch(endpoint(endpoints.login), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password }),
-  })
-  return parseResponse(response) as Promise<{ authToken: string; user_id: string }>
-}
+  const authToken = sessionStorage.getItem(STORAGE_KEYS.authToken)
+  const userId = sessionStorage.getItem(STORAGE_KEYS.userId)
 
-export async function xanoSignup(name: string, email: string, password: string) {
-  const response = await fetch(endpoint(endpoints.signup), {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name, email, password }),
-  })
-  return parseResponse(response) as Promise<{ authToken: string; user_id: string }>
-}
+  if (!authToken) return null
 
-export async function xanoRequestReset(email: string) {
-  const response = await fetch(`${endpoint(endpoints.requestReset)}?email=${encodeURIComponent(email)}`, {
-    method: "GET",
-  })
-  return parseResponse(response) as Promise<{ message: string }>
+  return { authToken, user_id: userId ?? "" }
 }
 
 export function saveXanoSession(data: { authToken: string; user_id: string }) {
-  sessionStorage.setItem("madallion_auth_token", data.authToken)
-  sessionStorage.setItem("madallion_user_id", data.user_id)
+  if (typeof window === "undefined") return
+
+  sessionStorage.setItem(STORAGE_KEYS.authToken, data.authToken)
+  sessionStorage.setItem(STORAGE_KEYS.userId, data.user_id)
 }
+
+export function clearXanoSession() {
+  if (typeof window === "undefined") return
+
+  sessionStorage.removeItem(STORAGE_KEYS.authToken)
+  sessionStorage.removeItem(STORAGE_KEYS.userId)
+}
+
+function endpoint(path: string) {
+  const base = getXanoBaseUrl()
+  if (!base) throw new Error("Xano is not configured")
+  return `${base}${path}`
+}
+
+export async function xanoRequest<T>(path: string, init: RequestInit = {}, options: { auth?: boolean } = {}): Promise<T> {
+  const base = getXanoBaseUrl()
+  if (!base) throw new Error("Xano is not configured")
+
+  const headers = new Headers(init.headers ?? {})
+
+  if (options.auth) {
+    const session = getXanoSession()
+    if (!session?.authToken) throw new Error("Not authenticated")
+    headers.set("Authorization", `Bearer ${session.authToken}`)
+  }
+
+  const hasBody = typeof init.body === "string" && init.body.length > 0
+  if (hasBody && !headers.has("Content-Type") && !(init.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json")
+  }
+
+  const response = await fetch(`${base}${path}`, { ...init, headers })
+  const text = await response.text()
+
+  let body: any = null
+  if (text) {
+    try {
+      body = JSON.parse(text)
+    } catch {
+      body = text
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(body?.message || body?.error || `Request failed (${response.status})`)
+  }
+
+  return body as T
+}
+
+export async function xanoLogin(email: string, password: string) {
+  return xanoRequest<{ authToken: string; user_id: string }>(endpoints.login, {
+    method: "POST",
+    body: JSON.stringify({ email, password }),
+  })
+}
+
+export async function xanoSignup(name: string, email: string, password: string) {
+  return xanoRequest<{ authToken: string; user_id: string }>(endpoints.signup, {
+    method: "POST",
+    body: JSON.stringify({ name, email, password }),
+  })
+}
+
+export async function xanoRequestReset(email: string) {
+  return xanoRequest<{ message: string }>(`${endpoints.requestReset}?email=${encodeURIComponent(email)}`, {
+    method: "GET",
+  })
+}
+
+export async function xanoMe() {
+  return xanoRequest<Record<string, unknown>>(endpoints.me, {}, { auth: true })
+}
+
+export async function xanoAdminDashboard() {
+  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_dashboard", {}, { auth: true })
+}
+
+export async function xanoAdminPending() {
+  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_pending", {}, { auth: true })
+}
+
+export async function xanoAdminUsers() {
+  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_user_list", {}, { auth: true })
+}
+
+export async function xanoAdminInvestments() {
+  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_investments", {}, { auth: true })
+}
+
+export async function xanoAdminPnl() {
+  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_pnl", {}, { auth: true })
+}
+
+export async function xanoAdminReconciliation() {
+  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_reconciliation", {}, { auth: true })
+}
+
+export async function xanoAdminTrialBalance() {
+  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_trial_balance", {}, { auth: true })
+}
+
+export async function xanoAdminAuditLogs() {
+  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_audit_logs", {}, { auth: true })
+}
+
+export async function xanoLedgerSummary() {
+  return xanoRequest<Record<string, unknown>>("/api:8I1G8l8u/ledger/summary", {}, { auth: true })
+}
+
+export async function xanoAccounts() {
+  return xanoRequest<Record<string, unknown>>("/api:8I1G8l8u/accounts", {}, { auth: true })
+}
+
+export async function xanoTransactions() {
+  return xanoRequest<Record<string, unknown>>("/api:8I1G8l8u/transactions", {}, { auth: true })
+}
+
+export async function xanoBalances() {
+  return xanoRequest<Record<string, unknown>>("/api:8I1G8l8u/balances", {}, { auth: true })
+}
+
+export const XANO_AUTH_ENDPOINTS = endpoints
+
+export { XANO_BASE_URL, endpoint }
