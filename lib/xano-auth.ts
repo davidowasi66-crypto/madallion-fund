@@ -13,7 +13,8 @@ const STORAGE_KEYS = {
 } as const
 
 export function getXanoBaseUrl() {
-  return (process.env.NEXT_PUBLIC_XANO_BASE_URL ?? process.env.XANO_BASE_URL ?? "").replace(/\/$/, "")
+  const configuredUrl = (process.env.NEXT_PUBLIC_XANO_BASE_URL ?? process.env.XANO_BASE_URL ?? "").trim()
+  return configuredUrl.replace(/\/api:[^/]+\/?$/, "").replace(/\/$/, "")
 }
 
 export function getXanoSession() {
@@ -140,19 +141,19 @@ export async function xanoAdminAuditLogs() {
 }
 
 export async function xanoLedgerSummary() {
-  return xanoRequest<Record<string, unknown>>("/api:8I1G8l8u/ledger/summary", {}, { auth: true })
+  return xanoRequest<Record<string, unknown>>("/api:ledger-api/ledger/summary", {}, { auth: true })
 }
 
 export async function xanoAccounts() {
-  return xanoRequest<Record<string, unknown>>("/api:8I1G8l8u/accounts", {}, { auth: true })
+  return xanoRequest<Record<string, unknown>>("/api:ledger-api/accounts", {}, { auth: true })
 }
 
 export async function xanoTransactions() {
-  return xanoRequest<Record<string, unknown>>("/api:8I1G8l8u/transactions", {}, { auth: true })
+  return xanoRequest<Record<string, unknown>>("/api:ledger-api/transactions", {}, { auth: true })
 }
 
 export async function xanoBalances() {
-  return xanoRequest<Record<string, unknown>>("/api:8I1G8l8u/balances", {}, { auth: true })
+  return xanoRequest<Record<string, unknown>>("/api:ledger-api/balances", {}, { auth: true })
 }
 
 export const XANO_AUTH_ENDPOINTS = endpoints
