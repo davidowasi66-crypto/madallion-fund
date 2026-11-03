@@ -13,7 +13,8 @@ const STORAGE_KEYS = {
 } as const
 
 export function getXanoBaseUrl() {
-  return (process.env.NEXT_PUBLIC_XANO_BASE_URL ?? process.env.XANO_BASE_URL ?? "").replace(/\/$/, "")
+  const configuredUrl = (process.env.NEXT_PUBLIC_XANO_BASE_URL ?? process.env.XANO_BASE_URL ?? "").trim()
+  return configuredUrl.replace(/\/api:[^/]+\/?$/, "").replace(/\/$/, "")
 }
 
 export function getXanoSession() {
