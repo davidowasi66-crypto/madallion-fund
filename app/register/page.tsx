@@ -6,11 +6,7 @@ import { FormEvent, Suspense, useState } from 'react'
 import { saveXanoSession, xanoSignup } from '@/lib/xano-auth'
 
 export default function RegisterPage() {
-  return (
-    <Suspense fallback={<main className="auth-page"><div className="auth-card">Loading account form…</div></main>}>
-      <RegisterForm />
-    </Suspense>
-  )
+  return <Suspense fallback={<main className="auth-page"><div className="auth-card">Loading account form…</div></main>}><RegisterForm /></Suspense>
 }
 
 function RegisterForm() {
@@ -25,12 +21,17 @@ function RegisterForm() {
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
     setError('')
+    const trimmedName = name.trim()
+    const trimmedEmail = email.trim()
+    const trimmedPassword = password.trim()
+    if (!trimmedName || !trimmedEmail || !trimmedPassword) {
+      setError('Complete all fields to create your account.')
+      return
+    }
     setLoading(true)
-
     try {
       const session = await xanoSignup(trimmedName, trimmedEmail, trimmedPassword)
       saveXanoSession(session)
-
       const next = searchParams.get('next')
       router.push(next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard')
     } catch {
@@ -40,5 +41,5 @@ function RegisterForm() {
     }
   }
 
-  return <main className="auth-page"><div className="auth-card"><Link href="/" className="auth-back">← Back to home</Link><p className="eyebrow">Start building</p><h1>Create your account</h1><p className="subtitle">Join Madallion fund and start building a smarter investment plan.</p><form onSubmit={handleSubmit} className="auth-form"><label>Full name<input type="text" value={name} onChange={(event) => setName(event.target.value)} placeholder="Your full name" required /></label><label>Email address<input type="email" value={email} onChange={(event) => setEmail(event.target.value)} placeholder="you@example.com" required /></label><label>Password<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Create a password" required /></label>{error ? <p className="auth-error" role="alert">{error}</p> : null}<button type="submit" disabled={loading}>{loading ? 'Creating account…' : 'Create account'}</button></form><div className="auth-links"><span>Already have an account? <Link href="/login">Sign in</Link></span></div></div></main>
+  return <main className="auth-page"><div className="auth-card"><Link href="/" className="auth-back">← Back to home</Link><p className="eyebrow">Start building</p><h1>Create your account</h1><p className="auth-description">Set up your Madallion investor account.</p><form onSubmit={handleSubmit} className="auth-form"><label>Full name<input type="text" autoComplete="name" required value={name} onChange={(event) => setName(event.target.value)} /></label><label>Email<input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label><label>Password<input type="password" autoComplete="new-password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} /></label>{error ? <p role="alert" className="auth-error">{error}</p> : null}<button type="submit" disabled={loading}>{loading ? 'Creating account…' : 'Create account'}</button></form><p className="auth-footer">Already registered? <Link href="/login">Sign in</Link></p></div></main>
 }
