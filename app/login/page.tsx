@@ -27,7 +27,7 @@ function LoginForm() {
     setLoading(true)
 
     try {
-      const session = await xanoLogin(email, password)
+      const session = await xanoLogin(trimmedEmail, trimmedPassword)
       saveXanoSession(session)
 
       const next = searchParams.get('next')

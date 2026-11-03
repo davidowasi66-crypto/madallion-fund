@@ -28,7 +28,7 @@ function RegisterForm() {
     setLoading(true)
 
     try {
-      const session = await xanoSignup(name, email, password)
+      const session = await xanoSignup(trimmedName, trimmedEmail, trimmedPassword)
       saveXanoSession(session)
 
       const next = searchParams.get('next')
