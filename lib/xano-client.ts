@@ -1,7 +1,7 @@
 const XANO_BASE_URL = process.env.NEXT_PUBLIC_XANO_BASE_URL ?? process.env.XANO_BASE_URL ?? ""
 
 export function normalizeBaseUrl() {
-  return XANO_BASE_URL.replace(/\/$/, "")
+  return XANO_BASE_URL.trim().replace(/\/api:[^/]+\/?$/, "").replace(/\/$/, "")
 }
 
 export function getStoredXanoToken() {
