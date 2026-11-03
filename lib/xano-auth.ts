@@ -7,25 +7,20 @@ const endpoints = {
   requestReset: "/api:r2YmAApr/reset/request-reset-link",
 } as const
 
-const storageKeys = {
+const STORAGE_KEYS = {
   authToken: "madallion_auth_token",
   userId: "madallion_user_id",
 } as const
 
-function endpoint(path: string) {
-  if (!XANO_BASE_URL) throw new Error("Xano is not configured")
-  return `${XANO_BASE_URL.replace(/\/$/, "")}${path}`
-}
-
-export function normalizeEmail(email: string) {
-  return email.trim().toLowerCase()
+export function getXanoBaseUrl() {
+  return (process.env.NEXT_PUBLIC_XANO_BASE_URL ?? process.env.XANO_BASE_URL ?? "").replace(/\/$/, "")
 }
 
 export function getXanoSession() {
   if (typeof window === "undefined") return null
 
-  const authToken = window.localStorage.getItem(storageKeys.authToken)
-  const userId = window.localStorage.getItem(storageKeys.userId)
+  const authToken = sessionStorage.getItem(STORAGE_KEYS.authToken)
+  const userId = sessionStorage.getItem(STORAGE_KEYS.userId)
 
   if (!authToken) return null
 
@@ -34,67 +29,132 @@ export function getXanoSession() {
 
 export function saveXanoSession(data: { authToken: string; user_id: string }) {
   if (typeof window === "undefined") return
-  window.localStorage.setItem(storageKeys.authToken, data.authToken)
-  window.localStorage.setItem(storageKeys.userId, data.user_id)
+
+  sessionStorage.setItem(STORAGE_KEYS.authToken, data.authToken)
+  sessionStorage.setItem(STORAGE_KEYS.userId, data.user_id)
 }
 
 export function clearXanoSession() {
   if (typeof window === "undefined") return
-  window.localStorage.removeItem(storageKeys.authToken)
-  window.localStorage.removeItem(storageKeys.userId)
+
+  sessionStorage.removeItem(STORAGE_KEYS.authToken)
+  sessionStorage.removeItem(STORAGE_KEYS.userId)
 }
 
-async function parseResponse(response: Response) {
-  const body = await response.json().catch(() => null)
-  if (!response.ok) throw new Error(body?.message || "Request failed")
-  return body
+function endpoint(path: string) {
+  const base = getXanoBaseUrl()
+  if (!base) throw new Error("Xano is not configured")
+  return `${base}${path}`
+}
+
+export async function xanoRequest<T>(path: string, init: RequestInit = {}, options: { auth?: boolean } = {}): Promise<T> {
+  const base = getXanoBaseUrl()
+  if (!base) throw new Error("Xano is not configured")
+
+  const headers = new Headers(init.headers ?? {})
+
+  if (options.auth) {
+    const session = getXanoSession()
+    if (!session?.authToken) throw new Error("Not authenticated")
+    headers.set("Authorization", `Bearer ${session.authToken}`)
+  }
+
+  const hasBody = typeof init.body === "string" && init.body.length > 0
+  if (hasBody && !headers.has("Content-Type") && !(init.body instanceof FormData)) {
+    headers.set("Content-Type", "application/json")
+  }
+
+  const response = await fetch(`${base}${path}`, { ...init, headers })
+  const text = await response.text()
+
+  let body: any = null
+  if (text) {
+    try {
+      body = JSON.parse(text)
+    } catch {
+      body = text
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(body?.message || body?.error || `Request failed (${response.status})`)
+  }
+
+  return body as T
 }
 
 export async function xanoLogin(email: string, password: string) {
-  const cleanedEmail = normalizeEmail(email)
-  const cleanedPassword = password.trim()
-
-  if (!cleanedEmail || !cleanedPassword) {
-    throw new Error("Email and password are required")
-  }
-
-  const response = await fetch(endpoint(endpoints.login), {
+  return xanoRequest<{ authToken: string; user_id: string }>(endpoints.login, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: cleanedEmail, password: cleanedPassword }),
+    body: JSON.stringify({ email, password }),
   })
-
-  return parseResponse(response) as Promise<{ authToken: string; user_id: string }>
 }
 
 export async function xanoSignup(name: string, email: string, password: string) {
-  const cleanedName = name.trim()
-  const cleanedEmail = normalizeEmail(email)
-  const cleanedPassword = password.trim()
-
-  if (!cleanedName || !cleanedEmail || !cleanedPassword) {
-    throw new Error("Name, email, and password are required")
-  }
-
-  const response = await fetch(endpoint(endpoints.signup), {
+  return xanoRequest<{ authToken: string; user_id: string }>(endpoints.signup, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ name: cleanedName, email: cleanedEmail, password: cleanedPassword }),
+    body: JSON.stringify({ name, email, password }),
   })
-
-  return parseResponse(response) as Promise<{ authToken: string; user_id: string }>
 }
 
 export async function xanoRequestReset(email: string) {
-  const cleanedEmail = normalizeEmail(email)
-
-  if (!cleanedEmail) {
-    throw new Error("Email is required")
-  }
-
-  const response = await fetch(`${endpoint(endpoints.requestReset)}?email=${encodeURIComponent(cleanedEmail)}`, {
+  return xanoRequest<{ message: string }>(`${endpoints.requestReset}?email=${encodeURIComponent(email)}`, {
     method: "GET",
   })
-
-  return parseResponse(response) as Promise<{ message: string }>
 }
+
+export async function xanoMe() {
+  return xanoRequest<Record<string, unknown>>(endpoints.me, {}, { auth: true })
+}
+
+export async function xanoAdminDashboard() {
+  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_dashboard", {}, { auth: true })
+}
+
+export async function xanoAdminPending() {
+  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_pending", {}, { auth: true })
+}
+
+export async function xanoAdminUsers() {
+  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_user_list", {}, { auth: true })
+}
+
+export async function xanoAdminInvestments() {
+  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_investments", {}, { auth: true })
+}
+
+export async function xanoAdminPnl() {
+  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_pnl", {}, { auth: true })
+}
+
+export async function xanoAdminReconciliation() {
+  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_reconciliation", {}, { auth: true })
+}
+
+export async function xanoAdminTrialBalance() {
+  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_trial_balance", {}, { auth: true })
+}
+
+export async function xanoAdminAuditLogs() {
+  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_audit_logs", {}, { auth: true })
+}
+
+export async function xanoLedgerSummary() {
+  return xanoRequest<Record<string, unknown>>("/api:8I1G8l8u/ledger/summary", {}, { auth: true })
+}
+
+export async function xanoAccounts() {
+  return xanoRequest<Record<string, unknown>>("/api:8I1G8l8u/accounts", {}, { auth: true })
+}
+
+export async function xanoTransactions() {
+  return xanoRequest<Record<string, unknown>>("/api:8I1G8l8u/transactions", {}, { auth: true })
+}
+
+export async function xanoBalances() {
+  return xanoRequest<Record<string, unknown>>("/api:8I1G8l8u/balances", {}, { auth: true })
+}
+
+export const XANO_AUTH_ENDPOINTS = endpoints
+
+export { XANO_BASE_URL, endpoint }
