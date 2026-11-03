@@ -1,2 +1,26 @@
-import Link from 'next/link'
-export default function ForgotPasswordPage() { return <main className="flex min-h-screen items-center justify-center bg-[#f4f8f3] px-5 py-10"><div className="w-full max-w-md"><Link href="/" className="font-bold text-[#0b4537]">Madallion fund</Link><div className="glass-panel mt-10 rounded-3xl p-7 sm:p-9"><p className="text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">Account recovery</p><h1 className="mt-3 text-4xl font-semibold tracking-[-.06em] text-[#0b4537]">Reset your password.</h1><form className="mt-8 space-y-4"><label className="block text-sm font-semibold text-[#0b4537]">Email<input required type="email" className="mt-2 w-full rounded-xl border border-[#ceddd2] bg-white/70 px-4 py-3" /></label><button className="w-full rounded-xl bg-[#0b4537] py-3.5 text-sm font-semibold text-white">Send reset link</button></form><Link href="/login" className="mt-6 block text-center text-sm font-semibold text-[#0b4537]">Back to login</Link></div></div></main> }
+"use client"
+
+import Link from "next/link"
+import { useRouter } from "next/navigation"
+import { useEffect } from "react"
+
+export default function CreateAccountPage() {
+  const router = useRouter()
+
+  useEffect(() => {
+    router.replace("/register")
+  }, [router])
+
+  return (
+    <main className="auth-page">
+      <div className="auth-card">
+        <p className="eyebrow">Redirecting</p>
+        <h1>Opening your account</h1>
+        <p className="subhead">You’ll be sent to the registration page.</p>
+        <Link href="/register" className="auth-button mt-6 inline-flex items-center justify-center">
+          Go to account creation
+        </Link>
+      </div>
+    </main>
+  )
+}

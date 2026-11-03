@@ -1,7 +1,118 @@
 'use client'
-import { AdminShell, SectionCard } from '@/components/admin-shell'
-import { Check, MoreHorizontal, Search, SlidersHorizontal } from 'lucide-react'
-import { useState } from 'react'
 
-const rows = { deposits: [['DEP-84291','Kemi Adeyemi','₦2,500,000','Oct 28, 09:42','Matched'],['DEP-84290','Ibrahim Musa','₦850,000','Oct 28, 09:31','Matched'],['DEP-84289','Chioma Eze','₦5,000,000','Oct 28, 08:54','Unmatched'],['DEP-84288','Tunde Bello','₦500,000','Oct 28, 08:12','Review']], withdrawals: [['WDR-19482','Bola Akinyemi','₦420,000','Oct 28, 10:02','Name mismatch'],['WDR-19481','Femi Okafor','₦1,200,000','Oct 28, 09:48','Ready'],['WDR-19480','Lara Yusuf','₦85,000','Oct 28, 09:22','Ready'],['WDR-19479','David Eze','₦2,000,000','Oct 28, 08:45','Name mismatch']], users: [['USR-10482','Amina Bello','amina@example.com','₦4,200,000','Active'],['USR-10481','Tobi Williams','tobi@example.com','₦850,000','Active'],['USR-10480','Kelechi Obi','kelechi@example.com','₦12,500,000','Capped'],['USR-10479','Musa Ibrahim','musa@example.com','₦0','Pending']] }
-export function OperationsPage({ kind, title, eyebrow, description, columns }: { kind: keyof typeof rows; title: string; eyebrow: string; description: string; columns: string[] }) { const [query, setQuery] = useState(''); const [notice, setNotice] = useState(''); const filtered = rows[kind].filter(row => row.join(' ').toLowerCase().includes(query.toLowerCase())); return <AdminShell eyebrow={eyebrow} title={title}><p className="max-w-2xl text-sm leading-6 text-[#72847a]">{description}</p>{notice && <div className="mt-5 rounded-xl bg-[#e1f6d8] px-4 py-3 text-xs font-semibold text-[#3e8052]">{notice}</div>}<SectionCard title={`${filtered.length} records`} action="Export CSV"><div className="mb-5 flex flex-col gap-3 sm:flex-row"><div className="flex flex-1 items-center gap-2 rounded-xl border border-[#dce9df] bg-white/60 px-3"><Search size={16} className="text-[#8ba096]" /><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search by name, ID or email" className="w-full bg-transparent py-3 text-sm outline-none placeholder:text-[#a1ada6]" /></div><button className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#dce9df] px-4 py-3 text-xs font-semibold text-[#5f766a]"><SlidersHorizontal size={15} /> Filters</button></div><div className="overflow-x-auto"><table className="w-full min-w-[680px] text-left text-sm"><thead className="text-[10px] uppercase tracking-wider text-[#92a098]"><tr>{columns.map(column => <th key={column} className="pb-3 font-semibold">{column}</th>)}<th className="pb-3" /></tr></thead><tbody className="divide-y divide-[#e7eee8]">{filtered.map((row, index) => <tr key={row[0]}><td className="py-4 font-medium text-[#315d4b]">{row[0]}</td><td className="py-4 text-[#315d4b]">{row[1]}</td><td className="py-4 text-[#71847a]">{row[2]}</td><td className="py-4 text-[#71847a]">{row[3]}</td><td className="py-4"><span className={`rounded-full px-2 py-1 text-[10px] font-bold ${row[4].toLowerCase().includes('mismatch') || row[4] === 'Unmatched' || row[4] === 'Review' ? 'bg-[#fff0d8] text-[#9b6725]' : 'bg-[#e1f6d8] text-[#4a8b5b]'}`}>{row[4]}</span></td><td className="py-4 text-right"><button onClick={() => setNotice(`${kind === 'withdrawals' ? 'Withdrawal' : 'Record'} ${row[0]} marked for review.`)} className="rounded-lg p-2 text-[#789087] hover:bg-[#edf6eb]" aria-label={`Review ${row[0]}`}><MoreHorizontal size={17} /></button></td></tr>)}</tbody></table></div>{kind === 'withdrawals' && <div className="mt-5 flex items-center gap-2 text-xs text-[#829088]"><Check size={14} className="text-[#4a8b5b]" /> Approval actions require a second reviewer before release.</div>}</SectionCard></AdminShell> }
+import { useEffect, useMemo, useState } from 'react'
+import { AdminShell, Metric, SectionCard } from '@/components/admin-shell'
+import { xanoLedgerDashboard, xanoLedgerTransactions, getFirstValue } from '@/lib/xano-client'
+
+const fallbackRows = [
+  ['2026-11-01', 'Plan maturity', 'Gold Premium', '+₦54,000', 'Settled'],
+  ['2026-11-01', 'Investor deposit', 'Kemi A.', '+₦2,500,000', 'Cleared'],
+  ['2026-10-31', 'Withdrawal request', 'Ibrahim M.', '-₦850,000', 'Processing'],
+  ['2026-10-29', 'Treasury transfer', 'Operations', '+₦1,200,000', 'Posted'],
+]
+
+export default function LedgerPage() {
+  const [loading, setLoading] = useState(true)
+  const [summary, setSummary] = useState<any>(null)
+  const [transactions, setTransactions] = useState<any[]>([])
+
+  useEffect(() => {
+    let active = true
+
+    async function load() {
+      const [dashboardRes, txRes] = await Promise.all([
+        xanoLedgerDashboard().catch(() => null),
+        xanoLedgerTransactions(undefined, { page: 1, per_page: 25 }).catch(() => null),
+      ])
+
+      if (!active) return
+
+      setSummary(dashboardRes)
+      const rows = txRes?.items ?? txRes?.data ?? txRes?.transactions ?? fallbackRows
+      setTransactions(Array.isArray(rows) ? rows : fallbackRows)
+      setLoading(false)
+    }
+
+    load()
+    return () => { active = false }
+  }, [])
+
+  const ledgerSummary = useMemo(() => {
+    const payload = summary?.summary ?? summary?.data ?? summary ?? {}
+    return {
+      netBalance: getFirstValue(payload, ['net_balance', 'netBalance']) ?? '₦12.4M',
+      pendingMovement: getFirstValue(payload, ['pending_movement', 'pendingMovement']) ?? '₦1.8M',
+      investorInflows: getFirstValue(payload, ['inflows', 'investor_inflows']) ?? '₦46.2M',
+      investorOutflows: getFirstValue(payload, ['outflows', 'investor_outflows']) ?? '₦28.9M',
+    }
+  }, [summary])
+
+  const ledgerRows = transactions.length
+    ? transactions.map((entry: any) => {
+        const date = entry.date ?? entry.created_at ?? entry.transaction_date ?? '—'
+        const description = entry.description ?? entry.narration ?? entry.reference ?? 'Ledger entry'
+        const account = entry.account ?? entry.account_name ?? entry.user_name ?? entry.user?.name ?? '—'
+        const amountValue = Number(entry.amount ?? entry.value ?? 0)
+        const formattedAmount = `${amountValue >= 0 ? '+' : '-'}₦${Math.abs(amountValue).toLocaleString()}`
+        const status = entry.status ?? entry.state ?? 'Posted'
+        return [String(date), String(description), String(account), formattedAmount, String(status)]
+      })
+    : fallbackRows
+
+  return (
+    <AdminShell eyebrow="Accounting" title="Ledger">
+      <div className="grid gap-4 md:grid-cols-4">
+        <Metric label="Net balance" value={loading ? '…' : String(ledgerSummary.netBalance)} detail="Across all wallets" tone="good" />
+        <Metric label="Pending movement" value={loading ? '…' : String(ledgerSummary.pendingMovement)} detail="Awaiting settlement" tone="warn" />
+        <Metric label="Investor inflows" value={loading ? '…' : String(ledgerSummary.investorInflows)} detail="This month" />
+        <Metric label="Investor outflows" value={loading ? '…' : String(ledgerSummary.investorOutflows)} detail="This month" />
+      </div>
+
+      <div className="mt-6 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+        <SectionCard title="Ledger entries" action={loading ? 'Syncing' : 'Live'}>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-left text-sm">
+              <thead>
+                <tr className="text-slate-400">
+                  <th className="pb-3 pr-4">Date</th>
+                  <th className="pb-3 pr-4">Description</th>
+                  <th className="pb-3 pr-4">Account</th>
+                  <th className="pb-3 pr-4">Amount</th>
+                  <th className="pb-3">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {ledgerRows.map(([date, description, account, amount, status], index) => (
+                  <tr key={`${date}-${index}`} className="border-t border-slate-800 text-slate-200">
+                    <td className="py-3 pr-4">{date}</td>
+                    <td className="py-3 pr-4">{description}</td>
+                    <td className="py-3 pr-4">{account}</td>
+                    <td className={`py-3 pr-4 font-medium ${String(amount).startsWith('-') ? 'text-red-300' : 'text-emerald-300'}`}>{amount}</td>
+                    <td className="py-3 text-slate-300">{status}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </SectionCard>
+
+        <SectionCard title="Summary" action="Live">
+          <div className="space-y-4 text-sm text-slate-300">
+            <div className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/40 p-3">
+              <span>Funded plans</span>
+              <strong className="text-white">84</strong>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/40 p-3">
+              <span>Active withdrawals</span>
+              <strong className="text-white">12</strong>
+            </div>
+            <div className="flex items-center justify-between rounded-lg border border-slate-800 bg-slate-900/40 p-3">
+              <span>Auto-matched entries</span>
+              <strong className="text-white">91%</strong>
+            </div>
+          </div>
+        </SectionCard>
+      </div>
+    </AdminShell>
+  )
+}

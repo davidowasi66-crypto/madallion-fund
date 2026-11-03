@@ -1,6 +1,57 @@
-import { AdminShell, Metric, SectionCard } from '@/components/admin-shell'
-import { ArrowUpRight, CalendarDays, CircleAlert, TrendingUp } from 'lucide-react'
+'use client'
 
-const accruals = [['Mon, Oct 26','₦8,420,000','₦151,560'],['Tue, Oct 27','₦8,610,000','₦154,980'],['Wed, Oct 28','₦8,740,000','₦157,320']]
+import Link from 'next/link'
+import { useEffect, useState } from 'react'
+import { ArrowUpRight, Bell, ChevronRight, LogOut, Menu, Plus, Wallet } from 'lucide-react'
+import { useRouter } from 'next/navigation'
+import { clearXanoSession, getXanoSession } from '@/lib/xano-auth'
+import { getFirstValue, xanoAuthMe, xanoLedgerDashboard } from '@/lib/xano-client'
 
-export default function AdminTreasury() { return <AdminShell eyebrow="Treasury control room" title="Good morning, Ada"><div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end"><div><p className="max-w-xl text-sm leading-6 text-[#72847a]">A clear view of the book, liquidity coverage, and the actions that need your attention today.</p></div><button className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#0b4537] px-4 py-3 text-xs font-semibold text-white"><CalendarDays size={15} /> Oct 28, 2026</button></div><div className="mt-7 grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><Metric label="Total book" value="₦12.84B" detail="↑ 4.8% vs last month" tone="good" /><Metric label="Daily accrual" value="₦231.6M" detail="Across 12,408 active accounts" /><Metric label="Daily inflow" value="₦184.2M" detail="₦42.8M above 7-day average" tone="good" /><Metric label="Liquidity coverage" value="4.6 mo" detail="Target: 6 months" tone="warn" /></div><div className="mt-6 grid gap-6 xl:grid-cols-[1.35fr_.65fr]"><SectionCard title="Book performance" action="View report"><div className="flex items-end justify-between"><div><p className="text-3xl font-semibold tracking-[-.06em] text-[#0b4537]">₦12,840,320,000</p><p className="mt-2 text-xs text-[#4b8c60]">+₦584.3M this month <ArrowUpRight size={13} className="inline" /></p></div><div className="rounded-lg bg-[#e1f6d8] px-2 py-1 text-[10px] font-bold text-[#4a8b5b]">ON TRACK</div></div><div className="mt-8 flex h-48 items-end gap-2 border-b border-[#dce9df]">{[38,44,40,51,47,55,61,57,65,68,75,71,82,79,88,94,91,100].map((height, index) => <div key={index} className="flex-1 rounded-t-md bg-[#9fda7d]" style={{ height: `${height}%`, opacity: .42 + index / 38 }} />)}</div><div className="mt-4 flex justify-between text-[10px] text-[#93a19a]"><span>Oct 01</span><span>Oct 15</span><span>Oct 28</span></div></SectionCard><SectionCard title="Reserve & runway"><div className="flex items-center justify-center py-3"><div className="relative flex h-44 w-44 items-center justify-center rounded-full border-[18px] border-[#d7edcd] border-t-[#4f9a68] border-r-[#4f9a68]"><div className="text-center"><p className="text-3xl font-semibold text-[#0b4537]">₦2.1B</p><p className="text-[10px] text-[#829088]">cash reserve</p></div></div></div><div className="mt-4 rounded-xl bg-[#fff5e5] p-3"><div className="flex gap-2"><CircleAlert size={15} className="mt-0.5 text-[#b47830]" /><div><p className="text-xs font-semibold text-[#80571f]">Coverage below target</p><p className="mt-1 text-[11px] leading-5 text-[#9a7444]">Runway is 4.6 months against a 6 month policy target.</p></div></div></div></SectionCard></div><div className="mt-6"><SectionCard title="Daily accrual ledger" action="Export CSV"><div className="overflow-x-auto"><table className="w-full min-w-[520px] text-left text-sm"><thead className="text-[10px] uppercase tracking-wider text-[#92a098]"><tr><th className="pb-3 font-semibold">Date</th><th className="pb-3 font-semibold">Eligible book</th><th className="pb-3 font-semibold">Accrual</th><th className="pb-3 font-semibold">Status</th></tr></thead><tbody className="divide-y divide-[#e7eee8]">{accruals.map(([date, book, amount]) => <tr key={date}><td className="py-4 font-medium text-[#315d4b]">{date}</td><td className="py-4 text-[#6f8177]">{book}</td><td className="py-4 font-semibold text-[#0b4537]">{amount}</td><td className="py-4"><span className="rounded-full bg-[#e1f6d8] px-2 py-1 text-[10px] font-bold text-[#4a8b5b]">POSTED</span></td></tr>)}</tbody></table></div></SectionCard></div><div className="mt-6 flex items-center gap-3 rounded-2xl border border-[#dce9df] bg-white/40 p-4 text-xs text-[#73867b]"><TrendingUp size={17} className="text-[#4f9a68]" /> Daily accruals are funded by new deposits and displayed for operational reconciliation.</div></AdminShell> }
+const positions = [
+  { name: 'Gold Plan', status: 'Active', invested: '₦500,000', return: '+₦54,000', maturity: '18 Aug 2026' },
+  { name: 'Starter Plan', status: 'Maturing soon', invested: '₦120,000', return: '+₦43,200', maturity: '02 Aug 2026' },
+]
+
+export default function DashboardPage() {
+  const router = useRouter()
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [ready, setReady] = useState(false)
+  const [profile, setProfile] = useState<any>(null)
+  const [summary, setSummary] = useState<any>(null)
+
+  useEffect(() => {
+    const authToken = getXanoSession()?.authToken
+    if (!authToken) {
+      clearXanoSession()
+      router.replace('/login?next=/dashboard')
+      return
+    }
+    let mounted = true
+    async function load() {
+      const [meRes, ledgerRes] = await Promise.all([
+        xanoAuthMe(authToken).catch(() => null),
+        xanoLedgerDashboard(authToken).catch(() => null),
+      ])
+      if (!mounted) return
+      setProfile(meRes)
+      setSummary(ledgerRes)
+      setReady(true)
+    }
+    load()
+    return () => { mounted = false }
+  }, [router])
+
+  const dashboardPayload = summary?.summary ?? summary?.data ?? summary ?? {}
+  const portfolioValue = getFirstValue(dashboardPayload, ['portfolio_value', 'total_value', 'net_balance', 'balance']) ?? '₦724,200'
+  const monthlyReturn = getFirstValue(dashboardPayload, ['monthly_return', 'returns_total']) ?? '₦68,400'
+  const activePlans = getFirstValue(dashboardPayload, ['active_plans', 'plans_count']) ?? '03'
+  const walletBalance = getFirstValue(dashboardPayload, ['wallet_balance', 'available_balance', 'balance']) ?? '₦240,500'
+
+  if (!ready) return <main className="flex min-h-screen items-center justify-center bg-[#eef5ef] text-[#10211b]"><p className="text-sm text-[#5d7068]">Checking your session…</p></main>
+
+  return <main className="min-h-screen bg-[#eef5ef] text-[#10211b]"><aside className={`fixed inset-y-0 left-0 z-50 w-72 border-r border-[#d9e7dc] bg-[#f8fbf7]/95 p-5 backdrop-blur-xl transition-transform lg:translate-x-0 ${menuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}`}><div className="flex items-center justify-between"><Link href="/" className="font-bold text-[#0b4537]">Madallion fund</Link><button className="lg:hidden" onClick={() => setMenuOpen(false)} aria-label="Close menu">×</button></div><nav className="mt-12 space-y-2" aria-label="Account navigation">{[['/dashboard', 'Overview'], ['/dashboard/investments', 'My investments'], ['/dashboard/wallet', 'Wallet'], ['/dashboard/activity', 'Activity']].map(([href, label]) => <Link key={href} href={href} className="flex items-center justify-between rounded-xl px-3 py-2.5 text-sm font-medium text-[#49615b] transition hover:bg-[#ecf4ee] hover:text-[#0b4537]">{label}<ChevronRight size={16} /></Link>)}</nav><Link href="/" className="absolute bottom-7 left-5 flex items-center gap-2 text-sm font-semibold text-[#71847a]"><LogOut size={16} /> Exit dashboard</Link></aside><div className="lg:pl-72"><header className="sticky top-0 z-30 border-b border-[#dce9df]/80 bg-[#eef5ef]/85 px-5 py-4 backdrop-blur-xl"><div className="flex items-center justify-between"><button className="lg:hidden" onClick={() => setMenuOpen(true)} aria-label="Open menu"><Menu size={20} /></button><div><p className="text-xs uppercase tracking-[0.22em] text-[#799388]">Investor portal</p><h1 className="mt-1 text-xl font-semibold text-[#10211b]">{profile?.name ? `Welcome, ${profile.name}` : 'Good morning'}</h1></div><div className="flex items-center gap-3"><button className="rounded-full border border-[#d9e7dc] bg-white p-2" aria-label="Notifications"><Bell size={16} /></button><button className="rounded-full bg-[#0b4537] px-3 py-2 text-sm font-medium text-white">View report</button></div></div></header><section className="mx-auto max-w-7xl p-5 sm:p-8"><div className="grid gap-4 sm:grid-cols-3"><Metric label="Portfolio value" value={String(portfolioValue)} detail="+₦97,200 all time" /><Metric label="Monthly return" value={String(monthlyReturn)} detail="+8.4% this month" /><Metric label="Active plans" value={String(activePlans)} detail="2 maturing soon" /></div><div className="mt-8 grid gap-4 xl:grid-cols-[1.5fr_0.9fr]"><section className="rounded-3xl border border-[#d8e6dc] bg-white p-5 shadow-sm"><p className="text-xs uppercase tracking-[0.2em] text-[#7a8d87]">Performance</p><h2 className="mt-2 text-2xl font-semibold">₦1.32M</h2><p className="mt-8 text-sm">Deposits ₦950,000 · Returns ₦280,000 · Available {String(walletBalance)}</p></section><section className="rounded-3xl bg-[#0b4537] p-5 text-white shadow-sm"><p className="text-xs uppercase tracking-[0.2em] text-[#b9f47f]">Wallet</p><h3 className="mt-3 text-3xl font-semibold">{String(walletBalance)}</h3><div className="mt-6 flex items-center justify-between rounded-2xl bg-white/5 p-3"><span className="flex items-center gap-3"><Wallet size={16} />Primary wallet</span><ArrowUpRight size={16} /></div><button className="mt-6 flex w-full items-center justify-center gap-2 rounded-xl bg-[#b9f47f] px-4 py-3 text-sm font-semibold text-[#0b4537]"><Plus size={16} /> Add funds</button></section></div><section className="mt-8 rounded-3xl border border-[#d8e6dc] bg-white p-5 shadow-sm"><h2 className="text-xl font-semibold">Investment positions</h2><div className="mt-5 space-y-3">{positions.map((position) => <div key={position.name} className="flex flex-col gap-3 rounded-2xl border border-[#e4efe6] bg-[#f8fbf7] p-4 sm:flex-row sm:items-center sm:justify-between"><div><p className="font-semibold">{position.name}</p><p className="text-sm">{position.status}</p></div><div className="flex items-center gap-6 text-sm"><span>Invested {position.invested}</span><span>Return {position.return}</span><span>Maturity {position.maturity}</span></div></div>)}</div></section></section></div></main>
+}
+
+function Metric({ label, value, detail }: { label: string; value: string; detail: string }) {
+  return <div className="rounded-2xl border border-[#d8e6dc] bg-white p-5 shadow-sm"><p className="text-xs uppercase tracking-[0.2em] text-[#7d8f88]">{label}</p><p className="mt-3 text-2xl font-semibold">{value}</p><p className="mt-1 text-sm">{detail}</p></div>
+}
