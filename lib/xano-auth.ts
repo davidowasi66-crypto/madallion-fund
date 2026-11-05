@@ -65,7 +65,7 @@ export async function xanoRequest<T>(path: string, init: RequestInit = {}, optio
     headers.set("Content-Type", "application/json")
   }
 
-  const response = await fetch(`${base}${path}`, { ...init, headers })
+  const response = await fetch(`${base}${path}`, { ...init, headers, credentials: "include" })
   const text = await response.text()
 
   let body: any = null
@@ -109,15 +109,15 @@ export async function xanoMe() {
 }
 
 export async function xanoAdminDashboard() {
-  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_dashboard", {}, { auth: true })
+  return xanoRequest<Record<string, unknown>>("/api:admin-api/fn_admin_dashboard", {}, { auth: true })
 }
 
 export async function xanoAdminPending() {
-  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_pending", {}, { auth: true })
+  return xanoRequest<Record<string, unknown>>("/api:admin-api/fn_admin_pending", {}, { auth: true })
 }
 
 export async function xanoAdminUsers() {
-  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_user_list", {}, { auth: true })
+  return xanoRequest<Record<string, unknown>>("/api:admin-api/fn_admin_user_list", {}, { auth: true })
 }
 
 export async function xanoAdminInvestments() {

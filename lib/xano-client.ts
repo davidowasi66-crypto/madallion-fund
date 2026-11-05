@@ -44,6 +44,7 @@ export async function xanoRequest<T>(path: string, options: RequestInit = {}, to
   const response = await fetch(`${baseUrl}${path}`, {
     ...options,
     headers: buildXanoHeaders(token, options),
+    credentials: 'include',
   })
 
   if (!response.ok) {

@@ -9,10 +9,13 @@ import { getAdminPending, getAdminUserList } from '@/lib/xano-admin'
 type OperationKind = 'deposits' | 'users' | 'withdrawals'
 type OperationRow = string[]
 
+const ngn = new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const lagosDate = new Intl.DateTimeFormat('en-NG', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Lagos' })
+
 const asRows = (kind: OperationKind, payload: any): OperationRow[] => {
   const items = payload?.items ?? []
-  if (kind === 'users') return items.map((item: any) => [String(item.id), item.name ?? 'Unknown', item.kyc_status ?? 'Unknown', item.role ?? 'member', item.status ?? 'Unknown'])
-  return items.map((item: any) => [item.reference ?? String(item.id), item.user?.name ?? 'Unknown', item.amount == null ? '—' : `₦${Number(item.amount).toLocaleString()}`, item.created_at ? new Date(item.created_at * 1000).toLocaleString() : '—', item.status ?? 'Unknown'])
+  if (kind === 'users') return items.map((item: any) => [String(item.id), item.name ?? 'Unknown', item.email ?? '—', item.wallet == null ? '—' : ngn.format(item.wallet), item.status ?? 'Unknown'])
+  return items.map((item: any) => [item.reference ?? String(item.id), item.user?.name ?? 'Unknown', item.amount == null ? '—' : ngn.format(item.amount), item.created_at ? lagosDate.format(new Date(item.created_at * 1000)) : '—', item.status ?? 'Unknown'])
 }
 
 export function OperationsPage({
