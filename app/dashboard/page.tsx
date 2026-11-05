@@ -18,6 +18,7 @@ export default function DashboardPage() {
   const [ready, setReady] = useState(false)
   const [profile, setProfile] = useState<any>(null)
   const [summary, setSummary] = useState<any>(null)
+  const [error, setError] = useState('')
 
   useEffect(() => {
     const authToken = getXanoSession()?.authToken
@@ -30,16 +31,26 @@ export default function DashboardPage() {
     let mounted = true
 
     async function load() {
-      const [meRes, ledgerRes] = await Promise.all([
-        xanoAuthMe(authToken).catch(() => null),
-        xanoLedgerDashboard(authToken).catch(() => null),
-      ])
-
-      if (!mounted) return
-
-      setProfile(meRes)
-      setSummary(ledgerRes)
-      setReady(true)
+      try {
+        const [meRes, ledgerRes] = await Promise.all([
+          xanoAuthMe(authToken),
+          xanoLedgerDashboard(authToken),
+        ])
+        if (!mounted) return
+        setProfile(meRes)
+        setSummary(ledgerRes)
+        setReady(true)
+      } catch (requestError) {
+        if (!mounted) return
+        const message = requestError instanceof Error ? requestError.message : 'Unable to load your dashboard.'
+        if (/401|403|unauthenticated|not authenticated/i.test(message)) {
+          clearXanoSession()
+          router.replace('/login?next=/dashboard')
+          return
+        }
+        setError(message)
+        setReady(true)
+      }
     }
 
     load()
@@ -54,6 +65,10 @@ export default function DashboardPage() {
 
   if (!ready) {
     return <main className="flex min-h-screen items-center justify-center bg-[#eef5ef] text-[#10211b]"><p className="text-sm text-[#5d7068]">Checking your session…</p></main>
+  }
+
+  if (error) {
+    return <main className="flex min-h-screen items-center justify-center bg-[#eef5ef] px-5 text-[#10211b]"><div className="rounded-2xl border border-[#f0d2cf] bg-white p-6 text-center shadow-sm"><h1 className="text-lg font-semibold">Dashboard unavailable</h1><p className="mt-2 max-w-sm text-sm text-[#6b7771]">{error}</p><button onClick={() => window.location.reload()} className="mt-5 rounded-xl bg-[#0b4537] px-4 py-2 text-sm font-semibold text-white">Try again</button></div></main>
   }
 
   return (

@@ -14,9 +14,9 @@ function getNestedRole(value: unknown): unknown {
 
 const groups = [
   { label: 'Overview', items: [{ href: '/admin', label: 'Command Centre' }, { href: '/admin/approvals', label: 'Approvals' }, { href: '/admin/treasury', label: 'Treasury' }, { href: '/admin/plans', label: 'Plans' }] },
-  { label: 'People', items: [{ href: '/admin/users', label: 'Users' }, { href: '/admin/kyc', label: 'KYC Queue' }, { href: '/admin/referrals', label: 'Referrals' }] },
-  { label: 'Money', items: [{ href: '/admin/deposits', label: 'Deposits' }, { href: '/admin/withdrawals', label: 'Withdrawals' }, { href: '/admin/investments', label: 'Investments' }] },
-  { label: 'System', items: [{ href: '/admin/announcements', label: 'Announcements' }, { href: '/admin/settings', label: 'Settings' }, { href: '/admin/audit', label: 'Audit trail' }] },
+{ label: 'People', items: [{ href: '/admin/users', label: 'Users' }] },
+ { label: 'Money', items: [{ href: '/admin/deposits', label: 'Deposits' }, { href: '/admin/withdrawals', label: 'Withdrawals' }] },
+ { label: 'System', items: [{ href: '/admin/settings', label: 'Settings' }] },
 ]
 
 export function AdminShell({ children, title, eyebrow }: { children: React.ReactNode; title: string; eyebrow: string }) {

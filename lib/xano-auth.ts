@@ -20,8 +20,8 @@ export function getXanoBaseUrl() {
 export function getXanoSession() {
   if (typeof window === "undefined") return null
 
-  const authToken = sessionStorage.getItem(STORAGE_KEYS.authToken)
-  const userId = sessionStorage.getItem(STORAGE_KEYS.userId)
+  const authToken = localStorage.getItem(STORAGE_KEYS.authToken)
+  const userId = localStorage.getItem(STORAGE_KEYS.userId)
 
   if (!authToken) return null
 
@@ -31,13 +31,15 @@ export function getXanoSession() {
 export function saveXanoSession(data: { authToken: string; user_id: string }) {
   if (typeof window === "undefined") return
 
-  sessionStorage.setItem(STORAGE_KEYS.authToken, data.authToken)
-  sessionStorage.setItem(STORAGE_KEYS.userId, data.user_id)
+  localStorage.setItem(STORAGE_KEYS.authToken, data.authToken)
+  localStorage.setItem(STORAGE_KEYS.userId, data.user_id)
 }
 
 export function clearXanoSession() {
   if (typeof window === "undefined") return
 
+  localStorage.removeItem(STORAGE_KEYS.authToken)
+  localStorage.removeItem(STORAGE_KEYS.userId)
   sessionStorage.removeItem(STORAGE_KEYS.authToken)
   sessionStorage.removeItem(STORAGE_KEYS.userId)
 }
@@ -109,7 +111,7 @@ export async function xanoMe() {
 }
 
 export async function xanoAdminDashboard() {
-  return xanoRequest<Record<string, unknown>>("/api:admin-api/fn_admin_dashboard", {}, { auth: true })
+  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_dashboard", {}, { auth: true })
 }
 
 export async function xanoAdminPending() {
