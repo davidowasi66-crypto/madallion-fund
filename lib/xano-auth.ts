@@ -22,6 +22,7 @@ export function getXanoSession() {
 
   const authToken = localStorage.getItem(STORAGE_KEYS.authToken) || sessionStorage.getItem(STORAGE_KEYS.authToken)
   const userId = localStorage.getItem(STORAGE_KEYS.userId) || sessionStorage.getItem(STORAGE_KEYS.userId)
+
   if (!authToken) return null
 
   return { authToken, user_id: userId ?? "" }
@@ -32,6 +33,7 @@ export function saveXanoSession(data: { authToken: string; user_id?: string }) {
 
   localStorage.setItem(STORAGE_KEYS.authToken, data.authToken)
   sessionStorage.setItem(STORAGE_KEYS.authToken, data.authToken)
+
   if (data.user_id) {
     localStorage.setItem(STORAGE_KEYS.userId, data.user_id)
     sessionStorage.setItem(STORAGE_KEYS.userId, data.user_id)
@@ -58,6 +60,7 @@ export async function xanoRequest<T>(path: string, init: RequestInit = {}, optio
   if (!base) throw new Error("Xano is not configured")
 
   const headers = new Headers(init.headers ?? {})
+
   if (options.auth) {
     const session = getXanoSession()
     if (!session?.authToken) throw new Error("Not authenticated")
@@ -72,6 +75,7 @@ export async function xanoRequest<T>(path: string, init: RequestInit = {}, optio
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 15000)
   let response: Response
+
   try {
     response = await fetch(`${base}${path}`, {
       ...init,
@@ -91,6 +95,7 @@ export async function xanoRequest<T>(path: string, init: RequestInit = {}, optio
 
   const text = await response.text()
   let body: any = null
+
   if (text) {
     try {
       body = JSON.parse(text)
