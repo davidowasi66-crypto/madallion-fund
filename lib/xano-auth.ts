@@ -20,11 +20,8 @@ export function getXanoBaseUrl() {
 export function getXanoSession() {
   if (typeof window === "undefined") return null
 
-  // Read both stores to retain sessions created by older app versions or browsers
-  // that restored a session from sessionStorage.
   const authToken = localStorage.getItem(STORAGE_KEYS.authToken) || sessionStorage.getItem(STORAGE_KEYS.authToken)
   const userId = localStorage.getItem(STORAGE_KEYS.userId) || sessionStorage.getItem(STORAGE_KEYS.userId)
-
   if (!authToken) return null
 
   return { authToken, user_id: userId ?? "" }
@@ -62,7 +59,6 @@ export async function xanoRequest<T>(path: string, init: RequestInit = {}, optio
   if (!base) throw new Error("Xano is not configured")
 
   const headers = new Headers(init.headers ?? {})
-
   if (options.auth) {
     const session = getXanoSession()
     if (!session?.authToken) throw new Error("Not authenticated")
@@ -96,6 +92,7 @@ export async function xanoRequest<T>(path: string, init: RequestInit = {}, optio
 
   const text = await response.text()
 
+  const text = await response.text()
   let body: any = null
   if (text) {
     try {
