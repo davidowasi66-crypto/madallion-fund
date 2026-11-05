@@ -20,19 +20,26 @@ export function getXanoBaseUrl() {
 export function getXanoSession() {
   if (typeof window === "undefined") return null
 
-  const authToken = localStorage.getItem(STORAGE_KEYS.authToken)
-  const userId = localStorage.getItem(STORAGE_KEYS.userId)
+  // Read both stores to retain sessions created by older app versions or browsers
+  // that restored a session from sessionStorage.
+  const authToken = localStorage.getItem(STORAGE_KEYS.authToken) || sessionStorage.getItem(STORAGE_KEYS.authToken)
+  const userId = localStorage.getItem(STORAGE_KEYS.userId) || sessionStorage.getItem(STORAGE_KEYS.userId)
 
   if (!authToken) return null
 
   return { authToken, user_id: userId ?? "" }
 }
 
-export function saveXanoSession(data: { authToken: string; user_id: string }) {
+export function saveXanoSession(data: { authToken: string; user_id?: string }) {
   if (typeof window === "undefined") return
 
   localStorage.setItem(STORAGE_KEYS.authToken, data.authToken)
-  localStorage.setItem(STORAGE_KEYS.userId, data.user_id)
+  sessionStorage.setItem(STORAGE_KEYS.authToken, data.authToken)
+
+  if (data.user_id) {
+    localStorage.setItem(STORAGE_KEYS.userId, data.user_id)
+    sessionStorage.setItem(STORAGE_KEYS.userId, data.user_id)
+  }
 }
 
 export function clearXanoSession() {
@@ -67,7 +74,26 @@ export async function xanoRequest<T>(path: string, init: RequestInit = {}, optio
     headers.set("Content-Type", "application/json")
   }
 
-  const response = await fetch(`${base}${path}`, { ...init, headers, credentials: "include" })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 15000)
+  let response: Response
+  try {
+    response = await fetch(`${base}${path}`, {
+      ...init,
+      signal: init.signal ?? controller.signal,
+      headers,
+      credentials: "include",
+      cache: init.cache ?? "no-store",
+    })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Xano request timed out. Please try again.")
+    }
+    throw error
+  } finally {
+    clearTimeout(timeout)
+  }
+
   const text = await response.text()
 
   let body: any = null
@@ -80,7 +106,8 @@ export async function xanoRequest<T>(path: string, init: RequestInit = {}, optio
   }
 
   if (!response.ok) {
-    throw new Error(body?.message || body?.error || `Request failed (${response.status})`)
+    const message = typeof body === "string" ? body : body?.message || body?.error
+    throw new Error(`${response.status}: ${message || `Request failed (${response.status})`}`)
   }
 
   return body as T
