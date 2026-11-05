@@ -41,15 +41,36 @@ export async function xanoRequest<T>(path: string, options: RequestInit = {}, to
     throw new Error("Xano base URL is not configured. Set NEXT_PUBLIC_XANO_BASE_URL or XANO_BASE_URL.")
   }
 
-  const response = await fetch(`${baseUrl}${path}`, {
-    ...options,
-    headers: buildXanoHeaders(token, options),
-    credentials: 'include',
-  })
+  const controller = new AbortController()
+  const timeout = setTimeout(() => controller.abort(), 15000)
+
+  let response: Response
+  try {
+    response = await fetch(`${baseUrl}${path}`, {
+      ...options,
+      signal: options.signal ?? controller.signal,
+      headers: buildXanoHeaders(token, options),
+      credentials: 'include',
+    })
+  } catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') {
+      throw new Error('Xano request timed out. Please try again.')
+    }
+    throw error
+  } finally {
+    clearTimeout(timeout)
+  }
 
   if (!response.ok) {
     const text = await response.text().catch(() => "")
-    throw new Error(text || `Xano request failed with status ${response.status}`)
+    let message = text
+    try {
+      const parsed = JSON.parse(text)
+      message = parsed?.message || parsed?.error || text
+    } catch {
+      // Keep the plain response when Xano does not return JSON.
+    }
+    throw new Error(`${response.status}: ${message || 'Xano request failed'}`)
   }
 
   const contentType = response.headers.get("content-type") ?? ""
@@ -157,7 +178,7 @@ export async function xanoAdminAuditLogs(token?: string | null, page = 1, perPag
 }
 
 export async function xanoLedgerDashboard(token?: string | null) {
-  return xanoRequest<any>("/api:ledger-api/admin/dashboard", { method: "GET" }, token)
+  return xanoRequest<any>("/api:ledger-api/ledger/summary", { method: "GET" }, token)
 }
 
 export async function xanoLedgerAccounts(token?: string | null, query?: Record<string, string | number | undefined>) {
