@@ -1,32 +1,45 @@
-"use client"
+'use client'
 
-import Link from "next/link"
-import { useRouter } from "next/navigation"
-import { FormEvent, useState } from "react"
-import { saveXanoSession, xanoSignup } from "@/lib/xano-auth"
+import Link from 'next/link'
+import { useRouter, useSearchParams } from 'next/navigation'
+import { FormEvent, Suspense, useState } from 'react'
+import { saveXanoSession, xanoSignup } from '@/lib/xano-auth'
 
 export default function RegisterPage() {
+  return <Suspense fallback={<main className="auth-page"><div className="auth-card">Loading account form…</div></main>}><RegisterForm /></Suspense>
+}
+
+function RegisterForm() {
   const router = useRouter()
-  const [name, setName] = useState("")
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [error, setError] = useState("")
+  const searchParams = useSearchParams()
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    setError("")
+    setError('')
+    const trimmedName = name.trim()
+    const trimmedEmail = email.trim()
+    const trimmedPassword = password.trim()
+    if (!trimmedName || !trimmedEmail || !trimmedPassword) {
+      setError('Complete all fields to create your account.')
+      return
+    }
     setLoading(true)
     try {
-      const session = await xanoSignup(name, email, password)
+      const session = await xanoSignup(trimmedName, trimmedEmail, trimmedPassword)
       saveXanoSession(session)
-      router.push("/dashboard")
+      const next = searchParams.get('next')
+      router.push(next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard')
     } catch {
-      setError("We could not create your account. Check your details and try again.")
+      setError('We could not create your account. Check your details and try again.')
     } finally {
       setLoading(false)
     }
   }
 
-  return <main className="auth-page"><div className="auth-card"><Link href="/" className="auth-back">← Back to home</Link><p className="eyebrow">Start building</p><h1>Create your account</h1><p className="auth-copy">Join the private community building toward consistent returns.</p><form onSubmit={handleSubmit} className="auth-form"><label>Full name<input required value={name} onChange={(e) => setName(e.target.value)} /></label><label>Email<input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} /></label><label>Password<input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} /></label>{error && <p className="form-error" role="alert">{error}</p>}<button className="primary-button" disabled={loading}>{loading ? "Creating account…" : "Create account"}</button></form><p className="auth-legal">By continuing, you agree to our <Link href="/terms">Terms</Link> and <Link href="/privacy">Privacy Policy</Link>.</p><p className="auth-footer">Already a member? <Link href="/login">Sign in</Link></p></div></main>
+  return <main className="auth-page"><div className="auth-card"><Link href="/" className="auth-back">← Back to home</Link><p className="eyebrow">Start building</p><h1>Create your account</h1><p className="auth-description">Set up your Madallion investor account.</p><form onSubmit={handleSubmit} className="auth-form"><label>Full name<input type="text" autoComplete="name" required value={name} onChange={(event) => setName(event.target.value)} /></label><label>Email<input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label><label>Password<input type="password" autoComplete="new-password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} /></label>{error ? <p role="alert" className="auth-error">{error}</p> : null}<button type="submit" disabled={loading}>{loading ? 'Creating account…' : 'Create account'}</button></form><p className="auth-footer">Already registered? <Link href="/login">Sign in</Link></p></div></main>
 }
