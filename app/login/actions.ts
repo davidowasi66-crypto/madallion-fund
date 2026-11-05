@@ -20,10 +20,31 @@ export async function loginAction(_previous: LoginState | null, formData: FormDa
       credentials: 'include',
       cache: 'no-store',
     })
+
     const body = await response.json().catch(() => null)
-    if (!response.ok) return { ok: false, error: body?.message || body?.error || 'Invalid email or password.' }
-    if (!body?.authToken) return { ok: false, error: 'The login response did not include an auth token.' }
-    return { ok: true, session: { authToken: String(body.authToken), user_id: String(body.user_id ?? body.id ?? '') } }
+    if (!response.ok) {
+      return { ok: false, error: body?.message || body?.error || 'Invalid email or password.' }
+    }
+
+    const authToken =
+      body?.authToken ??
+      body?.token ??
+      body?.data?.authToken ??
+      body?.data?.token ??
+      body?.session?.authToken ??
+      body?.session?.token
+
+    if (!authToken) {
+      return { ok: false, error: 'The login response did not include an auth token.' }
+    }
+
+    return {
+      ok: true,
+      session: {
+        authToken: String(authToken),
+        user_id: String(body?.user_id ?? body?.id ?? body?.data?.user_id ?? body?.data?.id ?? ''),
+      },
+    }
   } catch {
     return { ok: false, error: 'Unable to reach the authentication service. Try again.' }
   }

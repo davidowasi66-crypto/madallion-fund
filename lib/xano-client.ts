@@ -6,31 +6,26 @@ export function normalizeBaseUrl() {
 
 export function getStoredXanoToken() {
   if (typeof window === "undefined") return null
-  return window.localStorage.getItem("madallion_auth_token")
+  return window.localStorage.getItem("madallion_auth_token") ?? window.sessionStorage.getItem("madallion_auth_token")
 }
 
 export function buildXanoHeaders(token?: string | null, init?: RequestInit) {
   const headers = new Headers(init?.headers ?? {})
-
   if (!headers.has("Content-Type") && !(init?.body instanceof FormData)) {
     headers.set("Content-Type", "application/json")
   }
-
   const resolvedToken = token ?? getStoredXanoToken()
   if (resolvedToken) headers.set("Authorization", `Bearer ${resolvedToken}`)
-
   return headers
 }
 
 export function buildQuery(endpoint: string, params?: Record<string, string | number | boolean | undefined>) {
   if (!params) return endpoint
-
   const query = new URLSearchParams()
   Object.entries(params).forEach(([key, value]) => {
     if (value === undefined || value === null || value === "") return
     query.append(key, String(value))
   })
-
   const qs = query.toString()
   return qs ? `${endpoint}?${qs}` : endpoint
 }
@@ -43,18 +38,18 @@ export async function xanoRequest<T>(path: string, options: RequestInit = {}, to
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 15000)
-
   let response: Response
   try {
     response = await fetch(`${baseUrl}${path}`, {
       ...options,
       signal: options.signal ?? controller.signal,
       headers: buildXanoHeaders(token, options),
-      credentials: 'include',
+      credentials: "include",
+      cache: options.cache ?? "no-store",
     })
   } catch (error) {
-    if (error instanceof DOMException && error.name === 'AbortError') {
-      throw new Error('Xano request timed out. Please try again.')
+    if (error instanceof DOMException && error.name === "AbortError") {
+      throw new Error("Xano request timed out. Please try again.")
     }
     throw error
   } finally {
@@ -70,38 +65,32 @@ export async function xanoRequest<T>(path: string, options: RequestInit = {}, to
     } catch {
       // Keep the plain response when Xano does not return JSON.
     }
-    throw new Error(`${response.status}: ${message || 'Xano request failed'}`)
+    throw new Error(`${response.status}: ${message || "Xano request failed"}`)
   }
 
   const contentType = response.headers.get("content-type") ?? ""
   if (!contentType.includes("application/json")) {
     return (await response.text()) as unknown as T
   }
-
   return (await response.json()) as T
 }
 
 export function getFirstValue(data: any, paths: string[]) {
   const queue = [...paths]
-
   while (queue.length) {
     const path = queue.shift()!
     const value = path.split(".").reduce<any>((acc, key) => {
       if (acc == null) return undefined
       return acc[key]
     }, data)
-
     if (value !== undefined && value !== null) return value
   }
-
   return undefined
 }
 
 export function toMoney(value: unknown, fallback = "₦0") {
   const numeric = Number(value)
-  if (Number.isFinite(numeric)) {
-    return `₦${Math.abs(numeric).toLocaleString()}`
-  }
+  if (Number.isFinite(numeric)) return `₦${Math.abs(numeric).toLocaleString()}`
   return fallback
 }
 
@@ -154,27 +143,15 @@ export async function xanoAdminInvestments(token?: string | null, page = 1, perP
 }
 
 export async function xanoAdminTrialBalance(token?: string | null, ledgerId = 1) {
-  return xanoRequest<any>(
-    buildQuery("/api:yYNRHo4K/fn_admin_trial_balance", { ledger_id: ledgerId }),
-    { method: "GET" },
-    token,
-  )
+  return xanoRequest<any>(buildQuery("/api:yYNRHo4K/fn_admin_trial_balance", { ledger_id: ledgerId }), { method: "GET" }, token)
 }
 
 export async function xanoAdminReconciliation(token?: string | null, ledgerId = 1) {
-  return xanoRequest<any>(
-    buildQuery("/api:yYNRHo4K/fn_admin_reconciliation", { ledger_id: ledgerId }),
-    { method: "GET" },
-    token,
-  )
+  return xanoRequest<any>(buildQuery("/api:yYNRHo4K/fn_admin_reconciliation", { ledger_id: ledgerId }), { method: "GET" }, token)
 }
 
 export async function xanoAdminAuditLogs(token?: string | null, page = 1, perPage = 25) {
-  return xanoRequest<any>(
-    buildQuery("/api:yYNRHo4K/fn_admin_audit_logs", { page, per_page: perPage }),
-    { method: "GET" },
-    token,
-  )
+  return xanoRequest<any>(buildQuery("/api:yYNRHo4K/fn_admin_audit_logs", { page, per_page: perPage }), { method: "GET" }, token)
 }
 
 export async function xanoLedgerDashboard(token?: string | null) {
