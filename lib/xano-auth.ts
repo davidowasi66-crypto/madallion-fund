@@ -15,7 +15,7 @@ const STORAGE_KEYS = {
 } as const
 
 function normalizeUrl(value: string) {
-  return value.trim().replace(/\/api:[^/]+\/?$/, "").replace(/\/$/, "")
+  return value.trim().replace(/\/+$/, "")
 }
 
 function getEndpointBaseUrl(path: string) {
