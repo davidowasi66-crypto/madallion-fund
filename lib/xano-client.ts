@@ -2,8 +2,12 @@ const XANO_BASE_URL = process.env.NEXT_PUBLIC_XANO_BASE_URL ?? process.env.XANO_
 const XANO_AUTH_URL = process.env.NEXT_PUBLIC_XANO_AUTH_URL ?? process.env.XANO_AUTH_URL ?? ""
 const XANO_LEDGER_URL = process.env.NEXT_PUBLIC_XANO_LEDGER_URL ?? process.env.XANO_LEDGER_URL ?? ""
 
+function stripGroupSuffix(value: string) {
+  return value.trim().replace(/\/+$/, "").replace(/\/api:[^/]+$/, "")
+}
+
 function normalizeUrl(value: string) {
-  return value.trim().replace(/\/?$/, "").replace(/\/api:[^/]+\/?$/, "")
+  return stripGroupSuffix(value)
 }
 
 function getEndpointBaseUrl(path: string) {
@@ -13,7 +17,7 @@ function getEndpointBaseUrl(path: string) {
 }
 
 export function normalizeBaseUrl() {
-  return XANO_BASE_URL.trim().replace(/\/api:[^/]+\/?$/, "").replace(/\/$/, "")
+  return normalizeUrl(XANO_BASE_URL)
 }
 
 export function getStoredXanoToken() {
@@ -139,19 +143,11 @@ export async function xanoAdminUsers(token?: string | null, query?: Record<strin
 }
 
 export async function xanoAdminPending(token?: string | null, p_kind = "deposits", page = 1, perPage = 25) {
-  return xanoRequest<any>(
-    buildQuery("/api:yYNRHo4K/fn_admin_pending", { p_kind, page, per_page: perPage }),
-    { method: "GET" },
-    token,
-  )
+  return xanoRequest<any>(buildQuery("/api:yYNRHo4K/fn_admin_pending", { p_kind, page, per_page: perPage }), { method: "GET" }, token)
 }
 
 export async function xanoAdminInvestments(token?: string | null, page = 1, perPage = 25) {
-  return xanoRequest<any>(
-    buildQuery("/api:yYNRHo4K/fn_admin_investments", { page, per_page: perPage }),
-    { method: "GET" },
-    token,
-  )
+  return xanoRequest<any>(buildQuery("/api:yYNRHo4K/fn_admin_investments", { page, per_page: perPage }), { method: "GET" }, token)
 }
 
 export async function xanoAdminTrialBalance(token?: string | null, ledgerId = 1) {
@@ -205,3 +201,4 @@ export function chooseArray<T>(candidate: unknown, fallback: T[]): T[] {
   if (Array.isArray(candidate)) return candidate as T[]
   return fallback
 }
+

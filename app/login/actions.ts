@@ -2,7 +2,17 @@
 
 import { headers } from 'next/headers'
 
-const BASE_URL = (process.env.NEXT_PUBLIC_XANO_AUTH_URL ?? process.env.XANO_AUTH_URL ?? process.env.NEXT_PUBLIC_XANO_BASE_URL ?? process.env.XANO_BASE_URL ?? '').trim().replace(/\/api:[^/]+\/?$/, '').replace(/\/$/, '')
+function stripGroupSuffix(value: string) {
+  return value.trim().replace(/\/+$/, "").replace(/\/api:[^/]+$/, "")
+}
+
+const BASE_URL = stripGroupSuffix(
+  process.env.NEXT_PUBLIC_XANO_AUTH_URL ??
+    process.env.XANO_AUTH_URL ??
+    process.env.NEXT_PUBLIC_XANO_BASE_URL ??
+    process.env.XANO_BASE_URL ??
+    '',
+)
 
 export type LoginState = { ok: true; session: { authToken: string; user_id: string } } | { ok: false; error: string }
 

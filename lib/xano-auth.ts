@@ -14,13 +14,20 @@ const STORAGE_KEYS = {
   userId: "madallion_user_id",
 } as const
 
+function stripGroupSuffix(value: string) {
+  return value.trim().replace(/\/+$/, "").replace(/\/api:[^/]+$/, "")
+}
+
 function normalizeUrl(value: string) {
-  return value.trim().replace(/\/+$/, "")
+  return stripGroupSuffix(value)
 }
 
 function getEndpointBaseUrl(path: string) {
   if (path.startsWith("/api:r2YmAApr/")) return normalizeUrl(XANO_AUTH_URL || XANO_BASE_URL)
   if (path.startsWith("/api:ledger-api/")) return normalizeUrl(XANO_LEDGER_URL || XANO_BASE_URL)
+  if (path.startsWith("/api:yYNRHo4K/") || path.startsWith("/api:admin-api/")) {
+    return normalizeUrl(XANO_BASE_URL)
+  }
   return normalizeUrl(XANO_BASE_URL)
 }
 
@@ -68,7 +75,7 @@ function endpoint(path: string) {
 
 export async function xanoRequest<T>(path: string, init: RequestInit = {}, options: { auth?: boolean } = {}): Promise<T> {
   const base = getEndpointBaseUrl(path)
-  if (!base) throw new Error("Xano is not configured")
+  if (!base) throw new Error("Xano is not configured.")
 
   const headers = new Headers(init.headers ?? {})
 
@@ -124,16 +131,16 @@ export async function xanoRequest<T>(path: string, init: RequestInit = {}, optio
 }
 
 export async function xanoLogin(email: string, password: string) {
-  return xanoRequest<{ authToken: string; user_id: string }>(endpoints.login, {
+  return xanoRequest<{ authToken: string; user_id?: string }>(endpoints.login, {
     method: "POST",
-    body: JSON.stringify({ email, password }),
+    body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
   })
 }
 
 export async function xanoSignup(name: string, email: string, password: string) {
-  return xanoRequest<{ authToken: string; user_id: string }>(endpoints.signup, {
+  return xanoRequest<{ authToken: string; user_id?: string }>(endpoints.signup, {
     method: "POST",
-    body: JSON.stringify({ name, email, password }),
+    body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), password }),
   })
 }
 
@@ -198,3 +205,4 @@ export async function xanoBalances() {
 export const XANO_AUTH_ENDPOINTS = endpoints
 
 export { XANO_BASE_URL, endpoint }
+
