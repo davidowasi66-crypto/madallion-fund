@@ -1,4 +1,6 @@
 const XANO_BASE_URL = process.env.NEXT_PUBLIC_XANO_BASE_URL ?? process.env.XANO_BASE_URL ?? ""
+const XANO_AUTH_URL = process.env.NEXT_PUBLIC_XANO_AUTH_URL ?? process.env.XANO_AUTH_URL ?? ""
+const XANO_LEDGER_URL = process.env.NEXT_PUBLIC_XANO_LEDGER_URL ?? process.env.XANO_LEDGER_URL ?? ""
 
 const endpoints = {
   login: "/api:r2YmAApr/auth/login",
@@ -12,9 +14,18 @@ const STORAGE_KEYS = {
   userId: "madallion_user_id",
 } as const
 
+function normalizeUrl(value: string) {
+  return value.trim().replace(/\/api:[^/]+\/?$/, "").replace(/\/$/, "")
+}
+
+function getEndpointBaseUrl(path: string) {
+  if (path.startsWith("/api:r2YmAApr/")) return normalizeUrl(XANO_AUTH_URL || XANO_BASE_URL)
+  if (path.startsWith("/api:ledger-api/")) return normalizeUrl(XANO_LEDGER_URL || XANO_BASE_URL)
+  return normalizeUrl(XANO_BASE_URL)
+}
+
 export function getXanoBaseUrl() {
-  const configuredUrl = (process.env.NEXT_PUBLIC_XANO_BASE_URL ?? process.env.XANO_BASE_URL ?? "").trim()
-  return configuredUrl.replace(/\/api:[^/]+\/?$/, "").replace(/\/$/, "")
+  return normalizeUrl(XANO_BASE_URL)
 }
 
 export function getXanoSession() {
@@ -56,7 +67,7 @@ function endpoint(path: string) {
 }
 
 export async function xanoRequest<T>(path: string, init: RequestInit = {}, options: { auth?: boolean } = {}): Promise<T> {
-  const base = getXanoBaseUrl()
+  const base = getEndpointBaseUrl(path)
   if (!base) throw new Error("Xano is not configured")
 
   const headers = new Headers(init.headers ?? {})
