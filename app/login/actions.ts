@@ -2,7 +2,7 @@
 
 import { headers } from 'next/headers'
 
-const BASE_URL = (process.env.NEXT_PUBLIC_XANO_BASE_URL ?? process.env.XANO_BASE_URL ?? '').trim().replace(/\/api:[^/]+\/?$/, '').replace(/\/$/, '')
+const BASE_URL = (process.env.NEXT_PUBLIC_XANO_AUTH_URL ?? process.env.XANO_AUTH_URL ?? process.env.NEXT_PUBLIC_XANO_BASE_URL ?? process.env.XANO_BASE_URL ?? '').trim().replace(/\/api:[^/]+\/?$/, '').replace(/\/$/, '')
 
 export type LoginState = { ok: true; session: { authToken: string; user_id: string } } | { ok: false; error: string }
 

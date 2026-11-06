@@ -1,4 +1,16 @@
 const XANO_BASE_URL = process.env.NEXT_PUBLIC_XANO_BASE_URL ?? process.env.XANO_BASE_URL ?? ""
+const XANO_AUTH_URL = process.env.NEXT_PUBLIC_XANO_AUTH_URL ?? process.env.XANO_AUTH_URL ?? ""
+const XANO_LEDGER_URL = process.env.NEXT_PUBLIC_XANO_LEDGER_URL ?? process.env.XANO_LEDGER_URL ?? ""
+
+function normalizeUrl(value: string) {
+  return value.trim().replace(/\/?$/, "").replace(/\/api:[^/]+\/?$/, "")
+}
+
+function getEndpointBaseUrl(path: string) {
+  if (path.startsWith("/api:r2YmAApr/")) return normalizeUrl(XANO_AUTH_URL || XANO_BASE_URL)
+  if (path.startsWith("/api:ledger-api/")) return normalizeUrl(XANO_LEDGER_URL || XANO_BASE_URL)
+  return normalizeUrl(XANO_BASE_URL)
+}
 
 export function normalizeBaseUrl() {
   return XANO_BASE_URL.trim().replace(/\/api:[^/]+\/?$/, "").replace(/\/$/, "")
@@ -31,9 +43,9 @@ export function buildQuery(endpoint: string, params?: Record<string, string | nu
 }
 
 export async function xanoRequest<T>(path: string, options: RequestInit = {}, token?: string | null): Promise<T> {
-  const baseUrl = normalizeBaseUrl()
+  const baseUrl = getEndpointBaseUrl(path)
   if (!baseUrl) {
-    throw new Error("Xano base URL is not configured. Set NEXT_PUBLIC_XANO_BASE_URL or XANO_BASE_URL.")
+    throw new Error("Xano endpoint URL is not configured. Set the appropriate XANO_*_URL environment variable.")
   }
 
   const controller = new AbortController()
