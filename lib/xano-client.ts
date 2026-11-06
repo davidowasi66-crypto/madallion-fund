@@ -2,6 +2,10 @@ const XANO_BASE_URL = process.env.NEXT_PUBLIC_XANO_BASE_URL ?? process.env.XANO_
 const XANO_AUTH_URL = process.env.NEXT_PUBLIC_XANO_AUTH_URL ?? process.env.XANO_AUTH_URL ?? ""
 const XANO_LEDGER_URL = process.env.NEXT_PUBLIC_XANO_LEDGER_URL ?? process.env.XANO_LEDGER_URL ?? ""
 
+function stripGroupSuffix(value: string) {
+  return value.trim().replace(/\/+$/, "").replace(/\/api:[^/]+$/, "")
+}
+
 function normalizeUrl(value: string) {
   return value.trim().replace(/\/+$/, "").replace(/\/api:[^/]+$/, "")
 }
@@ -164,3 +168,4 @@ export function toNumeric(value: unknown, fallback = 0) {
 export function chooseArray<T>(candidate: unknown, fallback: T[]): T[] {
   return Array.isArray(candidate) ? candidate as T[] : fallback
 }
+

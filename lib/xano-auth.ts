@@ -23,6 +23,9 @@ function normalizeUrl(value: string) {
 function getEndpointBaseUrl(path: string) {
   if (path.startsWith("/api:r2YmAApr/")) return normalizeUrl(XANO_AUTH_URL || XANO_BASE_URL)
   if (path.startsWith("/api:ledger-api/")) return normalizeUrl(XANO_LEDGER_URL || XANO_BASE_URL)
+  if (path.startsWith("/api:yYNRHo4K/") || path.startsWith("/api:admin-api/")) {
+    return normalizeUrl(XANO_BASE_URL)
+  }
   return normalizeUrl(XANO_BASE_URL)
 }
 
@@ -235,3 +238,4 @@ export async function xanoBalances() {
 export const XANO_AUTH_ENDPOINTS = endpoints
 
 export { XANO_BASE_URL, endpoint }
+
