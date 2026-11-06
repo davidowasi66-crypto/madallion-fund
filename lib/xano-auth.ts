@@ -14,12 +14,10 @@ const STORAGE_KEYS = {
   userId: "madallion_user_id",
 } as const
 
-function stripGroupSuffix(value: string) {
-  return value.trim().replace(/\/+$/, "").replace(/\/api:[^/]+$/, "")
-}
-
+// API paths already include the Xano group id, so config values should stay as
+// host/origin URLs or group URLs, then the path is appended on top.
 function normalizeUrl(value: string) {
-  return stripGroupSuffix(value)
+  return value.trim().replace(/\/+$/, "").replace(/\/api:[^/]+$/, "")
 }
 
 function getEndpointBaseUrl(path: string) {
@@ -29,6 +27,41 @@ function getEndpointBaseUrl(path: string) {
     return normalizeUrl(XANO_BASE_URL)
   }
   return normalizeUrl(XANO_BASE_URL)
+}
+
+function authTokenFrom(payload: any): string | undefined {
+  const value =
+    payload?.authToken ??
+    payload?.auth_token ??
+    payload?.token ??
+    payload?.data?.authToken ??
+    payload?.data?.auth_token ??
+    payload?.data?.token ??
+    payload?.session?.authToken ??
+    payload?.session?.auth_token ??
+    payload?.session?.token
+  return value == null || value === "" ? undefined : String(value)
+}
+
+function normalizeAuthSession(payload: any) {
+  const authToken = authTokenFrom(payload)
+  if (!authToken) {
+    throw new Error(String(payload?.message || payload?.error || "Xano did not return an authentication token."))
+  }
+
+  const userId =
+    payload?.user_id ??
+    payload?.userId ??
+    payload?.id ??
+    payload?.user?.id ??
+    payload?.data?.user_id ??
+    payload?.data?.userId ??
+    payload?.data?.id ??
+    payload?.data?.user?.id ??
+    payload?.session?.user_id ??
+    payload?.session?.user?.id
+
+  return { authToken, user_id: userId == null ? "" : String(userId) }
 }
 
 export function getXanoBaseUrl() {
@@ -75,7 +108,7 @@ function endpoint(path: string) {
 
 export async function xanoRequest<T>(path: string, init: RequestInit = {}, options: { auth?: boolean } = {}): Promise<T> {
   const base = getEndpointBaseUrl(path)
-  if (!base) throw new Error("Xano is not configured.")
+  if (!base) throw new Error("Xano is not configured. Set the Xano workspace URL or the matching Xano API group URL.")
 
   const headers = new Headers(init.headers ?? {})
 
@@ -131,17 +164,17 @@ export async function xanoRequest<T>(path: string, init: RequestInit = {}, optio
 }
 
 export async function xanoLogin(email: string, password: string) {
-  return xanoRequest<{ authToken: string; user_id?: string }>(endpoints.login, {
+  return normalizeAuthSession(await xanoRequest<any>(endpoints.login, {
     method: "POST",
     body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
-  })
+  }))
 }
 
 export async function xanoSignup(name: string, email: string, password: string) {
-  return xanoRequest<{ authToken: string; user_id?: string }>(endpoints.signup, {
+  return normalizeAuthSession(await xanoRequest<any>(endpoints.signup, {
     method: "POST",
     body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), password }),
-  })
+  }))
 }
 
 export async function xanoRequestReset(email: string) {
