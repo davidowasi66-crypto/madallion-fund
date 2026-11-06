@@ -14,8 +14,10 @@ const STORAGE_KEYS = {
   userId: "madallion_user_id",
 } as const
 
+// Accept either the Xano workspace origin or a group URL in environment
+// variables. API paths below already include their Xano group identifiers.
 function normalizeUrl(value: string) {
-  return value.trim().replace(/\/api:[^/]+\/?$/, "").replace(/\/$/, "")
+  return value.trim().replace(/\/+$/, "").replace(/\/api:[^/]+$/, "")
 }
 
 function getEndpointBaseUrl(path: string) {
@@ -24,27 +26,40 @@ function getEndpointBaseUrl(path: string) {
   return normalizeUrl(XANO_BASE_URL)
 }
 
+function authTokenFrom(payload: any): string | undefined {
+  const value = payload?.authToken ?? payload?.auth_token ?? payload?.token ??
+    payload?.data?.authToken ?? payload?.data?.auth_token ?? payload?.data?.token ??
+    payload?.session?.authToken ?? payload?.session?.auth_token ?? payload?.session?.token
+  return value == null || value === "" ? undefined : String(value)
+}
+
+function normalizeAuthSession(payload: any) {
+  const authToken = authTokenFrom(payload)
+  if (!authToken) {
+    throw new Error(String(payload?.message || payload?.error || "Xano did not return an authentication token."))
+  }
+  const userId = payload?.user_id ?? payload?.userId ?? payload?.id ?? payload?.user?.id ??
+    payload?.data?.user_id ?? payload?.data?.userId ?? payload?.data?.id ?? payload?.data?.user?.id ??
+    payload?.session?.user_id ?? payload?.session?.user?.id
+  return { authToken, user_id: userId == null ? "" : String(userId) }
+}
+
 export function getXanoBaseUrl() {
   return normalizeUrl(XANO_BASE_URL)
 }
 
 export function getXanoSession() {
   if (typeof window === "undefined") return null
-
   const authToken = localStorage.getItem(STORAGE_KEYS.authToken) || sessionStorage.getItem(STORAGE_KEYS.authToken)
   const userId = localStorage.getItem(STORAGE_KEYS.userId) || sessionStorage.getItem(STORAGE_KEYS.userId)
-
   if (!authToken) return null
-
   return { authToken, user_id: userId ?? "" }
 }
 
 export function saveXanoSession(data: { authToken: string; user_id?: string }) {
   if (typeof window === "undefined") return
-
   localStorage.setItem(STORAGE_KEYS.authToken, data.authToken)
   sessionStorage.setItem(STORAGE_KEYS.authToken, data.authToken)
-
   if (data.user_id) {
     localStorage.setItem(STORAGE_KEYS.userId, data.user_id)
     sessionStorage.setItem(STORAGE_KEYS.userId, data.user_id)
@@ -53,7 +68,6 @@ export function saveXanoSession(data: { authToken: string; user_id?: string }) {
 
 export function clearXanoSession() {
   if (typeof window === "undefined") return
-
   localStorage.removeItem(STORAGE_KEYS.authToken)
   localStorage.removeItem(STORAGE_KEYS.userId)
   sessionStorage.removeItem(STORAGE_KEYS.authToken)
@@ -68,25 +82,19 @@ function endpoint(path: string) {
 
 export async function xanoRequest<T>(path: string, init: RequestInit = {}, options: { auth?: boolean } = {}): Promise<T> {
   const base = getEndpointBaseUrl(path)
-  if (!base) throw new Error("Xano is not configured")
-
+  if (!base) throw new Error("Xano is not configured. Set the Xano workspace URL or the matching Xano API group URL.")
   const headers = new Headers(init.headers ?? {})
-
   if (options.auth) {
     const session = getXanoSession()
     if (!session?.authToken) throw new Error("Not authenticated")
     headers.set("Authorization", `Bearer ${session.authToken}`)
   }
-
   const hasBody = typeof init.body === "string" && init.body.length > 0
-  if (hasBody && !headers.has("Content-Type") && !(init.body instanceof FormData)) {
-    headers.set("Content-Type", "application/json")
-  }
+  if (hasBody && !headers.has("Content-Type") && !(init.body instanceof FormData)) headers.set("Content-Type", "application/json")
 
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 15000)
   let response: Response
-
   try {
     response = await fetch(`${base}${path}`, {
       ...init,
@@ -96,9 +104,7 @@ export async function xanoRequest<T>(path: string, init: RequestInit = {}, optio
       cache: init.cache ?? "no-store",
     })
   } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
-      throw new Error("Xano request timed out. Please try again.")
-    }
+    if (error instanceof DOMException && error.name === "AbortError") throw new Error("Xano request timed out. Please try again.")
     throw error
   } finally {
     clearTimeout(timeout)
@@ -106,41 +112,32 @@ export async function xanoRequest<T>(path: string, init: RequestInit = {}, optio
 
   const text = await response.text()
   let body: any = null
-
   if (text) {
-    try {
-      body = JSON.parse(text)
-    } catch {
-      body = text
-    }
+    try { body = JSON.parse(text) } catch { body = text }
   }
-
   if (!response.ok) {
     const message = typeof body === "string" ? body : body?.message || body?.error
     throw new Error(`${response.status}: ${message || `Request failed (${response.status})`}`)
   }
-
   return body as T
 }
 
 export async function xanoLogin(email: string, password: string) {
-  return xanoRequest<{ authToken: string; user_id: string }>(endpoints.login, {
+  return normalizeAuthSession(await xanoRequest<any>(endpoints.login, {
     method: "POST",
-    body: JSON.stringify({ email, password }),
-  })
+    body: JSON.stringify({ email: email.trim().toLowerCase(), password }),
+  }))
 }
 
 export async function xanoSignup(name: string, email: string, password: string) {
-  return xanoRequest<{ authToken: string; user_id: string }>(endpoints.signup, {
+  return normalizeAuthSession(await xanoRequest<any>(endpoints.signup, {
     method: "POST",
-    body: JSON.stringify({ name, email, password }),
-  })
+    body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), password }),
+  }))
 }
 
 export async function xanoRequestReset(email: string) {
-  return xanoRequest<{ message: string }>(`${endpoints.requestReset}?email=${encodeURIComponent(email)}`, {
-    method: "GET",
-  })
+  return xanoRequest<{ message: string }>(`${endpoints.requestReset}?email=${encodeURIComponent(email)}`, { method: "GET" })
 }
 
 export async function xanoMe() {
@@ -196,5 +193,4 @@ export async function xanoBalances() {
 }
 
 export const XANO_AUTH_ENDPOINTS = endpoints
-
 export { XANO_BASE_URL, endpoint }

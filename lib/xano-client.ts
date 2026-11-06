@@ -3,7 +3,7 @@ const XANO_AUTH_URL = process.env.NEXT_PUBLIC_XANO_AUTH_URL ?? process.env.XANO_
 const XANO_LEDGER_URL = process.env.NEXT_PUBLIC_XANO_LEDGER_URL ?? process.env.XANO_LEDGER_URL ?? ""
 
 function normalizeUrl(value: string) {
-  return value.trim().replace(/\/?$/, "").replace(/\/api:[^/]+\/?$/, "")
+  return value.trim().replace(/\/+$/, "").replace(/\/api:[^/]+$/, "")
 }
 
 function getEndpointBaseUrl(path: string) {
@@ -13,7 +13,7 @@ function getEndpointBaseUrl(path: string) {
 }
 
 export function normalizeBaseUrl() {
-  return XANO_BASE_URL.trim().replace(/\/api:[^/]+\/?$/, "").replace(/\/$/, "")
+  return normalizeUrl(XANO_BASE_URL)
 }
 
 export function getStoredXanoToken() {
@@ -23,9 +23,7 @@ export function getStoredXanoToken() {
 
 export function buildXanoHeaders(token?: string | null, init?: RequestInit) {
   const headers = new Headers(init?.headers ?? {})
-  if (!headers.has("Content-Type") && !(init?.body instanceof FormData)) {
-    headers.set("Content-Type", "application/json")
-  }
+  if (!headers.has("Content-Type") && !(init?.body instanceof FormData)) headers.set("Content-Type", "application/json")
   const resolvedToken = token ?? getStoredXanoToken()
   if (resolvedToken) headers.set("Authorization", `Bearer ${resolvedToken}`)
   return headers
@@ -44,10 +42,7 @@ export function buildQuery(endpoint: string, params?: Record<string, string | nu
 
 export async function xanoRequest<T>(path: string, options: RequestInit = {}, token?: string | null): Promise<T> {
   const baseUrl = getEndpointBaseUrl(path)
-  if (!baseUrl) {
-    throw new Error("Xano endpoint URL is not configured. Set the appropriate XANO_*_URL environment variable.")
-  }
-
+  if (!baseUrl) throw new Error("Xano endpoint URL is not configured. Set the appropriate XANO_*_URL environment variable.")
   const controller = new AbortController()
   const timeout = setTimeout(() => controller.abort(), 15000)
   let response: Response
@@ -60,9 +55,7 @@ export async function xanoRequest<T>(path: string, options: RequestInit = {}, to
       cache: options.cache ?? "no-store",
     })
   } catch (error) {
-    if (error instanceof DOMException && error.name === "AbortError") {
-      throw new Error("Xano request timed out. Please try again.")
-    }
+    if (error instanceof DOMException && error.name === "AbortError") throw new Error("Xano request timed out. Please try again.")
     throw error
   } finally {
     clearTimeout(timeout)
@@ -71,19 +64,11 @@ export async function xanoRequest<T>(path: string, options: RequestInit = {}, to
   if (!response.ok) {
     const text = await response.text().catch(() => "")
     let message = text
-    try {
-      const parsed = JSON.parse(text)
-      message = parsed?.message || parsed?.error || text
-    } catch {
-      // Keep the plain response when Xano does not return JSON.
-    }
+    try { const parsed = JSON.parse(text); message = parsed?.message || parsed?.error || text } catch { /* Keep plain response text. */ }
     throw new Error(`${response.status}: ${message || "Xano request failed"}`)
   }
-
   const contentType = response.headers.get("content-type") ?? ""
-  if (!contentType.includes("application/json")) {
-    return (await response.text()) as unknown as T
-  }
+  if (!contentType.includes("application/json")) return (await response.text()) as unknown as T
   return (await response.json()) as T
 }
 
@@ -91,10 +76,7 @@ export function getFirstValue(data: any, paths: string[]) {
   const queue = [...paths]
   while (queue.length) {
     const path = queue.shift()!
-    const value = path.split(".").reduce<any>((acc, key) => {
-      if (acc == null) return undefined
-      return acc[key]
-    }, data)
+    const value = path.split(".").reduce<any>((acc, key) => acc == null ? undefined : acc[key], data)
     if (value !== undefined && value !== null) return value
   }
   return undefined
@@ -107,17 +89,11 @@ export function toMoney(value: unknown, fallback = "₦0") {
 }
 
 export async function xanoAuthLogin(email: string, password: string) {
-  return xanoRequest<any>("/api:r2YmAApr/auth/login", {
-    method: "POST",
-    body: JSON.stringify({ email, password }),
-  })
+  return xanoRequest<any>("/api:r2YmAApr/auth/login", { method: "POST", body: JSON.stringify({ email, password }) })
 }
 
 export async function xanoAuthSignup(name: string, email: string, password: string) {
-  return xanoRequest<any>("/api:r2YmAApr/auth/signup", {
-    method: "POST",
-    body: JSON.stringify({ name, email, password }),
-  })
+  return xanoRequest<any>("/api:r2YmAApr/auth/signup", { method: "POST", body: JSON.stringify({ name, email, password }) })
 }
 
 export async function xanoAuthMe(token?: string | null) {
@@ -125,9 +101,7 @@ export async function xanoAuthMe(token?: string | null) {
 }
 
 export async function xanoResetRequest(email: string) {
-  return xanoRequest<any>(buildQuery("/api:r2YmAApr/reset/request-reset-link", { email }), {
-    method: "GET",
-  })
+  return xanoRequest<any>(buildQuery("/api:r2YmAApr/reset/request-reset-link", { email }), { method: "GET" })
 }
 
 export async function xanoAdminDashboard(token?: string | null) {
@@ -139,19 +113,11 @@ export async function xanoAdminUsers(token?: string | null, query?: Record<strin
 }
 
 export async function xanoAdminPending(token?: string | null, p_kind = "deposits", page = 1, perPage = 25) {
-  return xanoRequest<any>(
-    buildQuery("/api:yYNRHo4K/fn_admin_pending", { p_kind, page, per_page: perPage }),
-    { method: "GET" },
-    token,
-  )
+  return xanoRequest<any>(buildQuery("/api:yYNRHo4K/fn_admin_pending", { p_kind, page, per_page: perPage }), { method: "GET" }, token)
 }
 
 export async function xanoAdminInvestments(token?: string | null, page = 1, perPage = 25) {
-  return xanoRequest<any>(
-    buildQuery("/api:yYNRHo4K/fn_admin_investments", { page, per_page: perPage }),
-    { method: "GET" },
-    token,
-  )
+  return xanoRequest<any>(buildQuery("/api:yYNRHo4K/fn_admin_investments", { page, per_page: perPage }), { method: "GET" }, token)
 }
 
 export async function xanoAdminTrialBalance(token?: string | null, ledgerId = 1) {
@@ -187,13 +153,7 @@ export async function xanoLedgerTrialBalance(token?: string | null, ledgerId = 1
 }
 
 export function toTitleCase(value: string) {
-  return value
-    .replace(/[_-]+/g, " ")
-    .replace(/\s+/g, " ")
-    .split(" ")
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
-    .join(" ")
+  return value.replace(/[_-]+/g, " ").replace(/\s+/g, " ").split(" ").filter(Boolean).map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(" ")
 }
 
 export function toNumeric(value: unknown, fallback = 0) {
@@ -202,6 +162,5 @@ export function toNumeric(value: unknown, fallback = 0) {
 }
 
 export function chooseArray<T>(candidate: unknown, fallback: T[]): T[] {
-  if (Array.isArray(candidate)) return candidate as T[]
-  return fallback
+  return Array.isArray(candidate) ? candidate as T[] : fallback
 }
