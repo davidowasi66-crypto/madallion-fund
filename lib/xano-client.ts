@@ -155,11 +155,15 @@ export async function xanoAdminAuditLogs(token?: string | null, page = 1, perPag
 }
 
 export async function xanoLedgerDashboard(token?: string | null) {
-  return xanoRequest<any>("/api:ledger-api/ledger/summary", { method: "GET" }, token)
+  return xanoRequest<any>("/api:ledger-api/admin/dashboard", { method: "GET" }, token)
 }
 
 export async function xanoLedgerAccounts(token?: string | null, query?: Record<string, string | number | undefined>) {
   return xanoRequest<any>(buildQuery("/api:ledger-api/accounts", query), { method: "GET" }, token)
+}
+
+export async function xanoLedgerAccount(token: string | null | undefined, accountId: string | number) {
+  return xanoRequest<any>(`/api:ledger-api/accounts/${encodeURIComponent(accountId)}`, { method: "GET" }, token)
 }
 
 export async function xanoLedgerTransactions(token?: string | null, query?: Record<string, string | number | undefined>) {
