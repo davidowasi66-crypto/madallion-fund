@@ -5,6 +5,7 @@ const XANO_LEDGER_URL = process.env.NEXT_PUBLIC_XANO_LEDGER_URL ?? process.env.X
 const XANO_ADMIN_URL = process.env.NEXT_PUBLIC_XANO_ADMIN_URL ?? process.env.XANO_ADMIN_URL ?? ""
 const XANO_PAYMENT_URL = process.env.NEXT_PUBLIC_XANO_PAYMENT_URL ?? process.env.XANO_PAYMENT_URL ?? ""
 const XANO_PAYMENTS_URL = process.env.XANO_PAYMENTS ?? ""
+const XANO_ADMIN_FUNCTION_URL = process.env.xanoAdminUrl ?? ""
 
 const endpoints = {
   login: "/api:r2YmAApr/auth/login",
@@ -110,6 +111,10 @@ async function xanoRequestFromBase<T>(baseUrl: string, path: string, init: Reque
 
 export function xanoPaymentsRequest<T = any>(path: string, init: RequestInit = {}, auth = false) {
   return xanoRequestFromBase<T>(XANO_PAYMENTS_URL, path, init, { auth })
+}
+
+export function xanoAdminFunctionRequest<T = any>(path: string, init: RequestInit = {}) {
+  return xanoRequestFromBase<T>(XANO_ADMIN_FUNCTION_URL, path, init, { auth: true })
 }
 
 export async function xanoRequest<T>(path: string, init: RequestInit = {}, options: { auth?: boolean } = {}): Promise<T> {
