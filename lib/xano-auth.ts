@@ -40,6 +40,7 @@ function resolveRequestUrl(path: string) {
 
   const [, requestedGroup, suffix = ""] = match
   const group = requestedGroup === "admin-api" ? "yYNRHo4K" : requestedGroup
+  if (typeof window !== "undefined") return `/api/xano/${group}${suffix}`
   const configuredGroupUrl = API_GROUPS[requestedGroup] || API_GROUPS[group] || XANO_BASE_URL
   const origin = normalizeOrigin(configuredGroupUrl)
   if (!origin) throw new Error(`Xano API group ${group} is not configured`)
