@@ -1,10 +1,29 @@
 import { xanoRequest } from '@/lib/xano-auth'
 
 function tokenFrom(payload: any): string | undefined {
-  const value = payload?.authToken ?? payload?.auth_token ?? payload?.token ??
-    payload?.data?.authToken ?? payload?.data?.auth_token ?? payload?.data?.token ??
-    payload?.session?.authToken ?? payload?.session?.auth_token ?? payload?.session?.token
-  return value == null || value === '' ? undefined : String(value)
+  const candidates = [
+    payload?.authToken,
+    payload?.auth_token,
+    payload?.token,
+    payload?.access_token,
+    payload?.authenticationToken,
+    payload?.authentication_token,
+    payload?.data?.authToken,
+    payload?.data?.auth_token,
+    payload?.data?.token,
+    payload?.data?.access_token,
+    payload?.data?.authenticationToken,
+    payload?.data?.authentication_token,
+    payload?.session?.authToken,
+    payload?.session?.auth_token,
+    payload?.session?.token,
+    payload?.session?.access_token,
+    payload?.session?.authenticationToken,
+    payload?.session?.authentication_token,
+  ]
+
+  const value = candidates.find((candidate) => candidate != null && String(candidate).trim() !== '')
+  return value == null ? undefined : String(value)
 }
 
 function userIdFrom(payload: any): string {
