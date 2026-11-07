@@ -1,9 +1,9 @@
 const XANO_BASE_URL = process.env.NEXT_PUBLIC_XANO_BASE_URL ?? process.env.XANO_BASE_URL ?? ""
 const XANO_AUTH_URL = process.env.NEXT_PUBLIC_XANO_AUTH_URL ?? process.env.XANO_AUTH_URL ?? ""
-const XANO_EVENT_LOG_URL = process.env.NEXT_PUBLIC_XANO_EVENT_LOG_URL ?? process.env.XANO_EVENT_LOG_URL ?? ""
+const XANO_EVENT_LOG_URL = process.env.NEXT_PUBLIC_XANO_EVENT_LOG_URL ?? process.env.XANO_EVENT_LOG_URL ?? process.env.XANO_EVENTLOG_URL ?? ""
 const XANO_LEDGER_URL = process.env.NEXT_PUBLIC_XANO_LEDGER_URL ?? process.env.XANO_LEDGER_URL ?? ""
-const XANO_ADMIN_URL = process.env.NEXT_PUBLIC_XANO_ADMIN_URL ?? process.env.XANO_ADMIN_URL ?? ""
-const XANO_PAYMENT_URL = process.env.NEXT_PUBLIC_XANO_PAYMENT_URL ?? process.env.XANO_PAYMENT_URL ?? ""
+const XANO_ADMIN_URL = process.env.NEXT_PUBLIC_XANO_ADMIN_URL ?? process.env.XANO_ADMIN_URL ?? process.env.xanoAdminUrl ?? ""
+const XANO_PAYMENT_URL = process.env.NEXT_PUBLIC_XANO_PAYMENT_URL ?? process.env.XANO_PAYMENT_URL ?? process.env.XANO_PAYMENTS ?? ""
 
 const API_GROUPS: Record<string, string> = {
   r2YmAApr: XANO_AUTH_URL,
@@ -27,6 +27,7 @@ function resolveRequestUrl(path: string) {
   }
   const [, requestedGroup, suffix = ""] = match
   const group = requestedGroup === "admin-api" ? "yYNRHo4K" : requestedGroup
+  if (typeof window !== "undefined") return `/api/xano/${group}${suffix}`
   const origin = normalizeOrigin(API_GROUPS[requestedGroup] || API_GROUPS[group] || XANO_BASE_URL)
   if (!origin) throw new Error(`Xano API group ${group} is not configured`)
   return `${origin}/api:${group}${suffix}`
