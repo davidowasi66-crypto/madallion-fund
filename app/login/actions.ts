@@ -1,18 +1,18 @@
-'use server'
+import { xanoRequest } from '@/lib/xano-auth'
 
-import { headers } from 'next/headers'
-
-function stripGroupSuffix(value: string) {
-  return value.trim().replace(/\/+$/, '').replace(/\/api:[^/]+$/, '')
+function tokenFrom(payload: any): string | undefined {
+  const value = payload?.authToken ?? payload?.auth_token ?? payload?.token ??
+    payload?.data?.authToken ?? payload?.data?.auth_token ?? payload?.data?.token ??
+    payload?.session?.authToken ?? payload?.session?.auth_token ?? payload?.session?.token
+  return value == null || value === '' ? undefined : String(value)
 }
 
-const BASE_URL = stripGroupSuffix(
-  process.env.NEXT_PUBLIC_XANO_AUTH_URL ??
-    process.env.XANO_AUTH_URL ??
-    process.env.NEXT_PUBLIC_XANO_BASE_URL ??
-    process.env.XANO_BASE_URL ??
-    '',
-)
+function userIdFrom(payload: any): string {
+  const value = payload?.user_id ?? payload?.userId ?? payload?.id ?? payload?.user?.id ??
+    payload?.data?.user_id ?? payload?.data?.userId ?? payload?.data?.id ?? payload?.data?.user?.id ??
+    payload?.session?.user_id ?? payload?.session?.user?.id
+  return value == null ? '' : String(value)
+}
 
 export type LoginState = { ok: true; session: { authToken: string; user_id: string } } | { ok: false; error: string }
 
@@ -20,25 +20,16 @@ export async function loginAction(_previous: LoginState | null, formData: FormDa
   const email = String(formData.get('email') ?? '').trim().toLowerCase()
   const password = String(formData.get('password') ?? '')
   if (!email || !password) return { ok: false, error: 'Enter your email and password.' }
-  if (!BASE_URL) return { ok: false, error: 'Authentication is not configured.' }
-
   try {
-    const response = await fetch(`${BASE_URL}/api:r2YmAApr/auth/login`, {
+    const body = await xanoRequest<any>('/api:r2YmAApr/auth/login', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-forwarded-host': (await headers()).get('host') ?? '' },
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ email, password }),
-      credentials: 'include',
-      cache: 'no-store',
     })
-    const body = await response.json().catch(() => null)
-    if (!response.ok) return { ok: false, error: body?.message || body?.error || 'Invalid email or password.' }
-
-    const authToken = body?.authToken ?? body?.auth_token ?? body?.token ?? body?.data?.authToken ?? body?.data?.auth_token ?? body?.data?.token ?? body?.session?.authToken ?? body?.session?.auth_token ?? body?.session?.token
-    if (!authToken) return { ok: false, error: body?.message || body?.error || 'The login response did not include an auth token.' }
-
-    const userId = body?.user_id ?? body?.userId ?? body?.id ?? body?.user?.id ?? body?.data?.user_id ?? body?.data?.userId ?? body?.data?.id ?? body?.data?.user?.id ?? body?.session?.user_id ?? body?.session?.user?.id
-    return { ok: true, session: { authToken: String(authToken), user_id: userId == null ? '' : String(userId) } }
-  } catch {
-    return { ok: false, error: 'Unable to reach the authentication service. Try again.' }
+    const authToken = tokenFrom(body)
+    if (!authToken) return { ok: false, error: body?.message || body?.error || 'Login succeeded but Xano did not return an auth token. Check the login response schema in Swagger.' }
+    return { ok: true, session: { authToken, user_id: userIdFrom(body) } }
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : 'Unable to reach the authentication service.' }
   }
 }
