@@ -1,9 +1,10 @@
 const XANO_BASE_URL = process.env.NEXT_PUBLIC_XANO_BASE_URL ?? process.env.XANO_BASE_URL ?? ""
 const XANO_AUTH_URL = process.env.NEXT_PUBLIC_XANO_AUTH_URL ?? process.env.XANO_AUTH_URL ?? ""
-const XANO_EVENT_LOG_URL = process.env.NEXT_PUBLIC_XANO_EVENT_LOG_URL ?? process.env.XANO_EVENT_LOG_URL ?? ""
+const XANO_EVENT_LOG_URL = process.env.NEXT_PUBLIC_XANO_EVENT_LOG_URL ?? process.env.XANO_EVENT_LOG_URL ?? process.env.XANO_EVENTLOG_URL ?? ""
 const XANO_LEDGER_URL = process.env.NEXT_PUBLIC_XANO_LEDGER_URL ?? process.env.XANO_LEDGER_URL ?? ""
 const XANO_ADMIN_URL = process.env.NEXT_PUBLIC_XANO_ADMIN_URL ?? process.env.XANO_ADMIN_URL ?? ""
 const XANO_PAYMENT_URL = process.env.NEXT_PUBLIC_XANO_PAYMENT_URL ?? process.env.XANO_PAYMENT_URL ?? ""
+const XANO_PAYMENTS_URL = process.env.XANO_PAYMENTS ?? ""
 
 const endpoints = {
   login: "/api:r2YmAApr/auth/login",
@@ -88,6 +89,28 @@ export function clearXanoSession() {
 }
 
 function endpoint(path: string) { return resolveRequestUrl(path) }
+
+async function xanoRequestFromBase<T>(baseUrl: string, path: string, init: RequestInit = {}, options: { auth?: boolean } = {}): Promise<T> {
+  const base = baseUrl.trim().replace(/\/$/, '')
+  if (!base) throw new Error('Xano payments API is not configured')
+  const headers = new Headers(init.headers ?? {})
+  if (options.auth) {
+    const session = getXanoSession()
+    if (!session?.authToken) throw new Error('Not authenticated')
+    headers.set('Authorization', `Bearer ${session.authToken}`)
+  }
+  if (init.body && !headers.has('Content-Type') && !(init.body instanceof FormData)) headers.set('Content-Type', 'application/json')
+  const response = await fetch(`${base}${path}`, { ...init, headers, credentials: 'include', cache: 'no-store' })
+  const text = await response.text()
+  let body: any = null
+  try { body = text ? JSON.parse(text) : null } catch { body = text }
+  if (!response.ok) throw new Error(`${response.status}: ${body?.message || body?.error || 'Request failed'}`)
+  return body as T
+}
+
+export function xanoPaymentsRequest<T = any>(path: string, init: RequestInit = {}, auth = false) {
+  return xanoRequestFromBase<T>(XANO_PAYMENTS_URL, path, init, { auth })
+}
 
 export async function xanoRequest<T>(path: string, init: RequestInit = {}, options: { auth?: boolean } = {}): Promise<T> {
   const url = resolveRequestUrl(path)
