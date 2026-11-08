@@ -48,7 +48,7 @@ function resolveRequestUrl(path: string) {
 }
 
 function authTokenFrom(payload: any): string | undefined {
-  const value = payload?.authToken ?? payload?.auth_token ?? payload?.token ??
+  const value = payload?.authToken ?? payload?.auth_token ?? payload?.token ?? payload?.access_token ?? payload?.authenticationToken ?? payload?.authentication_token ??
     payload?.data?.authToken ?? payload?.data?.auth_token ?? payload?.data?.token ??
     payload?.session?.authToken ?? payload?.session?.auth_token ?? payload?.session?.token
   return value == null || value === "" ? undefined : String(value)
@@ -149,7 +149,7 @@ export async function xanoRequest<T>(path: string, init: RequestInit = {}, optio
 }
 
 export async function xanoLogin(email: string, password: string) {
-  return normalizeAuthSession(await xanoRequest<any>(endpoints.login, { method: "POST", body: JSON.stringify({ email: email.trim().toLowerCase(), password }) }))
+  return normalizeAuthSession(await xanoRequest<any>(endpoints.login, { method: "POST", body: JSON.stringify({ email: email.trim().toLowerCase(), username: email.trim().toLowerCase(), password }) }))
 }
 
 export async function xanoSignup(name: string, email: string, password: string) {
