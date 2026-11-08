@@ -93,8 +93,8 @@ export async function xanoAdminInvestments(token?: string | null, page = 1, perP
 export async function xanoAdminTrialBalance(token?: string | null, ledgerId = 1) { return xanoRequest<any>(buildQuery("/api:yYNRHo4K/fn_admin_trial_balance", { ledger_id: ledgerId }), { method: "GET" }, token) }
 export async function xanoAdminReconciliation(token?: string | null, ledgerId = 1) { return xanoRequest<any>(buildQuery("/api:yYNRHo4K/fn_admin_reconciliation", { ledger_id: ledgerId }), { method: "GET" }, token) }
 export async function xanoAdminAuditLogs(token?: string | null, page = 1, perPage = 25) { return xanoRequest<any>(buildQuery("/api:yYNRHo4K/fn_admin_audit_logs", { page, per_page: perPage }), { method: "GET" }, token) }
-export async function xanoLedgerDashboard(token?: string | null) { return xanoRequest<any>("/api:ledger-api/accounts", { method: "GET" }, token) }
-export async function xanoLedgerAccounts(token?: string | null, query?: Record<string, string | number | undefined>) { return xanoRequest<any>(buildQuery("/api:ledger-api/accounts", query), { method: "GET" }, token) }
+export async function xanoLedgerDashboard(token?: string | null) { return xanoRequest<any>("/api:ledger-api/admin/dashboard", { method: "GET" }, token) }
+export async function xanoLedgerAccounts(token?: string | null, query?: Record<string, string | number | undefined>) { return xanoRequest<any>(buildQuery("/api:ledger-api/accounts", query), { method: "GET" }) }
 export async function xanoLedgerAccount(token: string | null | undefined, accountId: string | number) { return xanoRequest<any>(`/api:ledger-api/accounts/${encodeURIComponent(accountId)}`, { method: "GET" }, token) }
 export async function xanoLedgerTransactions(token?: string | null, query?: Record<string, string | number | undefined>) { return xanoRequest<any>(buildQuery("/api:ledger-api/transactions", query), { method: "GET" }, token) }
 export async function xanoLedgerTrialBalance(token?: string | null, ledgerId = 1) { return xanoRequest<any>(buildQuery("/api:ledger-api/reports/trial-balance", { ledger_id: ledgerId }), { method: "GET" }, token) }
