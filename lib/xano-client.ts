@@ -82,8 +82,8 @@ export function toMoney(value: unknown, fallback = "₦0") {
   const numeric = Number(value)
   return Number.isFinite(numeric) ? `₦${Math.abs(numeric).toLocaleString()}` : fallback
 }
-export async function xanoAuthLogin(email: string, password: string) { return xanoRequest<any>("/api:r2YmAApr/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }) }
-export async function xanoAuthSignup(name: string, email: string, password: string) { return xanoRequest<any>("/api:r2YmAApr/auth/signup", { method: "POST", body: JSON.stringify({ name, email, password }) }) }
+export async function xanoAuthLogin(email: string, password: string) { return xanoRequest<any>("/api:r2YmAApr/auth/login", { method: "POST", body: JSON.stringify({ email, username: email, password }) }) }
+export async function xanoAuthSignup(name: string, email: string, password: string) { return xanoRequest<any>("/api:r2YmAApr/auth/signup", { method: "POST", body: JSON.stringify({ name, email, username: email, password }) }) }
 export async function xanoAuthMe(token?: string | null) { return xanoRequest<any>("/api:r2YmAApr/auth/me", { method: "GET" }, token) }
 export async function xanoResetRequest(email: string) { return xanoRequest<any>(buildQuery("/api:r2YmAApr/reset/request-reset-link", { email }), { method: "GET" }) }
 export async function xanoAdminDashboard(token?: string | null) { return xanoRequest<any>("/api:yYNRHo4K/fn_admin_dashboard", { method: "GET" }, token) }

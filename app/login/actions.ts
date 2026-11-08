@@ -43,7 +43,7 @@ export async function loginAction(_previous: LoginState | null, formData: FormDa
     const body = await xanoRequest<any>('/api:r2YmAApr/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, username: email, password }),
     })
     const authToken = tokenFrom(body)
     if (!authToken) return { ok: false, error: body?.message || body?.error || 'Login succeeded but Xano did not return an auth token. Check the login response schema in Swagger.' }
