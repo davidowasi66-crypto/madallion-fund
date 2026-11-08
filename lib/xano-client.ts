@@ -14,9 +14,7 @@ const API_GROUPS: Record<string, string> = {
   "admin-api": XANO_ADMIN_URL,
 }
 
-function normalizeOrigin(value: string) {
-  return value.trim().replace(/\/+$/, "").replace(/\/api:[^/]+$/, "")
-}
+function normalizeOrigin(value: string) { return value.trim().replace(/\/+$/, "").replace(/\/api:[^/]+$/, "") }
 
 function resolveRequestUrl(path: string) {
   const match = path.match(/^\/api:([^/]+)(\/.*)?$/)
@@ -34,12 +32,10 @@ function resolveRequestUrl(path: string) {
 }
 
 export function normalizeBaseUrl() { return normalizeOrigin(XANO_BASE_URL) }
-
 export function getStoredXanoToken() {
   if (typeof window === "undefined") return null
   return window.localStorage.getItem("madallion_auth_token") ?? window.sessionStorage.getItem("madallion_auth_token")
 }
-
 export function buildXanoHeaders(token?: string | null, init?: RequestInit) {
   const headers = new Headers(init?.headers ?? {})
   if (!headers.has("Content-Type") && !(init?.body instanceof FormData)) headers.set("Content-Type", "application/json")
@@ -47,7 +43,6 @@ export function buildXanoHeaders(token?: string | null, init?: RequestInit) {
   if (resolvedToken) headers.set("Authorization", `Bearer ${resolvedToken}`)
   return headers
 }
-
 export function buildQuery(endpoint: string, params?: Record<string, string | number | boolean | undefined>) {
   if (!params) return endpoint
   const query = new URLSearchParams()
@@ -55,7 +50,6 @@ export function buildQuery(endpoint: string, params?: Record<string, string | nu
   const qs = query.toString()
   return qs ? `${endpoint}?${qs}` : endpoint
 }
-
 export async function xanoRequest<T>(path: string, options: RequestInit = {}, token?: string | null): Promise<T> {
   const url = resolveRequestUrl(path)
   const controller = new AbortController()
@@ -77,7 +71,6 @@ export async function xanoRequest<T>(path: string, options: RequestInit = {}, to
   if (!contentType.includes("application/json")) return (await response.text()) as unknown as T
   return (await response.json()) as T
 }
-
 export function getFirstValue(data: any, paths: string[]) {
   for (const path of paths) {
     const value = path.split(".").reduce<any>((acc, key) => acc == null ? undefined : acc[key], data)
@@ -85,12 +78,10 @@ export function getFirstValue(data: any, paths: string[]) {
   }
   return undefined
 }
-
 export function toMoney(value: unknown, fallback = "₦0") {
   const numeric = Number(value)
   return Number.isFinite(numeric) ? `₦${Math.abs(numeric).toLocaleString()}` : fallback
 }
-
 export async function xanoAuthLogin(email: string, password: string) { return xanoRequest<any>("/api:r2YmAApr/auth/login", { method: "POST", body: JSON.stringify({ email, password }) }) }
 export async function xanoAuthSignup(name: string, email: string, password: string) { return xanoRequest<any>("/api:r2YmAApr/auth/signup", { method: "POST", body: JSON.stringify({ name, email, password }) }) }
 export async function xanoAuthMe(token?: string | null) { return xanoRequest<any>("/api:r2YmAApr/auth/me", { method: "GET" }, token) }
@@ -102,14 +93,13 @@ export async function xanoAdminInvestments(token?: string | null, page = 1, perP
 export async function xanoAdminTrialBalance(token?: string | null, ledgerId = 1) { return xanoRequest<any>(buildQuery("/api:yYNRHo4K/fn_admin_trial_balance", { ledger_id: ledgerId }), { method: "GET" }, token) }
 export async function xanoAdminReconciliation(token?: string | null, ledgerId = 1) { return xanoRequest<any>(buildQuery("/api:yYNRHo4K/fn_admin_reconciliation", { ledger_id: ledgerId }), { method: "GET" }, token) }
 export async function xanoAdminAuditLogs(token?: string | null, page = 1, perPage = 25) { return xanoRequest<any>(buildQuery("/api:yYNRHo4K/fn_admin_audit_logs", { page, per_page: perPage }), { method: "GET" }, token) }
-export async function xanoLedgerDashboard(token?: string | null) { return xanoRequest<any>("/api:ledger-api/admin/dashboard", { method: "GET" }, token) }
+export async function xanoLedgerDashboard(token?: string | null) { return xanoRequest<any>("/api:ledger-api/accounts", { method: "GET" }, token) }
 export async function xanoLedgerAccounts(token?: string | null, query?: Record<string, string | number | undefined>) { return xanoRequest<any>(buildQuery("/api:ledger-api/accounts", query), { method: "GET" }, token) }
 export async function xanoLedgerAccount(token: string | null | undefined, accountId: string | number) { return xanoRequest<any>(`/api:ledger-api/accounts/${encodeURIComponent(accountId)}`, { method: "GET" }, token) }
 export async function xanoLedgerTransactions(token?: string | null, query?: Record<string, string | number | undefined>) { return xanoRequest<any>(buildQuery("/api:ledger-api/transactions", query), { method: "GET" }, token) }
 export async function xanoLedgerTrialBalance(token?: string | null, ledgerId = 1) { return xanoRequest<any>(buildQuery("/api:ledger-api/reports/trial-balance", { ledger_id: ledgerId }), { method: "GET" }, token) }
 export async function xanoEventLogRequest<T>(route: string, options: RequestInit = {}, token?: string | null) { return xanoRequest<T>(`/api:IkEAMc9L/${route.replace(/^\/+/, "")}`, options, token) }
 export async function xanoPaymentRequest<T>(route: string, options: RequestInit = {}, token?: string | null) { return xanoRequest<T>(`/api:dKuEO75q/${route.replace(/^\/+/, "")}`, options, token) }
-
 export function toTitleCase(value: string) { return value.replace(/[_-]+/g, " ").replace(/\s+/g, " ").split(" ").filter(Boolean).map(part => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase()).join(" ") }
 export function toNumeric(value: unknown, fallback = 0) { const num = Number(value); return Number.isFinite(num) ? num : fallback }
 export function chooseArray<T>(candidate: unknown, fallback: T[]): T[] { return Array.isArray(candidate) ? candidate as T[] : fallback }

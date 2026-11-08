@@ -22,8 +22,8 @@ function RegisterForm() {
     event.preventDefault()
     setError('')
     const trimmedName = name.trim()
-    const trimmedEmail = email.trim()
-    const trimmedPassword = password.trim()
+    const trimmedEmail = email.trim().toLowerCase()
+    const trimmedPassword = password
     if (!trimmedName || !trimmedEmail || !trimmedPassword) {
       setError('Complete all fields to create your account.')
       return
@@ -31,11 +31,12 @@ function RegisterForm() {
     setLoading(true)
     try {
       const session = await xanoSignup(trimmedName, trimmedEmail, trimmedPassword)
+      if (!session?.authToken) throw new Error('Xano created the account but did not return an auth token. Try signing in, or check whether email verification is required.')
       saveXanoSession(session)
       const next = searchParams.get('next')
       router.push(next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard')
-    } catch {
-      setError('We could not create your account. Check your details and try again.')
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to create the account. Please try again.')
     } finally {
       setLoading(false)
     }
