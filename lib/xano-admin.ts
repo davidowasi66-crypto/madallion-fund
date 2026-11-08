@@ -93,7 +93,7 @@ export const LedgerAdminDashboardResponseSchema = z.object({
 export type LedgerAdminDashboardResponse = z.infer<typeof LedgerAdminDashboardResponseSchema>
 
 // ============================================================================
-// 2. /api:admin-api/fn_admin_dashboard
+// 2. /api:yYNRHo4K/fn_admin_dashboard
 // ============================================================================
 
 export const AdminDashboardAlertSchema = z.object({
@@ -161,7 +161,7 @@ export const AdminDashboardResponseSchema = z.object({
 export type AdminDashboardResponse = z.infer<typeof AdminDashboardResponseSchema>
 
 // ============================================================================
-// 3. /api:admin-api/fn_admin_pending
+// 3. /api:yYNRHo4K/fn_admin_pending
 // ============================================================================
 
 export const AdminPendingUserSchema = z.object({
@@ -201,7 +201,7 @@ export const AdminPendingResponseSchema = z.object({
 export type AdminPendingResponse = z.infer<typeof AdminPendingResponseSchema>
 
 // ============================================================================
-// 4. /api:admin-api/fn_admin_user_list
+// 4. /api:yYNRHo4K/fn_admin_user_list
 // ============================================================================
 
 export const AdminUserListItemSchema = z.object({
@@ -285,42 +285,42 @@ export const getLedgerAdminDashboard = async (ledgerId = 1): Promise<LedgerAdmin
 }
 
 export const getAdminDashboard = async (): Promise<AdminDashboardResponse> => {
-  return request<AdminDashboardResponse>("/api:admin-api/fn_admin_dashboard", AdminDashboardResponseSchema, {
+  return request<AdminDashboardResponse>("/api:yYNRHo4K/fn_admin_dashboard", AdminDashboardResponseSchema, {
     auth: true,
   })
 }
 
 export const getAdminPending = async (params: { p_kind?: "deposits" | "withdrawals"; page?: number; per_page?: number } = {}): Promise<AdminPendingResponse> => {
-  return request<AdminPendingResponse>("/api:admin-api/fn_admin_pending", AdminPendingResponseSchema, {
+  return request<AdminPendingResponse>("/api:yYNRHo4K/fn_admin_pending", AdminPendingResponseSchema, {
     auth: true,
     query: params,
   })
 }
 
 export const getAdminUserList = async (params: { p_search?: string; p_status?: "admin" | "member"; page?: number; per_page?: number } = {}): Promise<AdminUserListResponse> => {
-  return request<AdminUserListResponse>("/api:admin-api/fn_admin_user_list", AdminUserListResponseSchema, {
+  return request<AdminUserListResponse>("/api:yYNRHo4K/fn_admin_user_list", AdminUserListResponseSchema, {
     auth: true,
     query: params,
   })
 }
 
 export const getAdminInvestments = async (params: { page?: number; per_page?: number } = {}): Promise<AdminInvestmentsResponse> => {
-  return request<AdminInvestmentsResponse>("/api:admin-api/fn_admin_investments", AdminInvestmentsResponseSchema, {
+  return request<AdminInvestmentsResponse>("/api:yYNRHo4K/fn_admin_investments", AdminInvestmentsResponseSchema, {
     auth: true,
     query: params,
   })
 }
 
 export const approveDeposit = async (payload: Record<string, unknown>) => {
-  return xanoRequest<Record<string, unknown>>("/api:admin-api/fn_approve_deposit", { method: "POST", body: JSON.stringify(payload) }, { auth: true })
+  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_approve_deposit", { method: "POST", body: JSON.stringify(payload) }, { auth: true })
 }
 
 export const settleWithdrawal = async (payload: Record<string, unknown>) => {
-  return xanoRequest<Record<string, unknown>>("/api:admin-api/fn_settle_withdrawal", { method: "POST", body: JSON.stringify(payload) }, { auth: true })
+  return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_settle_withdrawal", { method: "POST", body: JSON.stringify(payload) }, { auth: true })
 }
 
 export const getAdminUser360 = async (id: number | string) => {
-  return xanoRequest<Record<string, unknown>>(`/api:admin-api/fn_admin_user_360?p_user=${encodeURIComponent(String(id))}`, {}, { auth: true })
+  return xanoRequest<Record<string, unknown>>(`/api:yYNRHo4K/fn_admin_user_360?p_user=${encodeURIComponent(String(id))}`, {}, { auth: true })
 }
 
 export default {

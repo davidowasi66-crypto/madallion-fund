@@ -9,8 +9,8 @@ export const unwrapList = list
 export const getPlans = async () => list(await xanoAdminFunctionRequest('/fn_admin_plans')) as Plan[]
 export const createPlan = (payload: Partial<Plan>) => xanoAdminFunctionRequest('/fn_admin_plan_create', { method: 'POST', body: JSON.stringify(payload) })
 export const updatePlan = (id: number, payload: Partial<Plan>) => xanoAdminFunctionRequest(`/fn_admin_plan/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
-export const getMyInvestments = async () => list(await xanoRequest('/api:ledger-api/investments', {}, { auth: true })) as Investment[]
-export const getMyWallet = async () => list(await xanoRequest('/api:ledger-api/accounts', {}, { auth: true }))
+export const getMyInvestments = async () => list(await xanoRequest('/api:ledger-api/accounts', {}, { auth: true })) as Investment[]
+export const getMyWallet = async () => list(await xanoRequest('/api:ledger-api/accounts'))
 export const getMyCashflow = async () => list(await xanoRequest('/api:ledger-api/transactions', {}, { auth: true }))
 export const initializeDeposit = (payload: { amount: number; currency?: string }) => xanoPaymentRequest('/deposit/initialize', { method: 'POST', body: JSON.stringify(payload) }, true)
 export const requestWithdrawal = (payload: { amount: number; currency?: string; account_id?: number }) => xanoPaymentRequest('/withdrawal/request', { method: 'POST', body: JSON.stringify(payload) }, true)

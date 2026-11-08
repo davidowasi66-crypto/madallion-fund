@@ -111,11 +111,11 @@ async function xanoRequestFromBase<T>(baseUrl: string, path: string, init: Reque
 }
 
 export function xanoPaymentsRequest<T = any>(path: string, init: RequestInit = {}, auth = false) {
-  return xanoRequestFromBase<T>(XANO_PAYMENTS_URL, path, init, { auth })
+  return xanoRequest<T>(`/api:dKuEO75q${path}`, init, { auth })
 }
 
 export function xanoAdminFunctionRequest<T = any>(path: string, init: RequestInit = {}) {
-  return xanoRequestFromBase<T>(XANO_ADMIN_FUNCTION_URL, path, init, { auth: true })
+  return xanoRequest<T>(`/api:yYNRHo4K${path}`, init, { auth: true })
 }
 
 export async function xanoRequest<T>(path: string, init: RequestInit = {}, options: { auth?: boolean } = {}): Promise<T> {
@@ -169,10 +169,10 @@ export async function xanoAdminPnl() { return xanoRequest<Record<string, unknown
 export async function xanoAdminReconciliation() { return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_reconciliation", {}, { auth: true }) }
 export async function xanoAdminTrialBalance() { return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_trial_balance", {}, { auth: true }) }
 export async function xanoAdminAuditLogs() { return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_audit_logs", {}, { auth: true }) }
-export async function xanoLedgerSummary() { return xanoRequest<Record<string, unknown>>("/api:ledger-api/ledger/summary", {}, { auth: true }) }
-export async function xanoAccounts() { return xanoRequest<Record<string, unknown>>("/api:ledger-api/accounts", {}, { auth: true }) }
+export async function xanoLedgerSummary() { return xanoRequest<Record<string, unknown>>("/api:ledger-api/admin/dashboard", {}, { auth: true }) }
+export async function xanoAccounts() { return xanoRequest<Record<string, unknown>>("/api:ledger-api/accounts") }
 export async function xanoTransactions() { return xanoRequest<Record<string, unknown>>("/api:ledger-api/transactions", {}, { auth: true }) }
-export async function xanoBalances() { return xanoRequest<Record<string, unknown>>("/api:ledger-api/balances", {}, { auth: true }) }
+export async function xanoBalances() { return xanoRequest<Record<string, unknown>>("/api:ledger-api/accounts") }
 
 // Generic wrappers for endpoints in the event-log and payment API groups.
 export async function xanoEventLogRequest<T>(route: string, init: RequestInit = {}, auth = true) {
