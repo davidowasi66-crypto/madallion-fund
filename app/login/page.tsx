@@ -26,7 +26,6 @@ function LoginForm() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (event.nativeEvent.isComposing || (event as React.KeyboardEvent).keyCode === 229) return
     setPending(true)
     setState(null)
     const form = new FormData(event.currentTarget)
