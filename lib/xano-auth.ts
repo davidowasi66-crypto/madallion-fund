@@ -47,27 +47,91 @@ function resolveRequestUrl(path: string) {
   return `${origin}/api:${group}${suffix}`
 }
 
-function authTokenFrom(payload: any): string | undefined {
-  const value = payload?.authToken ?? payload?.auth_token ?? payload?.token ??
-    payload?.data?.authToken ?? payload?.data?.auth_token ?? payload?.data?.token ??
-    payload?.session?.authToken ?? payload?.session?.auth_token ?? payload?.session?.token
-  return value == null || value === "" ? undefined : String(value)
+function pickFirstNonEmpty(...candidates: unknown[]): string | undefined {
+  for (const candidate of candidates) {
+    if (candidate == null) continue
+    const value = String(candidate).trim()
+    if (value) return value
+  }
+  return undefined
 }
 
-function normalizeAuthSession(payload: any) {
+export function authTokenFrom(payload: any): string | undefined {
+  const value = pickFirstNonEmpty(
+    payload?.authToken,
+    payload?.auth_token,
+    payload?.token,
+    payload?.access_token,
+    payload?.jwt,
+    payload?.authenticationToken,
+    payload?.authentication_token,
+    payload?.data?.authToken,
+    payload?.data?.auth_token,
+    payload?.data?.token,
+    payload?.data?.access_token,
+    payload?.data?.jwt,
+    payload?.data?.authenticationToken,
+    payload?.data?.authentication_token,
+    payload?.session?.authToken,
+    payload?.session?.auth_token,
+    payload?.session?.token,
+    payload?.session?.access_token,
+    payload?.session?.jwt,
+    payload?.session?.authenticationToken,
+    payload?.session?.authentication_token,
+    payload?.auth?.token,
+    payload?.auth?.access_token,
+    payload?.auth?.authToken,
+    payload?.data?.session?.authToken,
+    payload?.data?.session?.token,
+    payload?.data?.session?.access_token,
+    payload?.user?.authToken,
+    payload?.user?.token,
+    payload?.user?.access_token,
+    payload?.result?.authToken,
+    payload?.result?.token,
+    payload?.result?.access_token,
+  )
+  return value
+}
+
+export function userIdFrom(payload: any): string {
+  const value = pickFirstNonEmpty(
+    payload?.user_id,
+    payload?.userId,
+    payload?.id,
+    payload?.user?.id,
+    payload?.data?.user_id,
+    payload?.data?.userId,
+    payload?.data?.id,
+    payload?.data?.user?.id,
+    payload?.session?.user_id,
+    payload?.session?.user?.id,
+    payload?.auth?.user_id,
+    payload?.auth?.userId,
+    payload?.auth?.id,
+    payload?.data?.session?.user_id,
+    payload?.data?.session?.user?.id,
+  )
+  return value ?? ""
+}
+
+export function normalizeAuthSession(payload: any) {
   const authToken = authTokenFrom(payload)
   if (!authToken) throw new Error(String(payload?.message || payload?.error || "Xano did not return an authentication token."))
-  const userId = payload?.user_id ?? payload?.userId ?? payload?.id ?? payload?.user?.id ??
-    payload?.data?.user_id ?? payload?.data?.userId ?? payload?.data?.id ?? payload?.data?.user?.id ??
-    payload?.session?.user_id ?? payload?.session?.user?.id
-  return { authToken, user_id: userId == null ? "" : String(userId) }
+  return { authToken, user_id: userIdFrom(payload) }
 }
 
 export function getXanoBaseUrl() { return normalizeOrigin(XANO_BASE_URL) }
 
+export function getStoredXanoToken() {
+  if (typeof window === "undefined") return null
+  return localStorage.getItem(STORAGE_KEYS.authToken) ?? sessionStorage.getItem(STORAGE_KEYS.authToken)
+}
+
 export function getXanoSession() {
   if (typeof window === "undefined") return null
-  const authToken = localStorage.getItem(STORAGE_KEYS.authToken) || sessionStorage.getItem(STORAGE_KEYS.authToken)
+  const authToken = getStoredXanoToken()
   const userId = localStorage.getItem(STORAGE_KEYS.userId) || sessionStorage.getItem(STORAGE_KEYS.userId)
   return authToken ? { authToken, user_id: userId ?? "" } : null
 }
@@ -111,21 +175,24 @@ async function xanoRequestFromBase<T>(baseUrl: string, path: string, init: Reque
 }
 
 export function xanoPaymentsRequest<T = any>(path: string, init: RequestInit = {}, auth = false) {
-  return xanoRequestFromBase<T>(XANO_PAYMENTS_URL, path, init, { auth })
+  return xanoRequest<T>(`/api:dKuEO75q${path}`, init, { auth })
 }
 
 export function xanoAdminFunctionRequest<T = any>(path: string, init: RequestInit = {}) {
-  return xanoRequestFromBase<T>(XANO_ADMIN_FUNCTION_URL, path, init, { auth: true })
+  return xanoRequest<T>(`/api:yYNRHo4K${path}`, init, { auth: true })
 }
 
 export async function xanoRequest<T>(path: string, init: RequestInit = {}, options: { auth?: boolean } = {}): Promise<T> {
   const url = resolveRequestUrl(path)
   const headers = new Headers(init.headers ?? {})
-  if (options.auth) {
-    const session = getXanoSession()
-    if (!session?.authToken) throw new Error("Not authenticated")
-    headers.set("Authorization", `Bearer ${session.authToken}`)
+  const session = getXanoSession()
+  const token = session?.authToken ?? getStoredXanoToken()
+
+  if (options.auth || token) {
+    if (!token) throw new Error('Not authenticated')
+    headers.set('Authorization', `Bearer ${token}`)
   }
+
   if (typeof init.body === "string" && init.body.length && !headers.has("Content-Type")) headers.set("Content-Type", "application/json")
 
   const controller = new AbortController()
@@ -149,11 +216,17 @@ export async function xanoRequest<T>(path: string, init: RequestInit = {}, optio
 }
 
 export async function xanoLogin(email: string, password: string) {
-  return normalizeAuthSession(await xanoRequest<any>(endpoints.login, { method: "POST", body: JSON.stringify({ email: email.trim().toLowerCase(), password }) }))
+  const payload = await xanoRequest<any>(endpoints.login, { method: "POST", body: JSON.stringify({ email: email.trim().toLowerCase(), username: email.trim().toLowerCase(), password }) })
+  const session = normalizeAuthSession(payload)
+  saveXanoSession(session)
+  return session
 }
 
 export async function xanoSignup(name: string, email: string, password: string) {
-  return normalizeAuthSession(await xanoRequest<any>(endpoints.signup, { method: "POST", body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), password }) }))
+  const payload = await xanoRequest<any>(endpoints.signup, { method: "POST", body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), password }) })
+  const session = normalizeAuthSession(payload)
+  saveXanoSession(session)
+  return session
 }
 
 export async function xanoRequestReset(email: string) {
@@ -169,10 +242,10 @@ export async function xanoAdminPnl() { return xanoRequest<Record<string, unknown
 export async function xanoAdminReconciliation() { return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_reconciliation", {}, { auth: true }) }
 export async function xanoAdminTrialBalance() { return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_trial_balance", {}, { auth: true }) }
 export async function xanoAdminAuditLogs() { return xanoRequest<Record<string, unknown>>("/api:yYNRHo4K/fn_admin_audit_logs", {}, { auth: true }) }
-export async function xanoLedgerSummary() { return xanoRequest<Record<string, unknown>>("/api:ledger-api/ledger/summary", {}, { auth: true }) }
+export async function xanoLedgerSummary() { return xanoRequest<Record<string, unknown>>("/api:ledger-api/admin/dashboard", {}, { auth: true }) }
 export async function xanoAccounts() { return xanoRequest<Record<string, unknown>>("/api:ledger-api/accounts", {}, { auth: true }) }
 export async function xanoTransactions() { return xanoRequest<Record<string, unknown>>("/api:ledger-api/transactions", {}, { auth: true }) }
-export async function xanoBalances() { return xanoRequest<Record<string, unknown>>("/api:ledger-api/balances", {}, { auth: true }) }
+export async function xanoBalances() { return xanoRequest<Record<string, unknown>>("/api:ledger-api/accounts", {}, { auth: true }) }
 
 // Generic wrappers for endpoints in the event-log and payment API groups.
 export async function xanoEventLogRequest<T>(route: string, init: RequestInit = {}, auth = true) {
