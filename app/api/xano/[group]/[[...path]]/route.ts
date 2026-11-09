@@ -20,7 +20,7 @@ async function forward(request: NextRequest, { params }: { params: Promise<{ gro
     const base = xanoBase(group)
     const target = `${base}/${path.map(encodeURIComponent).join('/')}${request.nextUrl.search}`
     const headers = new Headers(request.headers)
-    for (const header of ['connection', 'keep-alive', 'host', 'content-length', 'transfer-encoding', 'upgrade', 'te', 'trailer']) {
+    for (const header of ['connection', 'keep-alive', 'host', 'content-length', 'transfer-encoding', 'upgrade', 'te', 'trailer', 'accept-encoding']) {
       headers.delete(header)
     }
     const body = ['GET', 'HEAD'].includes(request.method) ? undefined : await request.arrayBuffer()
@@ -32,7 +32,11 @@ async function forward(request: NextRequest, { params }: { params: Promise<{ gro
     } finally {
       clearTimeout(timeout)
     }
-    return new NextResponse(response.body, { status: response.status, headers: response.headers })
+    const responseHeaders = new Headers(response.headers)
+    for (const header of ['connection', 'content-encoding', 'content-length', 'transfer-encoding']) {
+      responseHeaders.delete(header)
+    }
+    return new NextResponse(response.body, { status: response.status, headers: responseHeaders })
   } catch (error) {
     return NextResponse.json({ message: error instanceof Error ? error.message : 'Unable to reach Xano' }, { status: 502 })
   }
