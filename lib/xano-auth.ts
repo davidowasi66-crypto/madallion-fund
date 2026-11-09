@@ -200,7 +200,7 @@ export async function xanoLogin(email: string, password: string) {
 }
 
 export async function xanoSignup(name: string, email: string, password: string) {
-  const payload = await xanoRequest<any>(endpoints.signup, { method: "POST", body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), password }) })
+  const payload = await xanoRequest<any>(endpoints.signup, { method: "POST", body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), username: email.trim().toLowerCase(), password }) })
   const session = normalizeAuthSession(payload)
   saveXanoSession(session)
   return session
