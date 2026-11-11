@@ -1,13 +1,57 @@
 'use client'
 
-import useSWR from 'swr'
+import { useEffect, useState } from 'react'
 import { AdminShell, Metric, SectionCard } from '@/components/admin-shell'
-import { getAdminDashboard } from '@/lib/xano-admin'
+import { getAdminDashboard, getLedgerAdminDashboard } from '@/lib/xano-admin'
 
-const ngn = new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 2, maximumFractionDigits: 2 })
+const naira = (v: unknown) => {
+  const n = Number(v)
+  return Number.isFinite(n) ? `₦${n.toLocaleString('en-NG', { maximumFractionDigits: 0 })}` : '—'
+}
 
-export default function CommandCentrePage() {
-  const { data, error, isLoading } = useSWR('admin-dashboard', getAdminDashboard, { revalidateOnFocus: false })
-  const value = (amount: unknown) => typeof amount === 'number' ? ngn.format(amount) : '—'
-  return <AdminShell eyebrow="Admin operations" title="Command Centre"><div className="grid gap-4 md:grid-cols-4"><Metric label="Active principal" value={isLoading ? '…' : value(data?.aum.active_principal)} detail="Returned by Xano" tone="good" /><Metric label="Assets" value={isLoading ? '…' : value(data?.position.assets.total)} detail="Current position" /><Metric label="Pending approvals" value={isLoading ? '…' : String(data?.counts.total_pending_approvals ?? '—')} detail="Deposits and withdrawals" tone="warn" /><Metric label="Active investors" value={isLoading ? '…' : String(data?.counts.active_investors ?? '—')} detail="Current accounts" /></div><div className="mt-6 grid gap-6 lg:grid-cols-2"><SectionCard title="Position" action={error ? 'Xano unavailable' : 'Live Xano data'}><dl className="space-y-3 text-sm">{[['Liabilities', data?.position.liabilities.total], ['Equity', data?.position.equity.net], ['Interest accrued today', data?.today.interest_accrued]].map(([label, amount]) => <div key={String(label)} className="flex items-center justify-between border-b border-slate-800 pb-3"><dt className="text-slate-400">{label}</dt><dd className="font-medium text-white">{value(amount)}</dd></div>)}</dl></SectionCard><SectionCard title="Alerts" action="Returned by Xano"><div className="space-y-3">{(data?.alerts ?? []).map((alert, index) => <div key={`${alert.message}-${index}`} className={`rounded-lg border p-3 text-sm ${alert.severity === 'critical' ? 'border-red-500/20 bg-red-500/5 text-red-200' : 'border-amber-500/20 bg-amber-500/5 text-amber-200'}`}>{alert.message}: {value(alert.value)}</div>)}{!data?.alerts?.length && <p className="text-sm text-slate-500">No active alerts.</p>}</div></SectionCard></div></AdminShell>
+export default function AdminCommandCentrePage() {
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [admin, setAdmin] = useState<any>(null)
+  const [ledger, setLedger] = useState<any>(null)
+
+  useEffect(() => {
+    let mounted = true
+    Promise.allSettled([getAdminDashboard(), getLedgerAdminDashboard()]).then(([a, l]) => {
+      if (!mounted) return
+      if (a.status === 'fulfilled') setAdmin(a.value)
+      else setError(a.reason instanceof Error ? a.reason.message : 'Admin API unavailable')
+      if (l.status === 'fulfilled') setLedger(l.value)
+      setLoading(false)
+    })
+    return () => { mounted = false }
+  }, [])
+
+  const counts = admin?.counts ?? {}
+  const aum = admin?.aum ?? {}
+  const position = admin?.position ?? ledger?.position ?? {}
+
+  return (
+    <AdminShell eyebrow="Admin" title="Command Centre">
+      {error && (
+        <p role="alert" className="mb-4 rounded-lg border border-amber-500/25 bg-amber-500/5 p-3 text-sm text-amber-200">
+          {error}
+        </p>
+      )}
+      <div className="grid gap-4 md:grid-cols-4">
+        <Metric label="Active principal" value={loading ? '…' : naira(aum.active_principal)} detail="Portfolio" tone="good" />
+        <Metric label="Assets" value={loading ? '…' : naira(position?.assets?.total)} detail="Position" />
+        <Metric label="Pending" value={loading ? '…' : String(counts.total_pending_approvals ?? '—')} detail="Approvals queue" tone="warn" />
+        <Metric label="Active investors" value={loading ? '…' : String(counts.active_investors ?? '—')} detail="Accounts" />
+      </div>
+      <div className="mt-6">
+        <SectionCard title="Operational snapshot" action={loading ? 'Loading' : 'Live'}>
+          <p className="text-sm text-slate-400">
+            Plans support pause (new subscriptions only) and delete via live Xano. Users list uses fn_admin_user_list.
+            Deposits and withdrawals use fn_admin_pending. Transactions use ledger-api/transactions.
+          </p>
+        </SectionCard>
+      </div>
+    </AdminShell>
+  )
 }
