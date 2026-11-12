@@ -7,6 +7,7 @@ import { ArrowDownLeft, ArrowRight, ArrowUpRight, ChevronRight, LogOut, Menu, Wa
 import { clearXanoSession, getXanoSession, xanoRequest } from '@/lib/xano-auth'
 import { toMoney, toNumeric, toTitleCase } from '@/lib/xano-client'
 import { getMyInvestments, type Investment } from '@/lib/investment-api'
+import { ActivityTicker } from '@/components/activity-ticker'
 import { MaturityProgressBar, SavingsGoalCard } from '@/components/investment-widgets'
 
 type Section = 'investments' | 'wallet' | 'activity'
@@ -149,6 +150,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
             </div>
           </div>
         </header>
+        <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-8"><ActivityTicker variant="member" /></div>
         <section className="mx-auto max-w-7xl p-5 sm:p-8">
           <p className="text-sm text-[#8eaea0]">{subtitle}</p>
           {error && (
