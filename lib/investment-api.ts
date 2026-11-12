@@ -33,8 +33,13 @@ export type Investment = {
   status?: string
   currency?: string
   created_at?: number | string
+  started_at?: number | string
+  start_date?: number | string
   ends_at?: number | string
+  end_date?: number | string
   maturity_at?: number | string
+  maturity_date?: number | string
+  matures_at?: number | string
   progress?: number
 }
 
@@ -127,7 +132,7 @@ export const deletePlan = (id: number) =>
 
 export const getMyInvestments = async (): Promise<Investment[]> => {
   const payload = await xanoRequest('/api:ledger-api/investments', { method: 'GET' }, { auth: true })
-  return list(payload, ['investments', 'items', 'data', 'rows']) as Investment[]
+  return list(payload, ['investments', 'items', 'data.investments', 'data.items', 'data.rows', 'rows']) as Investment[]
 }
 
 export const getMyWallet = async () => list(await xanoRequest('/api:ledger-api/accounts', {}, { auth: true }), ['accounts', 'items', 'data'])
