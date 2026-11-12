@@ -1,8 +1,10 @@
 'use client'
 
+import Link from 'next/link'
 import useSWR from 'swr'
 import { useEffect, useMemo, useState } from 'react'
 import { Target } from 'lucide-react'
+import { getXanoSession } from '@/lib/xano-auth'
 import {
   getMyCashflow,
   getMyInvestments,
@@ -17,9 +19,14 @@ import {
 
 const money = (n: unknown) => `₦${Number(n || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`
 const date = (v: any) => (v ? new Date(Number(v) < 1e12 ? Number(v) * 1000 : v).toLocaleDateString('en-NG') : '—')
-const toMs = (v: unknown, fallback: number) => {
-  const num = Number(v)
-  return Number.isFinite(num) && num > 0 ? (num < 1e12 ? num * 1000 : num) : fallback
+const toMs = (value: unknown, fallback: number) => {
+  const numeric = Number(value)
+  if (Number.isFinite(numeric) && numeric > 0) return numeric < 1e12 ? numeric * 1000 : numeric
+  if (typeof value === 'string' && value.trim()) {
+    const parsed = Date.parse(value)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return fallback
 }
 
 export function LiveMoneyCounters() {
@@ -55,15 +62,56 @@ function Counter({ label, value, tone = 'default' }: { label: string; value: str
   )
 }
 
+export function MemberMaturityPreview() {
+  const [session, setSession] = useState<{ authenticated: boolean; cacheKey: string } | null>(null)
+  useEffect(() => {
+    const current = getXanoSession()
+    setSession(current?.authToken
+      ? { authenticated: true, cacheKey: `member-investments-${current.user_id || Date.now()}` }
+      : { authenticated: false, cacheKey: '' })
+  }, [])
+  const { data: investments, error, isLoading } = useSWR<Investment[]>(
+    session?.authenticated ? session.cacheKey : null,
+    getMyInvestments,
+  )
+
+  return (
+    <section className="mt-7 rounded-3xl border border-white/10 bg-[#0b2420] p-5 sm:p-6" aria-labelledby="maturity-preview-title">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <p className="text-xs uppercase tracking-[0.2em] text-[#76998b]">Investment tracking</p>
+          <h2 id="maturity-preview-title" className="mt-2 text-xl font-semibold">Progress to maturity</h2>
+        </div>
+        <Link href="/dashboard/investments" className="text-sm font-semibold text-[#b9f47f]">View all investments</Link>
+      </div>
+      {session === null || isLoading ? (
+        <p className="mt-5 text-sm text-[#8eaea0]">Loading investment progress…</p>
+      ) : !session.authenticated ? (
+        <p className="mt-5 text-sm text-[#8eaea0]">Sign in to view your investment progress.</p>
+      ) : error ? (
+        <p role="alert" className="mt-5 text-sm text-red-200">Investment progress could not be loaded. Please try again shortly.</p>
+      ) : investments?.length ? (
+        <div className="mt-5 grid gap-4">
+          {investments.slice(0, 2).map((investment, index) => (
+            <MaturityProgressBar key={investment.id ?? index} investment={investment} />
+          ))}
+        </div>
+      ) : (
+        <p className="mt-5 text-sm text-[#8eaea0]">Your investment progress will appear here after you subscribe to a plan.</p>
+      )}
+    </section>
+  )
+}
+
 export function MaturityProgressBar({ investment }: { investment: Investment }) {
   const plan: Plan = investment.plan ?? { name: 'Investment', duration_days: 30 }
   const principal = Number(investment.principal ?? 0)
-  const startMs = toMs(investment.created_at, Date.now())
+  const startMs = toMs(investment.started_at ?? investment.start_date ?? investment.created_at, Date.now())
   const durationDays = Number(plan.duration_days ?? 0)
-  const endMs =
-    investment.ends_at ?? investment.maturity_at
-      ? toMs(investment.ends_at ?? investment.maturity_at, startMs)
-      : startMs + durationDays * 86_400_000
+  const maturityDate = investment.ends_at ?? investment.maturity_at ?? investment.matures_at ?? investment.maturity_date ?? investment.end_date
+  const endMs = maturityDate
+    ? toMs(maturityDate, startMs + durationDays * 86_400_000)
+    : startMs + durationDays * 86_400_000
   const totalMs = Math.max(86_400_000, endMs - startMs)
   const elapsedMs = Math.max(0, Math.min(totalMs, Date.now() - startMs))
   const percent = Math.min(100, Math.round((elapsedMs / totalMs) * 100))

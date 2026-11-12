@@ -1,7 +1,8 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+import useSWR from 'swr'
 import { ArrowDownLeft, ArrowRight, ArrowUpRight, BarChart3, Check, ChevronDown, CircleDollarSign, Menu, ShieldCheck, Sparkles, X } from 'lucide-react'
 import { xanoRequest } from '@/lib/xano-auth'
 import { PlanCalculator } from '@/components/investment-widgets'
@@ -51,61 +52,52 @@ function money(value: number, currency: 'NGN' | 'GHS') {
 }
 
 function LiveActivity() {
-  const [liveItems, setLiveItems] = useState<FeedItem[]>([])
-  const [feedAvailable, setFeedAvailable] = useState(false)
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    let mounted = true
-    const load = async () => {
-      try {
-        const response = await xanoRequest<any>('/api:ledger-api/activity/feed', { method: 'GET' })
-        if (!mounted) return
-        setLiveItems(rowsFrom(response).map(parseActivity).filter((item): item is FeedItem => item !== null))
-        setFeedAvailable(true)
-      } catch {
-        if (!mounted) return
-        setFeedAvailable(false)
-        setLiveItems([])
-      } finally {
-        if (mounted) setLoading(false)
-      }
-    }
-    void load()
-    const timer = window.setInterval(load, 60_000)
-    return () => { mounted = false; window.clearInterval(timer) }
-  }, [])
-
-  // Sample examples remain visible alongside live activity. Keep the disclaimer below so
-  // examples cannot be mistaken for real customer transactions.
-  const activity = useMemo(() => [...liveItems, ...sampleActivity], [liveItems])
-  const totals = useMemo(() => activity.reduce((sum, item) => {
+  const { data: liveItems = [], error, isLoading } = useSWR<FeedItem[]>(
+    'public-activity-feed',
+    async () => {
+      const response = await xanoRequest<any>('/api:ledger-api/activity/feed', { method: 'GET' })
+      return rowsFrom(response).map(parseActivity).filter((item): item is FeedItem => item !== null)
+    },
+    { refreshInterval: 60_000, revalidateOnFocus: true },
+  )
+  const activity = useMemo(() => liveItems.length ? liveItems : sampleActivity, [liveItems])
+  const totals = useMemo(() => liveItems.reduce((sum, item) => {
     const bucket = item.currency === 'GHS' ? sum.ghs : sum.ngn
     bucket[item.type] += item.amount
     return sum
-  }, { ngn: { Deposit: 0, Withdrawal: 0 }, ghs: { Deposit: 0, Withdrawal: 0 } }), [activity])
+  }, { ngn: { Deposit: 0, Withdrawal: 0 }, ghs: { Deposit: 0, Withdrawal: 0 } }), [liveItems])
   const repeated = activity.length > 1 ? [...activity, ...activity] : activity
+  const badge = isLoading
+    ? 'Illustrative examples · loading live feed'
+    : error
+      ? liveItems.length ? 'Last live data · refresh failed' : 'Examples · live feed unavailable'
+      : liveItems.length ? 'Live activity' : 'Examples · no live events yet'
+  const total = (value: number, currency: 'NGN' | 'GHS') => isLoading
+    ? 'Loading…'
+    : error && liveItems.length === 0
+      ? 'Unavailable'
+      : money(value, currency)
 
   return <section aria-label="Deposit and withdrawal activity" className="border-y border-[#e1e9e3] bg-white py-8">
     <div className="mx-auto max-w-7xl px-5 lg:px-8">
       <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
         <div><p className="text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">Money movement</p><h2 className="mt-1 text-xl font-semibold text-[#0b4537]">Recent deposits & withdrawals</h2></div>
-        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">{loading ? 'Loading activity…' : feedAvailable ? 'Live activity and examples' : 'Examples while live activity loads'}</span>
+        <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-800">{badge}</span>
       </div>
       <div className="grid gap-3 sm:grid-cols-2">
-        <ActivityTotal label="Deposits" ngn={money(totals.ngn.Deposit, 'NGN')} ghs={money(totals.ghs.Deposit, 'GHS')} />
-        <ActivityTotal label="Withdrawals" ngn={money(totals.ngn.Withdrawal, 'NGN')} ghs={money(totals.ghs.Withdrawal, 'GHS')} />
+        <ActivityTotal label="Live deposits" ngn={total(totals.ngn.Deposit, 'NGN')} ghs={total(totals.ghs.Deposit, 'GHS')} />
+        <ActivityTotal label="Live withdrawals" ngn={total(totals.ngn.Withdrawal, 'NGN')} ghs={total(totals.ghs.Withdrawal, 'GHS')} />
       </div>
-      <div className="activity-window mt-5 overflow-hidden rounded-2xl border border-[#e6ede7] bg-[#f7faf6] py-3" aria-label="Horizontally scrolling transaction activity">
+      <div role="region" aria-label="Horizontally scrolling transaction activity" className="activity-window mt-5 overflow-hidden rounded-2xl border border-[#e6ede7] bg-[#f7faf6] py-3">
         <div className={`activity-track flex w-max gap-3 px-3 ${activity.length <= 1 ? 'activity-static' : ''}`}>
           {repeated.map((item, index) => <article key={`${item.id}-${index}`} aria-hidden={index >= activity.length} className="flex min-w-[265px] items-center gap-3 rounded-xl border border-[#e6ede7] bg-white px-4 py-3 shadow-sm">
             <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full ${item.type === 'Deposit' ? 'bg-emerald-50 text-emerald-700' : 'bg-sky-50 text-sky-700'}`}>{item.type === 'Deposit' ? <ArrowDownLeft size={17} /> : <ArrowUpRight size={17} />}</span>
-            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-[#173c30]">{item.displayName} · {item.country}</span><span className="text-xs text-[#708079]">{item.type} · {new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></span>
+            <span className="min-w-0 flex-1"><span className="block truncate text-sm font-semibold text-[#173c30]">{item.displayName} · {item.country}</span><span className="text-xs text-[#708079]">{item.sample ? `${item.type} · illustrative example` : `${item.type} · ${new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`}</span></span>
             <span className="whitespace-nowrap text-sm font-bold text-[#0b4537]">{money(item.amount, item.currency)}</span>
           </article>)}
         </div>
       </div>
-      <p className="mt-2 text-xs text-[#77857e]">The strip combines illustrative examples with live activity where available. Examples are not actual customer transactions; live names are anonymized aliases from the public feed.</p>
+      <p className="mt-2 text-xs text-[#77857e]">When the public feed is unavailable, clearly labeled illustrative examples appear instead. Live names use anonymized aliases.</p>
     </div>
   </section>
 }
