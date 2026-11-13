@@ -17,6 +17,7 @@ import { clearXanoSession, getXanoSession, xanoRequest } from '@/lib/xano-auth'
 import { toMoney, toNumeric, toTitleCase } from '@/lib/xano-client'
 import { getMyInvestments, type Investment } from '@/lib/investment-api'
 import { ActivityTicker } from '@/components/activity-ticker'
+import { MemberTabBar } from '@/components/member-tab-bar'
 import { MaturityProgressBar, SavingsGoalCard } from '@/components/investment-widgets'
 
 type Section = 'investments' | 'wallet' | 'activity'
@@ -167,7 +168,6 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
       <div className="lg:pl-72">
         {section === 'wallet' ? (
           <>
-            {/* Deposit / Withdraw hero — inspiration layout, Madallion green */}
             <header className="bg-gradient-to-b from-[#0b4537] via-[#0d3d32] to-[#123f34] px-5 pb-6 pt-5 text-white sm:px-8">
               <div className="mx-auto max-w-lg">
                 <div className="flex items-center justify-between gap-3">
@@ -290,7 +290,6 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                 disabled={amountNum <= 0}
                 className="mt-5 w-full rounded-2xl bg-[#b9f47f] py-4 text-sm font-semibold text-[#071a18] disabled:opacity-40"
                 onClick={() => {
-                  /* UI shell — wire to your deposit/withdraw Xano endpoints when ready */
                   window.alert(
                     mode === 'deposit'
                       ? `Deposit request UI: ₦${amountNum.toLocaleString('en-NG')}. Connect your payment endpoint next.`
@@ -363,19 +362,22 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
             </div>
             <section className="mx-auto max-w-7xl p-5 sm:p-8">
               <p className="text-sm text-[#60716b] lg:text-[#8eaea0]">{subtitle}</p>
-              {error && (
+              {error && section !== 'investments' && (
                 <div role="alert" className="mt-5 rounded-xl border border-red-300/20 bg-red-300/5 p-4 text-sm text-red-700 lg:text-red-200">
                   <p>{error}</p>
                 </div>
               )}
               {loading && <p className="mt-6 text-sm text-[#708079]">Loading {section}…</p>}
-              {!loading && !error && section === 'investments' && (
+              {!loading && section === 'investments' && (
                 <div className="mt-6 space-y-6">
                   <SavingsGoalCard currentValue={portfolioValue} />
                   {investments.length === 0 ? (
                     <div className="rounded-3xl border border-dashed border-[#dfe8e2] bg-white p-7 lg:border-white/10 lg:bg-transparent">
                       <p className="font-medium text-[#0b4537] lg:text-white">No investments yet</p>
-                      <p className="mt-2 text-sm text-[#708079]">Your investments will appear here after you subscribe to a plan.</p>
+                      <p className="mt-2 text-sm text-[#708079]">
+                        Your investments will appear here after you subscribe to a plan.
+                        {error ? ' (Ledger is still syncing — try again shortly.)' : ''}
+                      </p>
                       <Link
                         href="/plans"
                         className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#b9f47f] px-4 py-3 text-sm font-semibold text-[#071a18]"
@@ -406,31 +408,8 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
         )}
       </div>
 
-      <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dfe8e2] bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur lg:hidden"
-        aria-label="Member tabs"
-      >
-        <div className="mx-auto flex max-w-lg items-stretch justify-around">
-          <MobileTab href="/dashboard" label="Home" />
-          <MobileTab href="/dashboard/investments" label="Invest" />
-          <MobileTab href="/affiliate" label="Team" />
-          <MobileTab href="/dashboard/wallet" label="Wallet" active={section === 'wallet'} />
-        </div>
-      </nav>
+      <MemberTabBar />
     </main>
-  )
-}
-
-function MobileTab({ href, label, active }: { href: string; label: string; active?: boolean }) {
-  return (
-    <Link
-      href={href}
-      className={`flex flex-1 flex-col items-center gap-1 rounded-xl py-2 text-[10px] font-medium ${
-        active ? 'bg-[#eef7eb] text-[#0b4537]' : 'text-[#708079]'
-      }`}
-    >
-      {label}
-    </Link>
   )
 }
 
@@ -444,7 +423,9 @@ function Transaction({ row }: { row: Row }) {
       <div className="flex min-w-0 items-center gap-3">
         <span
           className={`rounded-full p-2 ${
-            amount >= 0 ? 'bg-[#eef7eb] text-[#2f7a4a] lg:bg-[#183e31] lg:text-[#b9f47f]' : 'bg-[#fff0e8] text-[#c45c2a] lg:bg-[#3c2925] lg:text-[#ffb19d]'
+            amount >= 0
+              ? 'bg-[#eef7eb] text-[#2f7a4a] lg:bg-[#183e31] lg:text-[#b9f47f]'
+              : 'bg-[#fff0e8] text-[#c45c2a] lg:bg-[#3c2925] lg:text-[#ffb19d]'
           }`}
         >
           {amount >= 0 ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}
@@ -462,5 +443,9 @@ function Transaction({ row }: { row: Row }) {
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="rounded-2xl border border-dashed border-[#dfe8e2] px-4 py-8 text-center text-sm text-[#708079] lg:border-white/10">{text}</p>
+  return (
+    <p className="rounded-2xl border border-dashed border-[#dfe8e2] px-4 py-8 text-center text-sm text-[#708079] lg:border-white/10">
+      {text}
+    </p>
+  )
 }
