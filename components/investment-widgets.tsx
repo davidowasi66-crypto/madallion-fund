@@ -62,122 +62,182 @@ function Counter({ label, value, tone = 'default' }: { label: string; value: str
   )
 }
 
+/** Dashboard maturity tracker — shows progress bars when the member has investments. */
 export function MemberMaturityPreview() {
   const [session, setSession] = useState<{ authenticated: boolean; cacheKey: string } | null>(null)
   useEffect(() => {
     const current = getXanoSession()
-    setSession(current?.authToken
-      ? { authenticated: true, cacheKey: `member-investments-${current.user_id || Date.now()}` }
-      : { authenticated: false, cacheKey: '' })
+    setSession(
+      current?.authToken
+        ? { authenticated: true, cacheKey: `member-investments-${current.user_id || 'me'}` }
+        : { authenticated: false, cacheKey: '' },
+    )
   }, [])
   const { data: investments, error, isLoading } = useSWR<Investment[]>(
     session?.authenticated ? session.cacheKey : null,
     getMyInvestments,
+    { revalidateOnFocus: true },
   )
 
+  const active = (investments ?? []).filter((inv) => {
+    const status = String(inv.status ?? 'active').toLowerCase()
+    return status !== 'cancelled' && status !== 'closed' && status !== 'refunded'
+  })
+
   return (
-    <section className="mt-7 rounded-3xl border border-white/10 bg-[#0b2420] p-5 sm:p-6" aria-labelledby="maturity-preview-title">
+    <section
+      className="mt-5 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm sm:p-6"
+      aria-labelledby="maturity-preview-title"
+    >
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-[0.2em] text-[#76998b]">Investment tracking</p>
-          <h2 id="maturity-preview-title" className="mt-2 text-xl font-semibold">Progress to maturity</h2>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#65a85c]">Investment tracking</p>
+          <h2 id="maturity-preview-title" className="mt-1 text-lg font-semibold text-[#0b4537]">
+            Progress to maturity
+          </h2>
         </div>
-        <Link href="/dashboard/investments" className="text-sm font-semibold text-[#b9f47f]">View all investments</Link>
+        <Link href="/dashboard/investments" className="text-sm font-semibold text-[#0b4537]">
+          View all
+        </Link>
       </div>
+
       {session === null || isLoading ? (
-        <p className="mt-5 text-sm text-[#8eaea0]">Loading investment progress…</p>
+        <p className="mt-5 text-sm text-[#708079]">Loading investment progress…</p>
       ) : !session.authenticated ? (
-        <p className="mt-5 text-sm text-[#8eaea0]">Sign in to view your investment progress.</p>
+        <p className="mt-5 text-sm text-[#708079]">Sign in to view your investment progress.</p>
       ) : error ? (
-        <p role="alert" className="mt-5 text-sm text-red-200">Investment progress could not be loaded. Please try again shortly.</p>
-      ) : investments?.length ? (
+        <p role="alert" className="mt-5 text-sm text-red-600">
+          Investment progress could not be loaded. Please try again shortly.
+        </p>
+      ) : active.length ? (
         <div className="mt-5 grid gap-4">
-          {investments.slice(0, 2).map((investment, index) => (
-            <MaturityProgressBar key={investment.id ?? index} investment={investment} />
+          {active.slice(0, 3).map((investment, index) => (
+            <MaturityProgressBar key={investment.id ?? index} investment={investment} variant="light" />
           ))}
         </div>
       ) : (
-        <p className="mt-5 text-sm text-[#8eaea0]">Your investment progress will appear here after you subscribe to a plan.</p>
+        <div className="mt-5 rounded-2xl border border-dashed border-[#dfe8e2] bg-[#f4f8f3] px-4 py-6 text-center">
+          <p className="text-sm text-[#60716b]">
+            Maturity progress bars appear here after you subscribe to a plan.
+          </p>
+          <Link
+            href="/plans"
+            className="mt-4 inline-flex rounded-xl bg-[#0b4537] px-4 py-2.5 text-sm font-semibold text-white"
+          >
+            Browse plans
+          </Link>
+        </div>
       )}
     </section>
   )
 }
 
-export function MaturityProgressBar({ investment }: { investment: Investment }) {
+export function MaturityProgressBar({
+  investment,
+  variant = 'dark',
+}: {
+  investment: Investment
+  variant?: 'dark' | 'light'
+}) {
   const plan: Plan = investment.plan ?? { name: 'Investment', duration_days: 30 }
   const principal = Number(investment.principal ?? 0)
   const startMs = toMs(investment.started_at ?? investment.start_date ?? investment.created_at, Date.now())
-  const durationDays = Number(plan.duration_days ?? 0)
-  const maturityDate = investment.ends_at ?? investment.maturity_at ?? investment.matures_at ?? investment.maturity_date ?? investment.end_date
+  const durationDays = Number(plan.duration_days ?? investment.plan?.duration_days ?? 0)
+  const maturityDate =
+    investment.ends_at ??
+    investment.maturity_at ??
+    investment.matures_at ??
+    investment.maturity_date ??
+    investment.end_date
   const endMs = maturityDate
-    ? toMs(maturityDate, startMs + durationDays * 86_400_000)
-    : startMs + durationDays * 86_400_000
+    ? toMs(maturityDate, startMs + Math.max(1, durationDays) * 86_400_000)
+    : startMs + Math.max(1, durationDays || 30) * 86_400_000
   const totalMs = Math.max(86_400_000, endMs - startMs)
   const elapsedMs = Math.max(0, Math.min(totalMs, Date.now() - startMs))
-  const percent = Math.min(100, Math.round((elapsedMs / totalMs) * 100))
+  const computedPercent = Math.min(100, Math.round((elapsedMs / totalMs) * 100))
+  const apiProgress = Number(investment.progress)
+  const percent =
+    Number.isFinite(apiProgress) && apiProgress >= 0
+      ? Math.min(100, Math.round(apiProgress <= 1 ? apiProgress * 100 : apiProgress))
+      : computedPercent
   const daysLeft = Math.max(0, Math.ceil((endMs - Date.now()) / 86_400_000))
   const daysElapsed = Math.floor(elapsedMs / 86_400_000)
   const dailyPercent = investment.daily_rate_bps
     ? Number(investment.daily_rate_bps) / 100
     : planDailyRate(plan)
-  const totalDays = Math.round(totalMs / 86_400_000)
+  const totalDays = Math.max(1, Math.round(totalMs / 86_400_000))
   const accrued =
     investment.accrued_total != null
       ? Number(investment.accrued_total)
       : Math.round(principal * (dailyPercent / 100) * daysElapsed)
   const projected = Math.round(principal * (dailyPercent / 100) * totalDays)
-  const matured = Date.now() >= endMs
+  const matured = Date.now() >= endMs || percent >= 100
+  const light = variant === 'light'
+  const planLabel =
+    plan.name ?? investment.plan_name ?? (investment.plan_id ? `Plan #${investment.plan_id}` : 'Investment')
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-[#0e2b26] p-4">
+    <div
+      className={`rounded-2xl border p-4 ${
+        light ? 'border-[#e7eee8] bg-[#f4f8f3]' : 'border-white/10 bg-[#0e2b26]'
+      }`}
+    >
       <div className="flex items-start justify-between gap-3">
-        <div>
-          <p className="font-semibold text-white">
-            {plan.name ?? investment.plan_name ?? (investment.plan_id ? `Plan #${investment.plan_id}` : 'Investment')}
-          </p>
-          <p className="mt-1 text-xs text-[#789589]">
+        <div className="min-w-0">
+          <p className={`font-semibold ${light ? 'text-[#0b4537]' : 'text-white'}`}>{planLabel}</p>
+          <p className={`mt-1 text-xs ${light ? 'text-[#708079]' : 'text-[#789589]'}`}>
             {money(principal)} principal · Matures {date(endMs)}
           </p>
         </div>
         <span
-          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
-            matured ? 'bg-sky-400/15 text-sky-300' : 'bg-[#b9f47f]/15 text-[#b9f47f]'
+          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
+            matured
+              ? light
+                ? 'bg-sky-100 text-sky-800'
+                : 'bg-sky-400/15 text-sky-300'
+              : light
+                ? 'bg-[#eef7eb] text-[#2f7a4a]'
+                : 'bg-[#b9f47f]/15 text-[#b9f47f]'
           }`}
         >
-          {matured ? 'Ready to settle' : `${Math.round(percent)}% to maturity`}
+          {matured ? 'Ready to settle' : `${percent}% to maturity`}
         </span>
       </div>
+
       <div
-        className="mt-4 h-2.5 overflow-hidden rounded-full bg-[#183e31]"
+        className={`mt-4 h-3 overflow-hidden rounded-full ${light ? 'bg-[#dfe8e2]' : 'bg-[#183e31]'}`}
         role="progressbar"
         aria-valuenow={percent}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label="Progress to maturity"
+        aria-label={`${planLabel} progress to maturity`}
       >
         <div
-          className="h-full rounded-full bg-gradient-to-r from-[#8fe35c] to-[#b9f47f] transition-all"
+          className="h-full rounded-full bg-gradient-to-r from-[#8fe35c] to-[#b9f47f] transition-all duration-500"
           style={{ width: `${percent}%` }}
         />
       </div>
+
       <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
         <div>
-          <p className="text-[#789589]">Elapsed</p>
-          <p className="mt-1 font-semibold text-white">
+          <p className={light ? 'text-[#708079]' : 'text-[#789589]'}>Elapsed</p>
+          <p className={`mt-1 font-semibold ${light ? 'text-[#0b4537]' : 'text-white'}`}>
             {daysElapsed} of {totalDays} days
           </p>
         </div>
         <div>
-          <p className="text-[#789589]">{matured ? 'Matured' : 'Days remaining'}</p>
-          <p className="mt-1 font-semibold text-white">{matured ? '0' : daysLeft}</p>
+          <p className={light ? 'text-[#708079]' : 'text-[#789589]'}>{matured ? 'Matured' : 'Days remaining'}</p>
+          <p className={`mt-1 font-semibold ${light ? 'text-[#0b4537]' : 'text-white'}`}>{matured ? '0' : daysLeft}</p>
         </div>
         <div>
-          <p className="text-[#789589]">Accrued so far</p>
-          <p className="mt-1 font-semibold text-[#b9f47f]">{money(accrued)}</p>
+          <p className={light ? 'text-[#708079]' : 'text-[#789589]'}>Accrued so far</p>
+          <p className={`mt-1 font-semibold ${light ? 'text-[#2f7a4a]' : 'text-[#b9f47f]'}`}>{money(accrued)}</p>
         </div>
         <div>
-          <p className="text-[#789589]">Projected at maturity</p>
-          <p className="mt-1 font-semibold text-white">{money(principal + projected)}</p>
+          <p className={light ? 'text-[#708079]' : 'text-[#789589]'}>Projected at maturity</p>
+          <p className={`mt-1 font-semibold ${light ? 'text-[#0b4537]' : 'text-white'}`}>
+            {money(principal + projected)}
+          </p>
         </div>
       </div>
     </div>
@@ -201,9 +261,7 @@ export function SavingsGoalCard({ currentValue }: { currentValue: number }) {
   const save = (value: number) => {
     setGoal(value > 0 ? value : null)
     try {
-      value > 0
-        ? window.localStorage.setItem(GOAL_KEY, String(value))
-        : window.localStorage.removeItem(GOAL_KEY)
+      value > 0 ? window.localStorage.setItem(GOAL_KEY, String(value)) : window.localStorage.removeItem(GOAL_KEY)
     } catch {}
   }
   const percent = goal && goal > 0 ? Math.min(100, Math.round((currentValue / goal) * 100)) : 0
@@ -221,7 +279,13 @@ export function SavingsGoalCard({ currentValue }: { currentValue: number }) {
               of {money(goal)} · {percent}%
             </p>
           </div>
-          <div className="mt-2 h-2.5 overflow-hidden rounded-full bg-[#183e31]" role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100}>
+          <div
+            className="mt-2 h-2.5 overflow-hidden rounded-full bg-[#183e31]"
+            role="progressbar"
+            aria-valuenow={percent}
+            aria-valuemin={0}
+            aria-valuemax={100}
+          >
             <div className="h-full rounded-full bg-[#b9f47f]" style={{ width: `${percent}%` }} />
           </div>
         </div>
@@ -236,7 +300,10 @@ export function SavingsGoalCard({ currentValue }: { currentValue: number }) {
           onChange={(e) => setDraft(e.target.value.replace(/[^\d]/g, ''))}
           className="w-full rounded-xl border border-white/10 bg-[#0e2b26] px-3 py-2 text-sm text-white outline-none"
         />
-        <button onClick={() => save(Number(draft || 0))} className="rounded-xl bg-[#b9f47f] px-3 py-2 text-sm font-semibold text-[#071a18]">
+        <button
+          onClick={() => save(Number(draft || 0))}
+          className="rounded-xl bg-[#b9f47f] px-3 py-2 text-sm font-semibold text-[#071a18]"
+        >
           Set
         </button>
       </div>
