@@ -25,7 +25,7 @@ async function forward(request: NextRequest, { params }: { params: Promise<{ gro
     }
     const body = ['GET', 'HEAD'].includes(request.method) ? undefined : await request.arrayBuffer()
     const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), 15000)
+    const timeout = setTimeout(() => controller.abort(), 25000)
     let response: Response
     try {
       response = await fetch(target, { method: request.method, headers, body, redirect: 'manual', cache: 'no-store', signal: controller.signal })
