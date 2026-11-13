@@ -19,6 +19,7 @@ import {
 } from 'lucide-react'
 import { clearXanoSession, getXanoSession } from '@/lib/xano-auth'
 import { ActivityTicker } from '@/components/activity-ticker'
+import { MemberTabBar } from '@/components/member-tab-bar'
 import { MemberMaturityPreview } from '@/components/investment-widgets'
 import { toMoney, toNumeric, toTitleCase } from '@/lib/xano-client'
 import {
@@ -483,17 +484,7 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <nav
-        className="fixed inset-x-0 bottom-0 z-40 border-t border-[#dfe8e2] bg-white/95 px-2 pb-[env(safe-area-inset-bottom)] pt-2 backdrop-blur lg:hidden"
-        aria-label="Member tabs"
-      >
-        <div className="mx-auto flex max-w-lg items-stretch justify-around">
-          <Tab href="/dashboard" label="Home" active icon={<Wallet size={18} />} />
-          <Tab href="/dashboard/investments" label="Invest" icon={<Layers size={18} />} />
-          <Tab href="/affiliate" label="Team" icon={<Users size={18} />} />
-          <Tab href="/dashboard/wallet" label="Wallet" icon={<ArrowDownLeft size={18} />} />
-        </div>
-      </nav>
+      <MemberTabBar />
     </main>
   )
 }
@@ -526,30 +517,6 @@ function QuickTile({
     <Link href={href} className="flex flex-col items-center gap-2 rounded-2xl border border-[#e7eee8] bg-white p-3 shadow-sm">
       <span className={`rounded-xl p-2.5 ${tones[tone]}`}>{icon}</span>
       <span className="text-[11px] font-medium text-[#0b4537]">{label}</span>
-    </Link>
-  )
-}
-
-function Tab({
-  href,
-  label,
-  icon,
-  active,
-}: {
-  href: string
-  label: string
-  icon: React.ReactNode
-  active?: boolean
-}) {
-  return (
-    <Link
-      href={href}
-      className={`flex flex-1 flex-col items-center gap-1 rounded-xl py-2 text-[10px] font-medium ${
-        active ? 'bg-[#eef7eb] text-[#0b4537]' : 'text-[#708079]'
-      }`}
-    >
-      {icon}
-      {label}
     </Link>
   )
 }
