@@ -56,6 +56,9 @@ const list = (value: any, keys: string[] = []): any[] => {
   for (const key of ['items', 'data', 'plans', 'rows', 'users', 'transactions', 'investments', 'leaders']) {
     if (Array.isArray(value[key])) return value[key]
   }
+  // Xano paging object sometimes nests under items.items
+  if (value.items && Array.isArray(value.items.items)) return value.items.items
+  if (value.inv_page && Array.isArray(value.inv_page.items)) return value.inv_page.items
   return []
 }
 
@@ -130,9 +133,27 @@ export const resumePlan = (id: number) => updatePlan(id, { is_paused: false, sta
 export const deletePlan = (id: number) =>
   SANDBOX_MOCK ? mockDeletePlan(id) : xanoAdminFunctionRequest(`/fn_admin_plan/${id}`, { method: 'DELETE' })
 
+/** Member investments — never throw on Xano pagination bugs (inv_page.totalCount). */
 export const getMyInvestments = async (): Promise<Investment[]> => {
-  const payload = await xanoRequest('/api:ledger-api/investments', { method: 'GET' }, { auth: true })
-  return list(payload, ['investments', 'items', 'data.investments', 'data.items', 'data.rows', 'rows']) as Investment[]
+  try {
+    const payload = await xanoRequest('/api:ledger-api/investments', { method: 'GET' }, { auth: true })
+    return list(payload, [
+      'investments',
+      'items',
+      'data.investments',
+      'data.items',
+      'data.rows',
+      'rows',
+      'inv_page.items',
+    ]) as Investment[]
+  } catch (cause) {
+    const message = cause instanceof Error ? cause.message : String(cause)
+    // Known Xano function bug: response expression references inv_page.totalCount when paging object is missing
+    if (/inv_page\.totalCount|Unable to locate var/i.test(message)) {
+      return []
+    }
+    throw cause
+  }
 }
 
 export const getMyWallet = async () => list(await xanoRequest('/api:ledger-api/accounts', {}, { auth: true }), ['accounts', 'items', 'data'])
