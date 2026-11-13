@@ -45,10 +45,18 @@ button:focus-visible, a:focus-visible, input:focus-visible { outline: 3px solid 
 
 @media (max-width: 640px) { .glass-panel { box-shadow: 0 16px 40px rgba(25,78,53,.1), inset 0 1px 0 rgba(255,255,255,.7); } }
 
-@keyframes activity-slide { from { transform: translateX(0); } to { transform: translateX(-50%); } }
-.activity-track { animation: activity-slide 38s linear infinite; will-change: transform; }
+/* Continuous horizontal ticker — does not pause on hover/touch */
+@keyframes activity-slide {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.activity-track {
+  animation: activity-slide 42s linear infinite;
+  will-change: transform;
+  pointer-events: none;
+}
 .activity-static { animation: none; }
-.activity-window:hover .activity-track, .activity-window:focus-within .activity-track { animation-play-state: paused; }
+/* Pause only when user opts in via reduced motion — not on touch/hover */
 @media (prefers-reduced-motion: reduce) {
   .activity-track { animation: none; transform: none; }
   .activity-window { overflow-x: auto !important; }
