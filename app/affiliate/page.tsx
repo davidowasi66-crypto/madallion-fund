@@ -27,7 +27,7 @@ export default function AffiliatePage() {
 
   useEffect(() => {
     const session = getXanoSession()
-    setHasSession(Boolean(session?.authToken))
+    setHasSession(Boolean(session?.authenticated))
     setUserId(session?.user_id ? String(session.user_id) : '')
   }, [])
 

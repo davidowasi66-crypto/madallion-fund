@@ -1,4 +1,5 @@
 import { Analytics } from '@vercel/analytics/next'
+import { SessionTokenCleanup } from '@/components/session-token-cleanup'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
@@ -41,6 +42,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className="antialiased">
+        <SessionTokenCleanup />
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>

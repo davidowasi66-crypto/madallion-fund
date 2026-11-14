@@ -14,7 +14,7 @@ const endpoints = {
   requestReset: "/api:r2YmAApr/reset/request-reset-link",
 } as const
 
-const STORAGE_KEYS = { authToken: "madallion_auth_token", userId: "madallion_user_id" } as const
+const STORAGE_KEYS = { authToken: "madallion_auth_token", authenticated: "madallion_authenticated", userId: "madallion_user_id" } as const
 
 const API_GROUPS: Record<string, string> = {
   "r2YmAApr": XANO_AUTH_URL,
@@ -95,29 +95,34 @@ function userIdFrom(payload: any): string {
 }
 
 export function normalizeAuthSession(payload: any) {
-  const authToken = authTokenFrom(payload)
-  if (!authToken) throw new Error(String(payload?.message || payload?.error || "Xano did not return an authentication token."))
-  return { authToken, user_id: userIdFrom(payload) }
+  if (payload?.authenticated !== true) throw new Error(String(payload?.message || payload?.error || "Xano did not establish an authenticated session."))
+  return { authenticated: true as const, user_id: userIdFrom(payload) }
 }
 
 export function getXanoBaseUrl() { return normalizeOrigin(XANO_BASE_URL) }
 
 export function getStoredXanoToken() {
-  if (typeof window === "undefined") return null
-  return localStorage.getItem(STORAGE_KEYS.authToken) ?? sessionStorage.getItem(STORAGE_KEYS.authToken)
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem(STORAGE_KEYS.authToken)
+    sessionStorage.removeItem(STORAGE_KEYS.authToken)
+  }
+  return null
 }
 
 export function getXanoSession() {
   if (typeof window === "undefined") return null
-  const authToken = getStoredXanoToken()
+  getStoredXanoToken()
+  const authenticated = localStorage.getItem(STORAGE_KEYS.authenticated) === 'true' || sessionStorage.getItem(STORAGE_KEYS.authenticated) === 'true'
   const userId = localStorage.getItem(STORAGE_KEYS.userId) || sessionStorage.getItem(STORAGE_KEYS.userId)
-  return authToken ? { authToken, user_id: userId ?? "" } : null
+  return authenticated ? { authenticated: true as const, user_id: userId ?? "" } : null
 }
 
-export function saveXanoSession(data: { authToken: string; user_id?: string }) {
+export function saveXanoSession(data: { authenticated: true; user_id?: string }) {
   if (typeof window === "undefined") return
-  localStorage.setItem(STORAGE_KEYS.authToken, data.authToken)
-  sessionStorage.setItem(STORAGE_KEYS.authToken, data.authToken)
+  localStorage.removeItem(STORAGE_KEYS.authToken)
+  sessionStorage.removeItem(STORAGE_KEYS.authToken)
+  localStorage.setItem(STORAGE_KEYS.authenticated, 'true')
+  sessionStorage.setItem(STORAGE_KEYS.authenticated, 'true')
   if (data.user_id) {
     localStorage.setItem(STORAGE_KEYS.userId, data.user_id)
     sessionStorage.setItem(STORAGE_KEYS.userId, data.user_id)
@@ -127,10 +132,14 @@ export function saveXanoSession(data: { authToken: string; user_id?: string }) {
 export function clearXanoSession() {
   if (typeof window === "undefined") return
   localStorage.removeItem(STORAGE_KEYS.authToken)
+  localStorage.removeItem(STORAGE_KEYS.authenticated)
   localStorage.removeItem(STORAGE_KEYS.userId)
   sessionStorage.removeItem(STORAGE_KEYS.authToken)
+  sessionStorage.removeItem(STORAGE_KEYS.authenticated)
   sessionStorage.removeItem(STORAGE_KEYS.userId)
+  void fetch('/api/xano/session', { method: 'DELETE', credentials: 'same-origin' }).catch(() => undefined)
 }
+
 
 function endpoint(path: string) { return resolveRequestUrl(path) }
 
@@ -138,11 +147,8 @@ async function xanoRequestFromBase<T>(baseUrl: string, path: string, init: Reque
   const base = baseUrl.trim().replace(/\/$/, '')
   if (!base) throw new Error('Xano payments API is not configured')
   const headers = new Headers(init.headers ?? {})
-  if (options.auth) {
-    const session = getXanoSession()
-    if (!session?.authToken) throw new Error('Not authenticated')
-    headers.set('Authorization', `Bearer ${session.authToken}`)
-  }
+  if (options.auth && typeof window !== 'undefined' && !getXanoSession()?.authenticated) throw new Error('Not authenticated')
+  headers.delete('Authorization')
   if (init.body && !headers.has('Content-Type') && !(init.body instanceof FormData)) headers.set('Content-Type', 'application/json')
   const response = await fetch(`${base}${path}`, { ...init, headers, credentials: 'include', cache: 'no-store' })
   const text = await response.text()
@@ -163,13 +169,8 @@ export function xanoAdminFunctionRequest<T = any>(path: string, init: RequestIni
 export async function xanoRequest<T>(path: string, init: RequestInit = {}, options: { auth?: boolean } = {}): Promise<T> {
   const url = resolveRequestUrl(path)
   const headers = new Headers(init.headers ?? {})
-  const session = getXanoSession()
-  const token = session?.authToken ?? getStoredXanoToken()
-
-  if (options.auth || token) {
-    if (!token) throw new Error('Not authenticated')
-    headers.set('Authorization', `Bearer ${token}`)
-  }
+  if (options.auth && typeof window !== 'undefined' && !getXanoSession()?.authenticated) throw new Error('Not authenticated')
+  headers.delete('Authorization')
   if (typeof init.body === "string" && init.body.length && !headers.has("Content-Type")) headers.set("Content-Type", "application/json")
 
   const controller = new AbortController()

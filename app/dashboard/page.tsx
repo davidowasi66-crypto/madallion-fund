@@ -69,7 +69,7 @@ export default function DashboardPage() {
     let mounted = true
 
     async function load() {
-      if (!getXanoSession()?.authToken) {
+      if (!getXanoSession()?.authenticated) {
         clearXanoSession()
         router.replace('/login?next=/dashboard')
         return

@@ -31,7 +31,7 @@ function RegisterForm() {
     setLoading(true)
     try {
       const session = await xanoSignup(trimmedName, trimmedEmail, trimmedPassword)
-      if (!session?.authToken) throw new Error('Xano created the account but did not return an auth token. Try signing in, or check whether email verification is required.')
+      if (!session?.authenticated) throw new Error('Xano created the account but did not establish a session. Try signing in, or check whether email verification is required.')
       saveXanoSession(session)
       const next = searchParams.get('next')
       router.push(next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard')
