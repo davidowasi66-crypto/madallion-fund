@@ -5,7 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { Suspense, useEffect, useState, type FormEvent } from 'react'
 import { xanoLogin, saveXanoSession } from '@/lib/xano-auth'
 
- type LoginState = { ok: true; session: { authToken: string; user_id: string } } | { ok: false; error: string } | null
+ type LoginState = { ok: true; session: { authenticated: true; user_id: string } } | { ok: false; error: string } | null
 
 export default function LoginPage() {
   return <Suspense fallback={<main className="auth-page"><div className="auth-card">Loading sign in…</div></main>}><LoginForm /></Suspense>

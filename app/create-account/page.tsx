@@ -21,7 +21,7 @@ export default function CreateAccountPage() {
 
     try {
       const session = await xanoSignup(`${firstName} ${lastName}`.trim(), email, password)
-      if (!session?.authToken) throw new Error('Xano did not return an authentication token.')
+      if (!session?.authenticated) throw new Error('Xano did not establish an authenticated session.')
       saveXanoSession(session)
       setStatus('success')
     } catch (cause) {

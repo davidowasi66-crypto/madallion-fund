@@ -68,7 +68,7 @@ export function MemberMaturityPreview() {
   useEffect(() => {
     const current = getXanoSession()
     setSession(
-      current?.authToken
+      current?.authenticated
         ? { authenticated: true, cacheKey: `member-investments-${current.user_id || 'me'}` }
         : { authenticated: false, cacheKey: '' },
     )

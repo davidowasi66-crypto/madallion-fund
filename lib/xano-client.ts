@@ -33,14 +33,16 @@ function resolveRequestUrl(path: string) {
 
 export function normalizeBaseUrl() { return normalizeOrigin(XANO_BASE_URL) }
 export function getStoredXanoToken() {
-  if (typeof window === "undefined") return null
-  return window.localStorage.getItem("madallion_auth_token") ?? window.sessionStorage.getItem("madallion_auth_token")
+  if (typeof window !== "undefined") {
+    window.localStorage.removeItem("madallion_auth_token")
+    window.sessionStorage.removeItem("madallion_auth_token")
+  }
+  return null
 }
-export function buildXanoHeaders(token?: string | null, init?: RequestInit) {
+export function buildXanoHeaders(_token?: string | null, init?: RequestInit) {
   const headers = new Headers(init?.headers ?? {})
+  headers.delete("Authorization")
   if (!headers.has("Content-Type") && !(init?.body instanceof FormData)) headers.set("Content-Type", "application/json")
-  const resolvedToken = token ?? getStoredXanoToken()
-  if (resolvedToken) headers.set("Authorization", `Bearer ${resolvedToken}`)
   return headers
 }
 export function buildQuery(endpoint: string, params?: Record<string, string | number | boolean | undefined>) {

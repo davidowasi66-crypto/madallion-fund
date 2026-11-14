@@ -56,7 +56,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
   useEffect(() => {
     let mounted = true
     async function load() {
-      if (!getXanoSession()?.authToken) {
+      if (!getXanoSession()?.authenticated) {
         clearXanoSession()
         router.replace(`/login?next=/dashboard/${section}`)
         return
