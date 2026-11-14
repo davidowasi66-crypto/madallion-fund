@@ -15,7 +15,7 @@ const parseResponse = <T>(schema: z.ZodType<T>, response: unknown, label: string
 
 const request = async <T>(
   path: string,
-  schema: z.ZodType<T>,
+  schema: z.ZodType<T, any, any>,
   options: {
     auth?: boolean
     query?: Record<string, string | number | undefined>
@@ -204,30 +204,50 @@ export type AdminPendingResponse = z.infer<typeof AdminPendingResponseSchema>
 // 4. /api:yYNRHo4K/fn_admin_user_list
 // ============================================================================
 
-export const AdminUserListItemSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  email: z.string().nullable().optional(),
-  role: z.enum(["admin", "member"]).nullable().optional(),
-  status: z.literal("active"),
-  kyc_status: z.literal("verified"),
-  created_at: z.number().nullable().optional(),
-  invested: z.number(),
-  earned: z.number(),
-  wallet: z.number(),
-  referral_earned: z.number(),
-  referrals: z.number(),
-  deposits_count: z.number(),
-})
+const optionalNumericValue = z.coerce.number().nullable().optional()
 
-export const AdminUserListResponseSchema = z.object({
+export const AdminUserListItemSchema = z.object({
+  id: z.coerce.number(),
+  name: z.string().nullish().transform((value) => value ?? "Unknown"),
+  email: z.string().nullish(),
+  role: z.string().nullish(),
+  status: z.string().nullish(),
+  kyc_status: z.string().nullish(),
+  created_at: optionalNumericValue,
+  invested: z.coerce.number().catch(0),
+  earned: z.coerce.number().catch(0),
+  wallet: z.coerce.number().catch(0),
+  referral_earned: z.coerce.number().catch(0),
+  referrals: z.coerce.number().catch(0),
+  deposits_count: z.coerce.number().catch(0),
+}).passthrough()
+
+export const AdminUserListResponseSchema = z.preprocess((response) => {
+  if (Array.isArray(response)) return { items: response }
+  if (!response || typeof response !== "object") return response
+
+  const payload = response as Record<string, unknown>
+  const nested = payload.data && typeof payload.data === "object" ? payload.data as Record<string, unknown> : undefined
+  const source = nested ?? payload
+  const items = source.items ?? source.users ?? source.records
+
+  return {
+    ...source,
+    items,
+    curPage: source.curPage ?? source.cur_page ?? source.page,
+    nextPage: source.nextPage ?? source.next_page,
+    prevPage: source.prevPage ?? source.prev_page,
+    itemsReceived: source.itemsReceived ?? source.items_received ?? (Array.isArray(items) ? items.length : 0),
+    generated_at: source.generated_at ?? source.generatedAt,
+  }
+}, z.object({
   items: z.array(AdminUserListItemSchema),
-  curPage: z.number().nullable().optional(),
-  nextPage: z.number().nullable().optional(),
-  prevPage: z.number().nullable().optional(),
-  itemsReceived: z.number(),
-  generated_at: z.number(),
-})
+  curPage: optionalNumericValue,
+  nextPage: optionalNumericValue,
+  prevPage: optionalNumericValue,
+  itemsReceived: z.coerce.number().catch(0),
+  generated_at: optionalNumericValue,
+}).passthrough())
 
 export type AdminUserListResponse = z.infer<typeof AdminUserListResponseSchema>
 
