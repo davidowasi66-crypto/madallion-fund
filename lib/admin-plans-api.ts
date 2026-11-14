@@ -11,6 +11,8 @@ export type AdminPlan = {
   active_investments: number
   total_aum_cents: number
   description?: string
+  status?: 'active' | 'paused' | 'archived' | string
+  is_paused?: boolean
 }
 
 type PlansResponse = AdminPlan[] | { items?: AdminPlan[]; plans?: AdminPlan[]; data?: AdminPlan[] }
@@ -28,6 +30,19 @@ export async function createAdminPlan(payload: Omit<AdminPlan, 'id' | 'active_in
   return xanoAdminFunctionRequest<AdminPlan>('/fn_admin_plan_create', { method: 'POST', body: JSON.stringify(payload) })
 }
 
-export async function updateAdminPlan(id: number, payload: Partial<Omit<AdminPlan, 'id' | 'active_investments' | 'total_aum_cents'>>) {
+export async function updateAdminPlan(id: number, payload: Partial<Omit<AdminPlan, 'id' | 'active_investments' | 'total_aum_cents'>> & { is_paused?: boolean; status?: string }) {
   return xanoAdminFunctionRequest<AdminPlan>(`/fn_admin_plan/${id}`, { method: 'PATCH', body: JSON.stringify(payload) })
+}
+
+export async function deleteAdminPlan(id: number) {
+  return xanoAdminFunctionRequest<{ ok?: boolean }>(`/fn_admin_plan/${id}`, { method: 'DELETE' })
+}
+
+/** Pause new subscriptions only. Existing member contracts keep locked terms. */
+export async function pauseAdminPlan(id: number) {
+  return updateAdminPlan(id, { is_paused: true, status: 'paused' })
+}
+
+export async function resumeAdminPlan(id: number) {
+  return updateAdminPlan(id, { is_paused: false, status: 'active' })
 }
