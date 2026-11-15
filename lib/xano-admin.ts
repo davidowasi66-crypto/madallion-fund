@@ -222,23 +222,42 @@ export const AdminUserListItemSchema = z.object({
   deposits_count: z.coerce.number().catch(0),
 }).passthrough()
 
-export const AdminUserListResponseSchema = z.preprocess((response) => {
-  if (Array.isArray(response)) return { items: response }
-  if (!response || typeof response !== "object") return response
+const parseJsonContainer = (value: unknown): unknown => {
+  if (typeof value !== "string") return value
+  const trimmed = value.trim()
+  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return value
 
-  const payload = response as Record<string, unknown>
-  const nested = payload.data && typeof payload.data === "object" ? payload.data as Record<string, unknown> : undefined
+  try {
+    return JSON.parse(trimmed)
+  } catch {
+    return value
+  }
+}
+
+export const AdminUserListResponseSchema = z.preprocess((response) => {
+  const decodedResponse = parseJsonContainer(response)
+  if (Array.isArray(decodedResponse)) return { items: decodedResponse }
+  if (!decodedResponse || typeof decodedResponse !== "object") return decodedResponse
+
+  const payload = decodedResponse as Record<string, unknown>
+  const decodedData = parseJsonContainer(payload.data)
+  const nested = decodedData && typeof decodedData === "object" && !Array.isArray(decodedData)
+    ? decodedData as Record<string, unknown>
+    : undefined
   const source = nested ?? payload
-  const items = source.items ?? source.users ?? source.records
+  const itemCandidates = [source.items, source.users, source.records, source.data, decodedData]
+    .map(parseJsonContainer)
+  const items = itemCandidates.find(Array.isArray)
 
   return {
+    ...payload,
     ...source,
     items,
-    curPage: source.curPage ?? source.cur_page ?? source.page,
-    nextPage: source.nextPage ?? source.next_page,
-    prevPage: source.prevPage ?? source.prev_page,
-    itemsReceived: source.itemsReceived ?? source.items_received ?? (Array.isArray(items) ? items.length : 0),
-    generated_at: source.generated_at ?? source.generatedAt,
+    curPage: source.curPage ?? source.cur_page ?? source.page ?? payload.curPage ?? payload.cur_page ?? payload.page,
+    nextPage: source.nextPage ?? source.next_page ?? payload.nextPage ?? payload.next_page,
+    prevPage: source.prevPage ?? source.prev_page ?? payload.prevPage ?? payload.prev_page,
+    itemsReceived: source.itemsReceived ?? source.items_received ?? payload.itemsReceived ?? payload.items_received ?? (Array.isArray(items) ? items.length : 0),
+    generated_at: source.generated_at ?? source.generatedAt ?? payload.generated_at ?? payload.generatedAt,
   }
 }, z.object({
   items: z.array(AdminUserListItemSchema),
