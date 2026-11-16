@@ -69,16 +69,91 @@ export type PublicInvestmentShare = {
   expires_at?: string
 }
 
+export type CreatePublicInvestmentShareRequest = {
+  investment_id: string
+  expires_at?: string
+}
+
+export type WaitlistSettingsUpdate = {
+  mode: WaitlistSettings['mode']
+  registration_enabled: boolean
+  waitlist_enabled: boolean
+  expected_updated_at?: string
+}
+
+export type InvestmentFeeType =
+  | 'management'
+  | 'performance'
+  | 'withdrawal'
+  | 'early_exit'
+  | 'referral_commission'
+
+export type InvestmentLedgerAccountCategory =
+  | 'investment_principal'
+  | 'investment_yield'
+  | 'management_fee_payable'
+  | 'performance_fee_payable'
+  | 'withdrawal_fee_payable'
+  | 'early_exit_fee_payable'
+  | 'referral_commission_payable'
+
 export type InvestmentFeeEntry = {
   id: string
   investment_id: string
-  fee_type: 'management' | 'payout' | 'referral' | 'tax' | 'other'
+  fee_type: InvestmentFeeType
   amount: number
   currency: string
-  debit_source: 'yield' | 'available_balance'
+  debit_source: 'interest_only' | 'available_balance'
+  debit_account: InvestmentLedgerAccountCategory
+  credit_account: InvestmentLedgerAccountCategory
   ledger_entry_id: string
   idempotency_key: string
   created_at: string
+}
+
+export type InvestmentFeePolicy = {
+  currency: string
+  management_fee_bps?: number
+  performance_fee_bps?: number
+  performance_hurdle_bps?: number
+  withdrawal_fee_bps?: number
+  early_exit_fee_bps?: number
+  referral_commission_bps?: number
+  effective_from: string
+  source: 'server'
+}
+
+export type CohortAssignment = {
+  investment_id: string
+  cohort_id: string
+  cohort_start_at: string
+  accrual_start_at: string
+  maturity_at: string
+  source: 'server'
+}
+
+export type AutoRolloverPreference = {
+  investment_id: string
+  enabled: boolean
+  effective_at: string
+  source: 'server'
+}
+
+export type AutoRolloverPreferenceRequest = {
+  enabled: boolean
+  expected_updated_at?: string
+}
+
+export type MaturityResolutionRequest = {
+  action: 'withdraw' | 'rollover'
+  idempotency_key: string
+}
+
+export type WithdrawalWindow = {
+  opens_at: string
+  closes_at: string
+  is_open: boolean
+  source: 'server'
 }
 
 export type ProductPlanLimit = PlanSoftLimit & {
@@ -109,6 +184,12 @@ export const PRODUCT_FEATURE_API_CONTRACT = {
     source: 'GET /api:ledger-api/plans',
     fields: ['featured', 'availability_status', 'soft_limits'] as const,
   },
+  cohortAssignment: { method: 'GET', path: '/api:ledger-api/investments/{investment_id}/schedule' },
+  autoRolloverPreference: { method: 'PATCH', path: '/api:ledger-api/investments/{investment_id}/rollover' },
+  maturityResolution: { method: 'POST', path: '/api:ledger-api/investments/{investment_id}/maturity-resolution' },
+  withdrawalWindow: { method: 'GET', path: '/api:ledger-api/investments/{investment_id}/withdrawal-window' },
+  feePolicy: { method: 'GET', path: '/api:ledger-api/fee-policy' },
+  investmentFeeEntries: { method: 'GET', path: '/api:ledger-api/investments/{investment_id}/fees' },
   signupReferralAttribution: {
     source: 'POST /api:auth/signup',
     field: 'referral_code',
@@ -121,5 +202,10 @@ export const PRODUCT_FEATURE_BACKEND_STATUS = {
   notificationPreferences: 'pending-xano-routes',
   waitlistSettings: 'pending-xano-routes',
   publicInvestmentShares: 'pending-signed-share-route',
+  cohorts: 'pending-xano-scheduling-route',
+  rollover: 'pending-xano-rollover-route',
+  maturityResolution: 'pending-xano-maturity-route',
+  feePolicy: 'pending-xano-fee-policy-route',
+  feePosting: 'pending-xano-ledger-posting-route',
   planLimits: 'read-only-when-present-in-plan-response',
 } as const

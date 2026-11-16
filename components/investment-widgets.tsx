@@ -209,8 +209,10 @@ export function MaturityProgressBar({
           <p className={`mt-1 font-semibold ${textTone}`}>{matured ? '0' : scheduled ? daysUntilStart : daysLeft}</p>
         </div>
         <div>
-          <p className={mutedTone}>{earnedToday == null ? 'Illustrative / day' : 'Today · ledger'}</p>
-          <p className={`mt-1 font-semibold ${textTone}`}>{earnedToday == null ? money(Math.round(principal * (dailyPercent / 100))) : money(Number(earnedToday))}</p>
+          <p className={mutedTone}>{scheduled ? 'Daily earnings' : earnedToday == null ? 'Illustrative / day' : 'Today · ledger'}</p>
+          <p className={`mt-1 font-semibold ${textTone}`}>
+            {scheduled ? 'Begins at cohort start' : earnedToday == null ? money(Math.round(principal * (dailyPercent / 100))) : money(Number(earnedToday))}
+          </p>
         </div>
         <div>
           <p className={mutedTone}>Accrued · ledger</p>
@@ -306,8 +308,20 @@ export function PortfolioSummary({ investments }: { investments: Investment[] })
   const nextMaturity = dates.map((value) => toMs(value, 0)).filter((value) => value > 0).sort((a, b) => a - b)[0]
   const nextPayouts = investments.map((item) => (item as any).next_payout_at ?? (item as any).next_payout_date).filter(Boolean)
   const nextPayout = nextPayouts.map((value) => toMs(value, 0)).filter((value) => value > 0).sort((a, b) => a - b)[0]
-  const dailyRates = investments.map((item) => Number(item.daily_rate_bps ?? item.plan?.daily_rate_bps ?? 0) / 100).filter((rate) => rate > 0)
-  const effectiveApy = dailyRates.length ? (Math.pow(1 + dailyRates.reduce((sum, rate) => sum + rate, 0) / dailyRates.length / 100, 365) - 1) * 100 : null
+  const weightedApy = investments.reduce((sum, item) => {
+    const itemPrincipal = Number(item.principal ?? 0)
+    const dailyPercent = item.daily_rate_bps != null ? Number(item.daily_rate_bps) / 100 : planDailyRate(item.plan)
+    if (itemPrincipal <= 0 || dailyPercent <= 0 || !Number.isFinite(dailyPercent)) return sum
+    const dailyRate = dailyPercent / 100
+    const compounds = Boolean(item.auto_compound_enabled ?? item.auto_compound ?? false)
+    const apy = (compounds ? Math.pow(1 + dailyRate, 365) - 1 : dailyRate * 365) * 100
+    return Number.isFinite(apy) ? sum + apy * itemPrincipal : sum
+  }, 0)
+  const rateWeightedPrincipal = investments.reduce((sum, item) => {
+    const dailyPercent = item.daily_rate_bps != null ? Number(item.daily_rate_bps) / 100 : planDailyRate(item.plan)
+    return Number.isFinite(dailyPercent) && dailyPercent > 0 ? sum + Number(item.principal ?? 0) : sum
+  }, 0)
+  const effectiveApy = rateWeightedPrincipal > 0 ? weightedApy / rateWeightedPrincipal : null
   return (
     <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="Portfolio summary">
       <SummaryMetric label="Principal" value={money(principal)} />
@@ -324,16 +338,26 @@ function SummaryMetric({ label, value }: { label: string; value: string }) {
 }
 
 export function AutoCompoundToggle({ investment }: { investment: Investment }) {
-  const [enabled, setEnabled] = useState(Boolean((investment as any).auto_compound ?? (investment as any).auto_compound_enabled ?? false))
+  const [enabled, setEnabled] = useState(Boolean(investment.auto_compound_enabled ?? investment.auto_compound ?? false))
+  const dailyPercent = investment.daily_rate_bps != null ? Number(investment.daily_rate_bps) / 100 : planDailyRate(investment.plan)
+  const dailyRate = dailyPercent / 100
+  const simpleAnnualRate = dailyRate * 365
+  const compoundAnnualRate = dailyRate > -1 ? Math.pow(1 + dailyRate, 365) - 1 : 0
+  const effectiveRate = (enabled ? compoundAnnualRate : simpleAnnualRate) * 100
+  const effectiveRateLabel = dailyPercent > 0 && Number.isFinite(effectiveRate)
+    ? `${effectiveRate.toLocaleString('en-NG', { maximumFractionDigits: 2 })}%`
+    : 'Rate unavailable'
+
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#dfe8e2] bg-white p-4">
       <div>
-        <p className="text-sm font-semibold text-[#0b4537]">Auto-compound</p>
-        <p className="mt-1 text-xs text-[#708079]">Compounding changes your effective rate. Toggle updates this session&apos;s projection only.</p>
+        <p className="text-sm font-semibold text-[#0b4537]">Auto-compound preview</p>
+        <p className="mt-1 text-xs text-[#708079]">Compounding changes your effective rate. This preview is not saved; Xano must enable the rollover preference before it can apply to your investment.</p>
+        <p className="mt-2 text-xs font-semibold text-[#0b4537]">Illustrative effective APY: {effectiveRateLabel}</p>
       </div>
       <button type="button" role="switch" aria-checked={enabled} onClick={() => setEnabled((value) => !value)} className={`relative h-7 w-12 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff8b28] ${enabled ? 'bg-[#ff8b28]' : 'bg-[#cbd5cf]'}`}>
         <span className={`absolute top-1 size-5 rounded-full bg-white shadow transition-transform ${enabled ? 'translate-x-6' : 'translate-x-1'}`} />
-        <span className="sr-only">{enabled ? 'Turn off' : 'Turn on'} auto-compound for {investment.plan_name ?? investment.plan?.name ?? 'this investment'}</span>
+        <span className="sr-only">{enabled ? 'Turn off' : 'Turn on'} auto-compound preview for {investment.plan_name ?? investment.plan?.name ?? 'this investment'}</span>
       </button>
     </div>
   )

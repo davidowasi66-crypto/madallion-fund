@@ -65,7 +65,11 @@ export type Investment = {
   matures_at?: number | string
   withdrawal_window_ends_at?: number | string
   rollover_enabled?: boolean
+  auto_compound_enabled?: boolean
+  auto_compound?: boolean
   next_rollover_at?: number | string
+  next_payout_at?: number | string
+  next_payout_date?: number | string
   fee_total?: number
   fee_breakdown?: Array<{ type: string; amount: number; currency?: string }>
   progress?: number
