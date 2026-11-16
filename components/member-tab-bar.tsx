@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
-import { ArrowDownLeft, Home, Layers, Users } from 'lucide-react'
+import { ArrowDownLeft, Home, Layers, UserPlus } from 'lucide-react'
 
 const tabs = [
   { href: '/dashboard', label: 'Home', icon: Home, match: (p: string) => p === '/dashboard' },
@@ -12,7 +12,7 @@ const tabs = [
     icon: Layers,
     match: (p: string) => p.startsWith('/dashboard/investments') || p.startsWith('/plans'),
   },
-  { href: '/affiliate', label: 'Team', icon: Users, match: (p: string) => p.startsWith('/affiliate') },
+  { href: '/affiliate', label: 'Referrals', icon: UserPlus, match: (p: string) => p.startsWith('/affiliate') },
   {
     href: '/dashboard/wallet',
     label: 'Wallet',

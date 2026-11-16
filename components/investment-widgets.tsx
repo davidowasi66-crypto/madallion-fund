@@ -141,104 +141,92 @@ export function MaturityProgressBar({
 }) {
   const plan: Plan = investment.plan ?? { name: 'Investment', duration_days: 30 }
   const principal = Number(investment.principal ?? 0)
-  const startMs = toMs(investment.started_at ?? investment.start_date ?? investment.created_at, Date.now())
-  const durationDays = Number(plan.duration_days ?? investment.plan?.duration_days ?? 0)
+  const now = Date.now()
+  const cohortStart = investment.scheduled_start_at ?? investment.cohort_start_at
+  const startValue = cohortStart ?? investment.started_at ?? investment.start_date ?? investment.created_at
+  const hasStart = startValue != null
+  const startMs = toMs(startValue, now)
+  const durationDays = Math.max(1, Number(plan.duration_days ?? 30) || 30)
   const maturityDate =
-    investment.ends_at ??
-    investment.maturity_at ??
-    investment.matures_at ??
-    investment.maturity_date ??
-    investment.end_date
-  const endMs = maturityDate
-    ? toMs(maturityDate, startMs + Math.max(1, durationDays) * 86_400_000)
-    : startMs + Math.max(1, durationDays || 30) * 86_400_000
+    investment.ends_at ?? investment.maturity_at ?? investment.matures_at ?? investment.maturity_date ?? investment.end_date
+  const endMs = maturityDate ? toMs(maturityDate, startMs + durationDays * 86_400_000) : startMs + durationDays * 86_400_000
   const totalMs = Math.max(86_400_000, endMs - startMs)
-  const elapsedMs = Math.max(0, Math.min(totalMs, Date.now() - startMs))
+  const scheduled = startMs > now
+  const elapsedMs = scheduled ? 0 : Math.max(0, Math.min(totalMs, now - startMs))
   const computedPercent = Math.min(100, Math.round((elapsedMs / totalMs) * 100))
   const apiProgress = Number(investment.progress)
-  const percent =
-    Number.isFinite(apiProgress) && apiProgress >= 0
-      ? Math.min(100, Math.round(apiProgress <= 1 ? apiProgress * 100 : apiProgress))
-      : computedPercent
-  const daysLeft = Math.max(0, Math.ceil((endMs - Date.now()) / 86_400_000))
+  const percent = Number.isFinite(apiProgress) && apiProgress >= 0
+    ? Math.min(100, Math.round(apiProgress <= 1 ? apiProgress * 100 : apiProgress))
+    : hasStart ? computedPercent : 0
+  const daysLeft = Math.max(0, Math.ceil((endMs - now) / 86_400_000))
+  const daysUntilStart = Math.max(0, Math.ceil((startMs - now) / 86_400_000))
   const daysElapsed = Math.floor(elapsedMs / 86_400_000)
-  const dailyPercent = investment.daily_rate_bps
+  const dailyPercent = investment.daily_rate_bps != null
     ? Number(investment.daily_rate_bps) / 100
     : planDailyRate(plan)
   const totalDays = Math.max(1, Math.round(totalMs / 86_400_000))
-  const accrued =
-    investment.accrued_total != null
-      ? Number(investment.accrued_total)
-      : Math.round(principal * (dailyPercent / 100) * daysElapsed)
-  const projected = Math.round(principal * (dailyPercent / 100) * totalDays)
-  const matured = Date.now() >= endMs || percent >= 100
+  const accrued = investment.net_accrued_total ?? investment.accrued_total
+  const earnedToday = investment.earned_today
+  const projected = Number.isFinite(dailyPercent) ? Math.round(principal * (dailyPercent / 100) * totalDays) : null
+  const matured = !scheduled && (now >= endMs || percent >= 100)
   const light = variant === 'light'
-  const planLabel =
-    plan.name ?? investment.plan_name ?? (investment.plan_id ? `Plan #${investment.plan_id}` : 'Investment')
+  const planLabel = plan.name ?? investment.plan_name ?? (investment.plan_id ? `Plan #${investment.plan_id}` : 'Investment')
+  const textTone = light ? 'text-[#0b4537]' : 'text-white'
+  const mutedTone = light ? 'text-[#708079]' : 'text-[#789589]'
+  const statusText = scheduled
+    ? `Cohort starts in ${daysUntilStart} ${daysUntilStart === 1 ? 'day' : 'days'}`
+    : !hasStart
+      ? 'Start date pending'
+      : matured
+        ? 'Ready to settle'
+        : `${percent}% to maturity`
 
   return (
-    <div
-      className={`rounded-2xl border p-4 ${
-        light ? 'border-[#e7eee8] bg-[#f4f8f3]' : 'border-white/10 bg-[#0e2b26]'
-      }`}
-    >
+    <div className={`rounded-2xl border p-4 ${light ? 'border-[#e7eee8] bg-[#f4f8f3]' : 'border-white/10 bg-[#0e2b26]'}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <p className={`font-semibold ${light ? 'text-[#0b4537]' : 'text-white'}`}>{planLabel}</p>
-          <p className={`mt-1 text-xs ${light ? 'text-[#708079]' : 'text-[#789589]'}`}>
-            {money(principal)} principal · Matures {date(endMs)}
+          <p className={`font-semibold ${textTone}`}>{planLabel}</p>
+          <p className={`mt-1 text-xs ${mutedTone}`}>
+            {money(principal)} principal · {scheduled ? `Cohort starts ${date(startMs)} · ` : ''}Matures {date(endMs)}
           </p>
         </div>
-        <span
-          className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${
-            matured
-              ? light
-                ? 'bg-sky-100 text-sky-800'
-                : 'bg-sky-400/15 text-sky-300'
-              : light
-                ? 'bg-[#eef7eb] text-[#2f7a4a]'
-                : 'bg-[#b9f47f]/15 text-[#b9f47f]'
-          }`}
-        >
-          {matured ? 'Ready to settle' : `${percent}% to maturity`}
+        <span className={`shrink-0 rounded-full px-2.5 py-1 text-xs font-semibold ${matured ? light ? 'bg-sky-100 text-sky-800' : 'bg-sky-400/15 text-sky-300' : light ? 'bg-[#eef7eb] text-[#2f7a4a]' : 'bg-[#b9f47f]/15 text-[#b9f47f]'}`}>
+          {statusText}
         </span>
       </div>
 
-      <div
-        className={`mt-4 h-3 overflow-hidden rounded-full ${light ? 'bg-[#dfe8e2]' : 'bg-[#183e31]'}`}
-        role="progressbar"
-        aria-valuenow={percent}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label={`${planLabel} progress to maturity`}
-      >
-        <div
-          className="h-full rounded-full bg-gradient-to-r from-[#8fe35c] to-[#b9f47f] transition-all duration-500"
-          style={{ width: `${percent}%` }}
-        />
+      <div className={`mt-4 h-3 overflow-hidden rounded-full ${light ? 'bg-[#dfe8e2]' : 'bg-[#183e31]'}`} role="progressbar" aria-valuenow={percent} aria-valuemin={0} aria-valuemax={100} aria-label={`${planLabel} progress to maturity`}>
+        <div className="h-full rounded-full bg-gradient-to-r from-[#8fe35c] to-[#b9f47f] transition-all duration-500" style={{ width: `${percent}%` }} />
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-4">
+      <div className="mt-3 grid grid-cols-2 gap-3 text-xs sm:grid-cols-5">
         <div>
-          <p className={light ? 'text-[#708079]' : 'text-[#789589]'}>Elapsed</p>
-          <p className={`mt-1 font-semibold ${light ? 'text-[#0b4537]' : 'text-white'}`}>
-            {daysElapsed} of {totalDays} days
-          </p>
+          <p className={mutedTone}>Elapsed</p>
+          <p className={`mt-1 font-semibold ${textTone}`}>{daysElapsed} of {totalDays} days</p>
         </div>
         <div>
-          <p className={light ? 'text-[#708079]' : 'text-[#789589]'}>{matured ? 'Matured' : 'Days remaining'}</p>
-          <p className={`mt-1 font-semibold ${light ? 'text-[#0b4537]' : 'text-white'}`}>{matured ? '0' : daysLeft}</p>
+          <p className={mutedTone}>{matured ? 'Matured' : scheduled ? 'Starts in' : 'Days remaining'}</p>
+          <p className={`mt-1 font-semibold ${textTone}`}>{matured ? '0' : scheduled ? daysUntilStart : daysLeft}</p>
         </div>
         <div>
-          <p className={light ? 'text-[#708079]' : 'text-[#789589]'}>Accrued so far</p>
-          <p className={`mt-1 font-semibold ${light ? 'text-[#2f7a4a]' : 'text-[#b9f47f]'}`}>{money(accrued)}</p>
+          <p className={mutedTone}>{earnedToday == null ? 'Illustrative / day' : 'Today · ledger'}</p>
+          <p className={`mt-1 font-semibold ${textTone}`}>{earnedToday == null ? money(Math.round(principal * (dailyPercent / 100))) : money(Number(earnedToday))}</p>
         </div>
         <div>
-          <p className={light ? 'text-[#708079]' : 'text-[#789589]'}>Projected at maturity</p>
-          <p className={`mt-1 font-semibold ${light ? 'text-[#0b4537]' : 'text-white'}`}>
-            {money(principal + projected)}
-          </p>
+          <p className={mutedTone}>Accrued · ledger</p>
+          <p className={`mt-1 font-semibold ${light ? 'text-[#2f7a4a]' : 'text-[#b9f47f]'}`}>{accrued == null ? 'Pending' : money(Number(accrued))}</p>
         </div>
+        <div>
+          <p className={mutedTone}>Illustrative at maturity</p>
+          <p className={`mt-1 font-semibold ${textTone}`}>{projected == null ? 'Pending' : money(principal + projected)}</p>
+        </div>
+      </div>
+
+      <div className={`mt-3 flex flex-wrap gap-x-5 gap-y-2 border-t pt-3 text-[11px] ${light ? 'border-[#e7eee8] text-[#708079]' : 'border-white/10 text-[#789589]'}`}>
+        <span>{investment.rollover_enabled == null ? 'Rollover preference pending' : `Auto-roll ${investment.rollover_enabled ? 'on' : 'off'}`}</span>
+        {investment.withdrawal_window_ends_at != null && <span>Withdrawal window ends {date(investment.withdrawal_window_ends_at)}</span>}
+        {investment.fee_total != null && <span>Fees recorded {money(Number(investment.fee_total))}</span>}
+        <span>Projected values are illustrative; ledger totals are authoritative.</span>
       </div>
     </div>
   )
@@ -307,6 +295,46 @@ export function SavingsGoalCard({ currentValue }: { currentValue: number }) {
           Set
         </button>
       </div>
+    </div>
+  )
+}
+
+export function PortfolioSummary({ investments }: { investments: Investment[] }) {
+  const principal = investments.reduce((sum, item) => sum + Number(item.principal ?? 0), 0)
+  const accrued = investments.reduce((sum, item) => sum + Number(item.net_accrued_total ?? item.accrued_total ?? 0), 0)
+  const dates = investments.map((item) => item.maturity_at ?? item.ends_at ?? item.matures_at ?? item.maturity_date ?? item.end_date).filter(Boolean)
+  const nextMaturity = dates.map((value) => toMs(value, 0)).filter((value) => value > 0).sort((a, b) => a - b)[0]
+  const nextPayouts = investments.map((item) => (item as any).next_payout_at ?? (item as any).next_payout_date).filter(Boolean)
+  const nextPayout = nextPayouts.map((value) => toMs(value, 0)).filter((value) => value > 0).sort((a, b) => a - b)[0]
+  const dailyRates = investments.map((item) => Number(item.daily_rate_bps ?? item.plan?.daily_rate_bps ?? 0) / 100).filter((rate) => rate > 0)
+  const effectiveApy = dailyRates.length ? (Math.pow(1 + dailyRates.reduce((sum, rate) => sum + rate, 0) / dailyRates.length / 100, 365) - 1) * 100 : null
+  return (
+    <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5" aria-label="Portfolio summary">
+      <SummaryMetric label="Principal" value={money(principal)} />
+      <SummaryMetric label="Accrued to date · ledger" value={money(accrued)} />
+      <SummaryMetric label="Next payout" value={nextPayout ? date(nextPayout) : 'Not scheduled'} />
+      <SummaryMetric label="Next maturity" value={nextMaturity ? date(nextMaturity) : 'Not scheduled'} />
+      <SummaryMetric label="Illustrative effective APY" value={effectiveApy == null ? 'Rate unavailable' : `${effectiveApy.toLocaleString('en-NG', { maximumFractionDigits: 2 })}%`} />
+    </section>
+  )
+}
+
+function SummaryMetric({ label, value }: { label: string; value: string }) {
+  return <div className="rounded-2xl border border-white/10 bg-[#0b2420] p-4"><p className="text-xs text-[#8eaea0]">{label}</p><p className="mt-2 text-lg font-semibold text-white">{value}</p></div>
+}
+
+export function AutoCompoundToggle({ investment }: { investment: Investment }) {
+  const [enabled, setEnabled] = useState(Boolean((investment as any).auto_compound ?? (investment as any).auto_compound_enabled ?? false))
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#dfe8e2] bg-white p-4">
+      <div>
+        <p className="text-sm font-semibold text-[#0b4537]">Auto-compound</p>
+        <p className="mt-1 text-xs text-[#708079]">Compounding changes your effective rate. Toggle updates this session&apos;s projection only.</p>
+      </div>
+      <button type="button" role="switch" aria-checked={enabled} onClick={() => setEnabled((value) => !value)} className={`relative h-7 w-12 rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ff8b28] ${enabled ? 'bg-[#ff8b28]' : 'bg-[#cbd5cf]'}`}>
+        <span className={`absolute top-1 size-5 rounded-full bg-white shadow transition-transform ${enabled ? 'translate-x-6' : 'translate-x-1'}`} />
+        <span className="sr-only">{enabled ? 'Turn off' : 'Turn on'} auto-compound for {investment.plan_name ?? investment.plan?.name ?? 'this investment'}</span>
+      </button>
     </div>
   )
 }

@@ -2,6 +2,14 @@ import { xanoAdminFunctionRequest, xanoPaymentRequest, xanoRequest } from '@/lib
 import { DEFAULT_PLANS } from '@/lib/default-plans'
 import { mockCreatePlan, mockDeletePlan, mockGetPlans, mockUpdatePlan, SANDBOX_MOCK } from '@/lib/mock-mode'
 
+export type PlanSoftLimit = {
+  key: string
+  label: string
+  limit: number
+  used?: number
+  unit?: string
+}
+
 export type Plan = {
   id?: number
   name: string
@@ -14,12 +22,21 @@ export type Plan = {
   principal_returned?: boolean
   status?: 'active' | 'paused' | 'archived' | string
   is_paused?: boolean
+  featured?: boolean
+  sold_out?: boolean
+  availability_status?: 'available' | 'sold_out' | 'paused' | string
+  soft_limits?: PlanSoftLimit[]
   plan_url?: string
   url?: string
   currency?: string
   active_investments?: number
   total_aum?: number
   total_aum_cents?: number
+  payout_cadence?: 'daily' | 'at_maturity' | string
+  lock_period_days?: number
+  capacity?: number
+  capacity_used?: number
+  capacity_percent?: number
 }
 
 export type Investment = {
@@ -29,17 +46,28 @@ export type Investment = {
   plan_name?: string
   principal: number
   accrued_total?: number
+  net_accrued_total?: number
+  earned_today?: number
+  earned_today_as_of?: number | string
+  accrued_as_of?: number | string
   daily_rate_bps?: number
   status?: string
   currency?: string
   created_at?: number | string
   started_at?: number | string
+  scheduled_start_at?: number | string
+  cohort_start_at?: number | string
   start_date?: number | string
   ends_at?: number | string
   end_date?: number | string
   maturity_at?: number | string
   maturity_date?: number | string
   matures_at?: number | string
+  withdrawal_window_ends_at?: number | string
+  rollover_enabled?: boolean
+  next_rollover_at?: number | string
+  fee_total?: number
+  fee_breakdown?: Array<{ type: string; amount: number; currency?: string }>
   progress?: number
 }
 
@@ -96,12 +124,28 @@ const normalizePlan = (row: any): Plan | null => {
     principal_returned: row.principal_returned == null ? undefined : Boolean(row.principal_returned),
     status: row.status == null ? undefined : String(row.status),
     is_paused: row.is_paused == null ? undefined : Boolean(row.is_paused),
+    featured: row.featured == null ? undefined : Boolean(row.featured),
+    sold_out: row.sold_out == null && row.is_sold_out == null ? undefined : Boolean(row.sold_out ?? row.is_sold_out),
+    availability_status: row.availability_status == null && row.availability == null ? undefined : String(row.availability_status ?? row.availability),
+    soft_limits: Array.isArray(row.soft_limits ?? row.limits)
+      ? (row.soft_limits ?? row.limits).flatMap((limit: any, index: number) => {
+          const name = String(limit?.label ?? limit?.name ?? '').trim()
+          const value = Number(limit?.limit ?? limit?.max ?? limit?.included)
+          if (!name || !Number.isFinite(value) || value < 0) return []
+          return [{ key: String(limit.key ?? limit.id ?? `${name}-${index}`), label: name, limit: value, used: Number.isFinite(Number(limit.used)) ? Number(limit.used) : undefined, unit: limit.unit == null ? undefined : String(limit.unit) }]
+        })
+      : undefined,
     plan_url: row.plan_url ?? row.url ?? undefined,
     url: row.url ?? row.plan_url ?? undefined,
     currency: row.currency == null ? undefined : String(row.currency),
     active_investments: row.active_investments == null ? undefined : Number(row.active_investments),
     total_aum: row.total_aum == null ? undefined : Number(row.total_aum),
     total_aum_cents: row.total_aum_cents == null ? undefined : Number(row.total_aum_cents),
+    payout_cadence: row.payout_cadence ?? row.payout_frequency ?? row.payout_schedule ?? undefined,
+    lock_period_days: row.lock_period_days == null && row.lock_days == null ? undefined : Number(row.lock_period_days ?? row.lock_days),
+    capacity: row.capacity == null && row.capacity_amount == null ? undefined : Number(row.capacity ?? row.capacity_amount),
+    capacity_used: row.capacity_used == null && row.total_aum == null ? undefined : Number(row.capacity_used ?? row.total_aum),
+    capacity_percent: row.capacity_percent == null ? undefined : Number(row.capacity_percent),
   }
 }
 

@@ -200,8 +200,9 @@ export async function xanoLogin(email: string, password: string) {
   return session
 }
 
-export async function xanoSignup(name: string, email: string, password: string) {
-  const payload = await xanoRequest<any>(endpoints.signup, { method: "POST", body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), username: email.trim().toLowerCase(), password }) })
+export async function xanoSignup(name: string, email: string, password: string, referralCode?: string) {
+  const validReferralCode = referralCode && /^[A-Za-z0-9_-]{1,64}$/.test(referralCode) ? referralCode : undefined
+  const payload = await xanoRequest<any>(endpoints.signup, { method: "POST", body: JSON.stringify({ name: name.trim(), email: email.trim().toLowerCase(), username: email.trim().toLowerCase(), password, ...(validReferralCode ? { referral_code: validReferralCode } : {}) }) })
   const session = normalizeAuthSession(payload)
   saveXanoSession(session)
   return session
