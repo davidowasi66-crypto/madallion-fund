@@ -2,8 +2,9 @@
 
 import Link from 'next/link'
 import useSWR from 'swr'
+import { PlanCard } from '@/components/plan-card'
 import { PlanCalculator } from '@/components/investment-widgets'
-import { getPlans, PLANS_KEY, planDailyRate } from '@/lib/investment-api'
+import { getPlans, PLANS_KEY } from '@/lib/investment-api'
 
 export default function PlansPage() {
   const { data: catalogue, isLoading } = useSWR(PLANS_KEY, getPlans)
@@ -25,42 +26,15 @@ export default function PlansPage() {
             Choose your pace of growth.
           </h1>
           <p className="mt-5 text-lg leading-8 text-[#60716b]">
-            Plan terms and availability are loaded from the investment system, so every page stays in sync.
+            Plan terms and availability are loaded from the investment system, so every page stays in sync. Any usage limits attach to an investment plan; they are not separate membership subscriptions.
           </p>
         </div>
         {isLoading ? (
           <p className="mt-12 text-sm text-[#60716b]">Loading available plans…</p>
         ) : (
-          <div className="mt-12 grid gap-5 lg:grid-cols-3">
+          <div id="catalogue" className="mt-12 grid gap-5 lg:grid-cols-3">
             {plans.map((plan, index) => (
-              <article key={plan.id ?? index} className="glass-panel rounded-3xl p-7">
-                <p className="text-sm font-semibold text-[#65a85c]">{plan.name}</p>
-                <h2 className="mt-8 text-3xl font-semibold text-[#0b4537]">
-                  {planDailyRate(plan).toFixed(2)}% daily ROI
-                </h2>
-                <p className="mt-3 text-sm leading-6 text-[#708079]">
-                  {plan.description ?? 'A transparent plan for intentional growth.'}
-                </p>
-                <dl className="mt-8 space-y-4 border-t border-[#dfe8e2] pt-6 text-sm">
-                  <div className="flex justify-between">
-                    <dt className="text-[#829088]">Duration</dt>
-                    <dd className="font-semibold text-[#0b4537]">{plan.duration_days} days</dd>
-                  </div>
-                  <div className="flex justify-between">
-                    <dt className="text-[#829088]">Range</dt>
-                    <dd className="font-semibold text-[#0b4537]">
-                      {plan.min_amount ? `₦${plan.min_amount.toLocaleString()}` : 'Flexible'}
-                      {plan.max_amount ? ` – ₦${plan.max_amount.toLocaleString()}` : ''}
-                    </dd>
-                  </div>
-                </dl>
-                <Link
-                  href="/register"
-                  className="mt-8 block rounded-xl bg-[#0b4537] py-3 text-center text-sm font-semibold text-white"
-                >
-                  Start with {plan.name}
-                </Link>
-              </article>
+              <PlanCard key={plan.id ?? index} plan={plan} />
             ))}
           </div>
         )}

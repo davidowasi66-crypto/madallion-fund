@@ -7,6 +7,7 @@ import {
   ArrowDownLeft,
   ArrowRight,
   ArrowUpRight,
+  Bell,
   ChevronRight,
   Clock3,
   LogOut,
@@ -15,10 +16,11 @@ import {
 } from 'lucide-react'
 import { clearXanoSession, getXanoSession, xanoRequest } from '@/lib/xano-auth'
 import { toMoney, toNumeric, toTitleCase } from '@/lib/xano-client'
-import { getMyInvestments, type Investment } from '@/lib/investment-api'
+import { getMyInvestments, initializeDeposit, requestWithdrawal, type Investment } from '@/lib/investment-api'
 import { ActivityTicker } from '@/components/activity-ticker'
 import { MemberTabBar } from '@/components/member-tab-bar'
-import { MaturityProgressBar, SavingsGoalCard } from '@/components/investment-widgets'
+import { AutoCompoundToggle, MaturityProgressBar, PortfolioSummary, SavingsGoalCard } from '@/components/investment-widgets'
+import { InvestmentCertificate } from '@/components/investment-certificate'
 
 type Section = 'investments' | 'wallet' | 'activity'
 type Row = Record<string, any>
@@ -28,7 +30,8 @@ const navigation = [
   { href: '/dashboard/investments', label: 'Investments' },
   { href: '/dashboard/wallet', label: 'Wallet' },
   { href: '/dashboard/activity', label: 'Activity' },
-  { href: '/affiliate', label: 'Team' },
+  { href: '/dashboard/notifications', label: 'Notifications' },
+  { href: '/affiliate', label: 'Referrals' }
 ]
 
 function rowsFrom(response: any, ...keys: string[]): Row[] {
@@ -52,6 +55,8 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
   const [error, setError] = useState('')
   const [mode, setMode] = useState<'deposit' | 'withdraw'>('deposit')
   const [amount, setAmount] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [actionMessage, setActionMessage] = useState('')
 
   useEffect(() => {
     let mounted = true
@@ -118,6 +123,42 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
 
   const amountNum = Number(String(amount).replace(/[^0-9.]/g, '')) || 0
 
+  async function submitWalletAction() {
+    setError('')
+    setActionMessage('')
+    if (!Number.isFinite(amountNum) || amountNum <= 0) {
+      setError('Enter a valid amount greater than zero.')
+      return
+    }
+    if (mode === 'withdraw' && amountNum < 1000) {
+      setError('The minimum withdrawal is ₦1,000.')
+      return
+    }
+    if (mode === 'withdraw' && amountNum > walletBalance) {
+      setError('The withdrawal amount is greater than your available balance.')
+      return
+    }
+    setSubmitting(true)
+    try {
+      const result: any = mode === 'deposit'
+        ? await initializeDeposit({ amount: amountNum, currency: 'NGN' })
+        : await requestWithdrawal({ amount: amountNum, currency: 'NGN' })
+      const redirect = result?.checkout_url ?? result?.payment_url ?? result?.authorization_url ?? result?.data?.checkout_url ?? result?.data?.payment_url
+      if (mode === 'deposit' && typeof redirect === 'string' && /^https:\/\//i.test(redirect)) {
+        window.location.assign(redirect)
+        return
+      }
+      setActionMessage(mode === 'deposit'
+        ? 'Deposit initialized. Follow the payment instructions returned by your payment provider.'
+        : 'Withdrawal request submitted. You can follow its status in History.')
+      setAmount('')
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : `Unable to submit your ${mode} request. Please try again.`)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   return (
     <main className="min-h-screen bg-[#f4f8f3] text-[#101d1a] pb-24 lg:bg-[#071a18] lg:pb-8 lg:text-[#edf7f1]">
       <aside
@@ -168,7 +209,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
       <div className="lg:pl-72">
         {section === 'wallet' ? (
           <>
-            <header className="bg-gradient-to-b from-[#0b4537] via-[#0d3d32] to-[#123f34] px-5 pb-6 pt-5 text-white sm:px-8">
+            <header className="rounded-b-[2rem] bg-[radial-gradient(ellipse_at_top_right,_rgba(160,98,39,.55),_transparent_52%),linear-gradient(145deg,#21160f_0%,#100c08_70%,#271607_100%)] px-5 pb-6 pt-5 text-white shadow-[0_22px_44px_rgba(30,20,10,.24)] sm:mx-4 sm:mt-4 sm:rounded-[2rem] sm:px-8">
               <div className="mx-auto max-w-lg">
                 <div className="flex items-center justify-between gap-3">
                   <button className="lg:hidden rounded-full bg-white/10 p-2" onClick={() => setMenuOpen(true)} aria-label="Open menu">
@@ -200,7 +241,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                     type="button"
                     onClick={() => setMode('deposit')}
                     className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
-                      mode === 'deposit' ? 'bg-[#b9f47f] text-[#071a18]' : 'text-[#a8c7b8]'
+                      mode === 'deposit' ? 'bg-[#ff8b28] text-white' : 'text-[#e2c8a9]'
                     }`}
                   >
                     Deposit
@@ -209,17 +250,17 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                     type="button"
                     onClick={() => setMode('withdraw')}
                     className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
-                      mode === 'withdraw' ? 'bg-[#b9f47f] text-[#071a18]' : 'text-[#a8c7b8]'
+                      mode === 'withdraw' ? 'bg-[#ff8b28] text-white' : 'text-[#e2c8a9]'
                     }`}
                   >
                     Withdraw
                   </button>
                 </div>
 
-                <div className="mt-5 rounded-3xl border border-white/10 bg-black/20 p-5">
+                <div className="mt-5 rounded-3xl border border-white/10 bg-black/25 p-5">
                   <p className="text-xs text-[#8eaea0]">Enter amount</p>
                   <div className="mt-2 flex items-baseline gap-2">
-                    <span className="text-2xl font-semibold text-[#b9f47f]">₦</span>
+                    <span className="text-2xl font-semibold text-[#ff9c38]">₦</span>
                     <input
                       inputMode="decimal"
                       placeholder="0.00"
@@ -247,8 +288,8 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
               </div>
             </header>
 
-            <div className="mx-auto max-w-lg px-5 sm:px-8">
-              <div className="-mt-2 rounded-2xl border border-[#dfe8e2] bg-white px-4 py-3 text-center text-sm text-[#60716b] shadow-sm">
+            <div className="mx-auto max-w-lg bg-[#f6f1e8] px-5 pb-8 sm:px-8">
+              <div className="-mt-2 rounded-2xl border border-[#e7e2da] bg-white px-4 py-3 text-center text-sm text-[#51483d] shadow-sm">
                 {mode === 'deposit' ? 'Min deposit · programme rules apply' : 'Min · ₦1,000.00'}
               </div>
 
@@ -258,7 +299,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                   <div className="mt-3 flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
                     <div>
                       <p className="text-sm font-semibold text-amber-900">Bank payout</p>
-                      <p className="mt-0.5 text-xs text-amber-800/80">Link or confirm bank details in account settings when available</p>
+                      <p className="mt-0.5 text-xs text-amber-800/80">Your payout destination must be linked before the provider can complete a withdrawal.</p>
                     </div>
                     <ChevronRight size={16} className="text-amber-800" />
                   </div>
@@ -287,18 +328,17 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
 
               <button
                 type="button"
-                disabled={amountNum <= 0}
-                className="mt-5 w-full rounded-2xl bg-[#b9f47f] py-4 text-sm font-semibold text-[#071a18] disabled:opacity-40"
-                onClick={() => {
-                  window.alert(
-                    mode === 'deposit'
-                      ? `Deposit request UI: ₦${amountNum.toLocaleString('en-NG')}. Connect your payment endpoint next.`
-                      : `Withdraw request UI: ₦${amountNum.toLocaleString('en-NG')}. Connect your payout endpoint next.`,
-                  )
-                }}
+                disabled={amountNum <= 0 || submitting}
+                className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#ffae4f] to-[#f56810] py-4 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(245,104,16,.22)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45"
+                onClick={submitWalletAction}
               >
-                {mode === 'deposit' ? 'Continue deposit' : 'Withdraw'}
+                {submitting ? 'Submitting…' : mode === 'deposit' ? 'Continue deposit' : 'Withdraw'}
               </button>
+              {actionMessage && (
+                <p role="status" className="mt-4 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">
+                  {actionMessage}
+                </p>
+              )}
 
               {error && (
                 <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
@@ -355,6 +395,9 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                   <p className="text-xs uppercase tracking-[0.22em] text-[#65a85c] lg:text-[#719486]">Member workspace</p>
                   <h1 className="mt-1 text-xl font-semibold text-[#0b4537] lg:text-white">{title}</h1>
                 </div>
+                <Link href="/dashboard/notifications" aria-label="Notifications" className="ml-auto inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-[#dfe8e2] text-[#0b4537] hover:bg-[#f4f8f3] lg:border-white/15 lg:text-[#b9f47f] lg:hover:bg-white/5">
+                  <Bell size={18} aria-hidden="true" />
+                </Link>
               </div>
             </header>
             <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-8">
@@ -370,6 +413,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
               {loading && <p className="mt-6 text-sm text-[#708079]">Loading {section}…</p>}
               {!loading && section === 'investments' && (
                 <div className="mt-6 space-y-6">
+                  <PortfolioSummary investments={investments} />
                   <SavingsGoalCard currentValue={portfolioValue} />
                   {investments.length === 0 ? (
                     <div className="rounded-3xl border border-dashed border-[#dfe8e2] bg-white p-7 lg:border-white/10 lg:bg-transparent">
@@ -388,7 +432,11 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                   ) : (
                     <div className="grid gap-4">
                       {investments.map((investment, index) => (
-                        <MaturityProgressBar key={investment.id ?? index} investment={investment} />
+                        <div key={investment.id ?? index} className="space-y-3">
+                          <MaturityProgressBar investment={investment} />
+                          <AutoCompoundToggle investment={investment} />
+                          <InvestmentCertificate investment={investment} />
+                        </div>
                       ))}
                     </div>
                   )}

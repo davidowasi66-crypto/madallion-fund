@@ -30,7 +30,8 @@ function RegisterForm() {
     }
     setLoading(true)
     try {
-      const session = await xanoSignup(trimmedName, trimmedEmail, trimmedPassword)
+      const referralCode = searchParams.get('ref')?.trim()
+      const session = await xanoSignup(trimmedName, trimmedEmail, trimmedPassword, referralCode)
       if (!session?.authenticated) throw new Error('Xano created the account but did not establish a session. Try signing in, or check whether email verification is required.')
       saveXanoSession(session)
       const next = searchParams.get('next')

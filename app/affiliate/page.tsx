@@ -22,7 +22,7 @@ const money = (value: unknown) =>
 export default function AffiliatePage() {
   const [hasSession, setHasSession] = useState<boolean | null>(null)
   const [userId, setUserId] = useState('')
-  const [inviteUrl, setInviteUrl] = useState('')
+  const [inviteUrl] = useState('')
   const [copied, setCopied] = useState(false)
 
   useEffect(() => {
@@ -31,32 +31,20 @@ export default function AffiliatePage() {
     setUserId(session?.user_id ? String(session.user_id) : '')
   }, [])
 
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    const origin = window.location.origin
-    const code = userId || 'YOUR_CODE'
-    setInviteUrl(`${origin}/register?ref=${encodeURIComponent(code)}`)
-  }, [userId])
-
   const { data, isLoading } = useSWR(hasSession ? 'referral-leaderboard' : null, getReferralLeaderboard)
 
   const myStats = useMemo(() => {
     const rows = data?.rows ?? []
     if (!userId || !rows.length) {
-      return { earned: 0, referrals: 0, rank: null as number | null }
+      return { available: false, earned: null as number | null, referrals: null as number | null, rank: null as number | null }
     }
     const mine = rows.find((row) => {
       const id = String(row.user_id ?? row.member_id ?? row.id ?? '')
       return id && id === userId
     })
-    if (!mine) {
-      return {
-        earned: rows.reduce((s, r) => s + Number(r.referral_earned ?? r.commission_earned ?? 0), 0) * 0,
-        referrals: 0,
-        rank: null,
-      }
-    }
+    if (!mine) return { available: false, earned: null, referrals: null, rank: null }
     return {
+      available: true,
       earned: Number(mine.referral_earned ?? mine.commission_earned ?? mine.total_earned ?? 0),
       referrals: Number(mine.referrals ?? mine.referral_count ?? mine.total_referrals ?? 0),
       rank: Number(mine.rank ?? 0) || null,
@@ -87,9 +75,9 @@ export default function AffiliatePage() {
             >
               <ArrowLeft size={18} />
             </Link>
-            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#b9f47f]/90">Team</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#b9f47f]/90">Referrals</p>
             <span className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-[#dcebe4]">
-              {money(myStats.earned)}
+              {myStats.available ? money(myStats.earned) : '—'}
             </span>
           </div>
           <h1 className="mt-6 text-3xl font-semibold tracking-tight">Invite &amp; earn</h1>
@@ -103,14 +91,15 @@ export default function AffiliatePage() {
         {/* Invite link card */}
         <section className="-mt-5 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#65a85c]">Your invite link</p>
-          <p className="mt-3 break-all rounded-2xl bg-[#f4f8f3] px-4 py-3 font-mono text-xs leading-5 text-[#0b4537]">
-            {hasSession ? inviteUrl : `${typeof window !== 'undefined' ? window.location.origin : ''}/register?ref=…`}
+          <p className="mt-3 rounded-2xl bg-[#f4f8f3] px-4 py-3 font-mono text-xs leading-5 text-[#0b4537]">
+            {hasSession ? inviteUrl || 'Secure referral link not issued yet' : 'Sign in to check referral access'}
           </p>
           {hasSession ? (
             <button
               type="button"
+              disabled={!inviteUrl}
               onClick={() => void copyInvite()}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#b9f47f] py-3.5 text-sm font-semibold text-[#071a18]"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#b9f47f] py-3.5 text-sm font-semibold text-[#071a18] disabled:cursor-not-allowed disabled:opacity-50"
             >
               {copied ? <Check size={16} /> : <Copy size={16} />}
               {copied ? 'Copied' : 'Copy invite link'}
@@ -128,19 +117,19 @@ export default function AffiliatePage() {
         {/* Stats */}
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div className="rounded-2xl bg-[#0b4537] p-4 text-white">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8fbfa8]">Total earned</p>
-            <p className="mt-2 text-xl font-semibold">{money(myStats.earned)}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8fbfa8]">Leaderboard earnings</p>
+            <p className="mt-2 text-xl font-semibold">{myStats.available ? money(myStats.earned) : '—'}</p>
           </div>
           <div className="rounded-2xl border border-[#dfe8e2] bg-white p-4">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#65a85c]">Team size</p>
-            <p className="mt-2 text-xl font-semibold text-[#0b4537]">{myStats.referrals}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#65a85c]">Referrals</p>
+            <p className="mt-2 text-xl font-semibold text-[#0b4537]">{myStats.available ? myStats.referrals : '—'}</p>
           </div>
           <div className="rounded-2xl border border-[#dfe8e2] bg-white p-4">
             <div className="flex items-center gap-2 text-[#65a85c]">
               <Users size={14} />
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em]">Active</p>
             </div>
-            <p className="mt-2 text-xl font-semibold text-[#0b4537]">{myStats.referrals}</p>
+            <p className="mt-2 text-xl font-semibold text-[#0b4537]">{myStats.available ? myStats.referrals : '—'}</p>
           </div>
           <div className="rounded-2xl border border-[#dfe8e2] bg-white p-4">
             <div className="flex items-center gap-2 text-[#65a85c]">
@@ -150,6 +139,20 @@ export default function AffiliatePage() {
             <p className="mt-2 text-xl font-semibold text-[#0b4537]">{myStats.rank ?? '—'}</p>
           </div>
         </div>
+
+        <section className="mt-4 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm" aria-labelledby="referral-credit-title">
+          <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#65a85c]">Referral ledger</p>
+          <h2 id="referral-credit-title" className="mt-1 text-lg font-semibold text-[#0b4537]">Credit status</h2>
+          <div className="mt-4 grid grid-cols-2 gap-3">
+            {['Available to use', 'Pending hold', 'Lifetime credited', 'Per-member cap'].map((label) => (
+              <div key={label} className="rounded-2xl bg-[#f4f8f3] p-3">
+                <p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#829088]">{label}</p>
+                <p className="mt-2 text-sm font-semibold text-[#60716b]">Ledger API required</p>
+              </div>
+            ))}
+          </div>
+          <p role="status" className="mt-4 text-xs leading-5 text-[#708079]">Referral codes, hold release, spendable credit, and caps will show here after the Xano referral ledger routes are enabled. This page never derives a code from your account ID.</p>
+        </section>
 
         {/* Commission structure — rates from admin later */}
         <section className="mt-6 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm">

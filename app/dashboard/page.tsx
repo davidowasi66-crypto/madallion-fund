@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import {
   ArrowDownLeft,
   ArrowUpRight,
+  Bell,
   ChevronRight,
   CircleCheck,
   Clock3,
@@ -269,6 +270,7 @@ export default function DashboardPage() {
             ['/dashboard/investments', 'Investments'],
             ['/dashboard/wallet', 'Wallet'],
             ['/dashboard/activity', 'Activity'],
+            ['/dashboard/notifications', 'Notifications'],
             ['/affiliate', 'Team'],
             ['/plans', 'Plans'],
           ].map(([href, label]) => (
@@ -304,6 +306,9 @@ export default function DashboardPage() {
                 <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8fbfa8]">{greeting}</p>
                 <p className="mt-1 truncate text-lg font-semibold">{displayName}</p>
               </div>
+              <Link href="/dashboard/notifications" aria-label="Notifications" className="inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-white/15 bg-white/10 text-[#b9f47f] hover:bg-white/15">
+                <Bell size={18} aria-hidden="true" />
+              </Link>
               <span className="shrink-0 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs text-[#b9f47f]">
                 {role || 'member'}
               </span>
