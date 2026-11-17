@@ -161,7 +161,7 @@ export const getPlans = async (): Promise<PlanCatalogue> => {
     if (plans.length) return { plans, source: 'live' }
   } catch {}
   try {
-    const plans = list(await xanoRequest('/api:ledger-api/plans', { method: ' co' } as any), ['plans', 'items', 'data'])
+    const plans = list(await xanoRequest('/api:ledger-api/plans', { method: 'GET' }), ['plans', 'items', 'data'])
       .map(normalizePlan)
       .filter((plan): plan is Plan => plan !== null)
     if (plans.length) return { plans, source: 'live' }
@@ -180,6 +180,7 @@ export const resumePlan = (id: number) => updatePlan(id, { is_paused: false, sta
 export const deletePlan = (id: number) =>
   SANDBOX_MOCK ? mockDeletePlan(id) : xanoAdminFunctionRequest(`/fn_admin_plan/${id}`, { method: 'DELETE' })
 
+/** Member investments — never throw on pagination bugs (inv_page.totalCount). */
 export const getMyInvestments = async (): Promise<Investment[]> => {
   try {
     const payload = await xanoRequest('/api:ledger-api/investments', { method: 'GET' }, { auth: true })
