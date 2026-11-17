@@ -65,6 +65,7 @@ export default function DashboardPage() {
   const [statementError, setStatementError] = useState('')
   const [error, setError] = useState('')
   const [hideBalance, setHideBalance] = useState(false)
+  const [loadAttempt, setLoadAttempt] = useState(0)
 
   useEffect(() => {
     let mounted = true
@@ -154,9 +155,9 @@ export default function DashboardPage() {
         transactionResult.status === 'rejected'
       if (allFailed && softNotice) {
         setError(
-          softNotice.includes('timed out')
-            ? 'Some ledger data is slow right now. Tap Retry to refresh.'
-            : softNotice,
+          /(?:^|\D)429(?:\D|$)|rate limit/i.test(softNotice)
+            ? 'The ledger is busy right now. Wait a moment, then retry.'
+            : 'Account details could not be loaded. Please try again shortly.',
         )
       } else {
         setError('')
@@ -168,7 +169,7 @@ export default function DashboardPage() {
     return () => {
       mounted = false
     }
-  }, [router])
+  }, [router, loadAttempt])
 
   async function loadStatement(accountId: string) {
     setStatementAccount(accountId)
@@ -271,7 +272,7 @@ export default function DashboardPage() {
             ['/dashboard/wallet', 'Wallet'],
             ['/dashboard/activity', 'Activity'],
             ['/dashboard/notifications', 'Notifications'],
-            ['/affiliate', 'Team'],
+            ['/affiliate', 'Referrals'],
             ['/plans', 'Plans'],
           ].map(([href, label]) => (
             <Link
@@ -365,7 +366,15 @@ export default function DashboardPage() {
           {error && (
             <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
               <span>{error}</span>
-              <button type="button" onClick={() => window.location.reload()} className="font-semibold underline">
+              <button
+                type="button"
+                onClick={() => {
+                  setError('')
+                  setReady(false)
+                  setLoadAttempt((attempt) => attempt + 1)
+                }}
+                className="rounded-lg px-2 py-1 font-semibold underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-700"
+              >
                 Retry
               </button>
             </div>
@@ -374,7 +383,7 @@ export default function DashboardPage() {
           <div className="mt-5 grid grid-cols-4 gap-3">
             <QuickTile href="/dashboard/investments" label="Invest" icon={<Layers size={18} />} tone="violet" />
             <QuickTile href="/dashboard/activity" label="Activity" icon={<FileText size={18} />} tone="blue" />
-            <QuickTile href="/affiliate" label="Team" icon={<Users size={18} />} tone="amber" />
+            <QuickTile href="/affiliate" label="Referrals" icon={<Users size={18} />} tone="amber" />
             <QuickTile href="/plans" label="Plans" icon={<Gift size={18} />} tone="rose" />
           </div>
 

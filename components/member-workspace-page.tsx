@@ -125,12 +125,31 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
   )
 
   const amountNum = Number(String(amount).replace(/[^0-9.]/g, '')) || 0
+  const amountError = mode === 'deposit'
+    ? amountNum > 0 && amountNum < 10_000
+      ? 'Minimum deposit is ₦10,000.'
+      : amountNum > 5_000_000
+        ? 'Maximum deposit is ₦5,000,000.'
+        : ''
+    : amountNum > 0 && amountNum < 1_000
+      ? 'Minimum withdrawal is ₦1,000.'
+      : amountNum > walletBalance
+        ? 'Amount exceeds your available balance.'
+        : ''
 
   async function submitWalletAction() {
     setError('')
     setActionMessage('')
     if (!Number.isFinite(amountNum) || amountNum <= 0) {
       setError('Enter a valid amount greater than zero.')
+      return
+    }
+    if (mode === 'deposit' && amountNum < 10_000) {
+      setError('The minimum deposit is ₦10,000.')
+      return
+    }
+    if (mode === 'deposit' && amountNum > 5_000_000) {
+      setError('The maximum deposit is ₦5,000,000.')
       return
     }
     if (mode === 'withdraw' && amountNum < 1000) {
@@ -269,19 +288,29 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                   <div className="mt-2 flex items-baseline gap-2">
                     <span className="text-2xl font-semibold text-[#ff9c38]">₦</span>
                     <input
+                      type="number"
                       inputMode="decimal"
+                      min={mode === 'deposit' ? 10_000 : 1_000}
+                      max={mode === 'deposit' ? 5_000_000 : walletBalance}
+                      step="1"
                       placeholder="0.00"
                       value={amount}
-                      onChange={(e) => setAmount(e.target.value.replace(/[^0-9.]/g, ''))}
-                      className="w-full bg-transparent text-4xl font-semibold text-white outline-none placeholder:text-white/30"
+                      onChange={(e) => {
+                        setAmount(e.target.value)
+                        setError('')
+                      }}
+                      className="w-full min-w-0 bg-transparent text-4xl font-semibold text-white outline-none placeholder:text-white/30"
                       aria-label="Amount"
+                      aria-invalid={Boolean(amountError)}
+                      aria-describedby={amountError ? 'amount-error' : undefined}
                     />
                   </div>
+                  {amountError && <p id="amount-error" role="alert" className="mt-2 text-xs font-medium text-rose-300">{amountError}</p>}
                   <p className="mt-3 text-xs text-[#8eaea0]">Available: {toMoney(walletBalance, '₦0')}</p>
                 </div>
 
                 <div className="mt-3 flex flex-wrap gap-2">
-                  {(mode === 'deposit' ? [5000, 10000, 25000, 50000] : [1000, 5000, 10000, 25000]).map((preset) => (
+                  {(mode === 'deposit' ? [10_000, 25_000, 100_000, 500_000] : [1000, 5000, 10000, 25000]).map((preset) => (
                     <button
                       key={preset}
                       type="button"
@@ -327,7 +356,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
 
               <button
                 type="button"
-                disabled={amountNum <= 0 || submitting}
+                disabled={amountNum <= 0 || Boolean(amountError) || submitting || (mode === 'withdraw' && !payoutReady)}
                 className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#ffae4f] to-[#f56810] py-4 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(245,104,16,.22)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45"
                 onClick={submitWalletAction}
               >

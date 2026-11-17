@@ -4,16 +4,17 @@ import { useMemo } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Banknote } from 'lucide-react'
 import useSWR from 'swr'
 import { xanoRequest } from '@/lib/xano-auth'
+import { antiThrottleSwrConfig } from '@/lib/swr'
 
 type ActivityKind = 'Deposit' | 'Withdrawal' | 'Payout'
 type ActivityItem = {
   id: string
   displayName: string
   type: ActivityKind
+  planName?: string
   amount: number
   createdAt: number
   bankHint: string
-  sample: boolean
 }
 type RawActivity = Record<string, any>
 type ActivityTickerProps = { variant?: 'landing' | 'member' }
@@ -28,28 +29,12 @@ function maskName(raw: string): string {
   return `${first.slice(0, 3)}***${first.slice(-1)}`
 }
 
-/** Mask Nigerian account-style tail: ****4521 */
-function maskAccountTail(seed: string | number): string {
-  const digits = String(seed).replace(/\D/g, '') || '0000'
-  return `****${digits.slice(-4).padStart(4, '0')}`
+/** Mask an actual bank account identifier, if the ledger includes one. */
+function maskAccountTail(value: unknown): string | null {
+  if (value == null) return null
+  const digits = String(value).replace(/\D/g, '')
+  return digits.length >= 4 ? `•••• ${digits.slice(-4)}` : null
 }
-
-const ngBanks = ['GTBank', 'Access', 'Zenith', 'UBA', 'FirstBank', 'Opay', 'PalmPay', 'Kuda', 'Moniepoint'] as const
-
-const sampleActivity: ActivityItem[] = [
-  { id: 's1', displayName: maskName('Chioma'), type: 'Deposit', amount: 250_000, createdAt: Date.now() - 120_000, bankHint: `GTBank ${maskAccountTail(4521)}`, sample: true },
-  { id: 's2', displayName: maskName('Adebayo'), type: 'Payout', amount: 96_000, createdAt: Date.now() - 300_000, bankHint: `Access ${maskAccountTail(8832)}`, sample: true },
-  { id: 's3', displayName: maskName('Ngozi'), type: 'Withdrawal', amount: 75_000, createdAt: Date.now() - 480_000, bankHint: `Opay ${maskAccountTail(1109)}`, sample: true },
-  { id: 's4', displayName: maskName('Kwame'), type: 'Deposit', amount: 500_000, createdAt: Date.now() - 600_000, bankHint: `Zenith ${maskAccountTail(7740)}`, sample: true },
-  { id: 's5', displayName: maskName('Fatima'), type: 'Payout', amount: 142_500, createdAt: Date.now() - 900_000, bankHint: `UBA ${maskAccountTail(3301)}`, sample: true },
-  { id: 's6', displayName: maskName('Ibrahim'), type: 'Withdrawal', amount: 120_000, createdAt: Date.now() - 1_100_000, bankHint: `PalmPay ${maskAccountTail(6622)}`, sample: true },
-  { id: 's7', displayName: maskName('Amaka'), type: 'Deposit', amount: 85_000, createdAt: Date.now() - 1_400_000, bankHint: `Kuda ${maskAccountTail(9188)}`, sample: true },
-  { id: 's8', displayName: maskName('Tunde'), type: 'Payout', amount: 210_000, createdAt: Date.now() - 1_700_000, bankHint: `Moniepoint ${maskAccountTail(5544)}`, sample: true },
-  { id: 's9', displayName: maskName('Zainab'), type: 'Withdrawal', amount: 45_000, createdAt: Date.now() - 2_000_000, bankHint: `FirstBank ${maskAccountTail(2210)}`, sample: true },
-  { id: 's10', displayName: maskName('Emeka'), type: 'Deposit', amount: 1_000_000, createdAt: Date.now() - 2_400_000, bankHint: `GTBank ${maskAccountTail(7099)}`, sample: true },
-  { id: 's11', displayName: maskName('Aisha'), type: 'Payout', amount: 58_000, createdAt: Date.now() - 2_800_000, bankHint: `Access ${maskAccountTail(4412)}`, sample: true },
-  { id: 's12', displayName: maskName('Olumide'), type: 'Withdrawal', amount: 320_000, createdAt: Date.now() - 3_200_000, bankHint: `Zenith ${maskAccountTail(8801)}`, sample: true },
-]
 
 function rowsFrom(payload: any): RawActivity[] {
   if (Array.isArray(payload)) return payload
@@ -75,7 +60,7 @@ function timestampFrom(value: unknown) {
     const parsed = Date.parse(trimmed)
     if (Number.isFinite(parsed)) return parsed
   }
-  return Date.now()
+  return 0
 }
 
 function parseActivity(row: RawActivity, index: number): ActivityItem | null {
@@ -95,18 +80,18 @@ function parseActivity(row: RawActivity, index: number): ActivityItem | null {
   const alias = row.display_name ?? row.displayName ?? row.alias ?? row.public_name ?? row.name
   const createdAt = timestampFrom(row.created_at ?? row.createdAt ?? row.timestamp ?? row.date)
   const amount = Number(row.amount ?? row.value ?? row.total_amount ?? 0)
-  const bank =
-    row.bank_name ?? row.bank ?? row.provider ?? ngBanks[index % ngBanks.length]
-  const accountSeed = row.account_last4 ?? row.account_mask ?? row.id ?? index
+  const bank = row.bank_name ?? row.bank ?? row.provider
+  const accountTail = maskAccountTail(row.account_last4 ?? row.account_mask ?? row.account_number)
+  const bankHint = [bank ? String(bank).slice(0, 24) : null, accountTail].filter(Boolean).join(' · ')
 
   return {
     id: String(row.id ?? row.event_id ?? `live-${index}-${createdAt}`),
     displayName: maskName(typeof alias === 'string' && alias.trim() ? alias.trim() : 'Member'),
     type: isPayout ? 'Payout' : isWithdrawal ? 'Withdrawal' : 'Deposit',
+    planName: typeof (row.plan_name ?? row.plan) === 'string' ? String(row.plan_name ?? row.plan).trim() : undefined,
     amount: Number.isFinite(amount) ? Math.abs(amount) : 0,
     createdAt,
-    bankHint: `${String(bank).slice(0, 12)} ${maskAccountTail(accountSeed)}`,
-    sample: false,
+    bankHint: bankHint || 'Verified ledger activity',
   }
 }
 
@@ -127,22 +112,21 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
       return rowsFrom(response)
         .map(parseActivity)
         .filter((item): item is ActivityItem => item !== null)
+        .sort((left, right) => right.createdAt - left.createdAt)
     },
-    { refreshInterval: 60_000, revalidateOnFocus: true },
+    { ...antiThrottleSwrConfig, refreshInterval: 60_000, revalidateOnFocus: false },
   )
 
-  const activity = useMemo(() => (liveItems.length ? liveItems : sampleActivity), [liveItems])
+  const activity = useMemo(() => liveItems, [liveItems])
   const loopCount = activity.length > 1 ? 2 : 1
 
   const status = error
-    ? liveItems.length
-      ? 'Last live update'
-      : 'Sample · live feed offline'
+    ? 'Feed unavailable'
     : isLoading
       ? 'Connecting…'
       : liveItems.length
-        ? 'Live · NGN'
-        : 'Sample activity'
+        ? 'Ledger activity'
+        : 'No recent activity'
 
   const surfaceClass = isMember
     ? 'rounded-2xl border border-white/10 bg-[#0b2420] p-3 sm:p-4'
@@ -176,16 +160,17 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
 
         <div
           role="region"
-          aria-label="Scrolling Nigerian naira activity. Names and accounts are masked."
-          className={`activity-window overflow-hidden rounded-xl border ${isMember ? 'border-white/10 bg-[#0e2b26]' : 'border-[#e6ede7] bg-[#f7faf6]'}`}
+          aria-label="Recent ledger activity. Investor names are masked."
+          className={`activity-window overflow-hidden rounded-2xl border ${isMember ? 'border-white/10 bg-[#0e2b26]' : 'border-[#e6ede7] bg-[#f7faf6]'}`}
         >
-          <div
-            className={`activity-track flex w-max ${activity.length <= 1 ? 'activity-static' : ''}`}
-            aria-live="off"
-          >
-            {Array.from({ length: loopCount }, (_, group) => (
-              <div key={group} aria-hidden={group === 1} className="flex shrink-0 gap-3 px-3 py-2.5">
-                {activity.map((item) => {
+          {activity.length ? (
+            <div
+              className={`activity-track flex w-max ${activity.length <= 1 ? 'activity-static' : ''}`}
+              aria-live="off"
+            >
+              {Array.from({ length: loopCount }, (_, group) => (
+                <div key={group} aria-hidden={group === 1} className="flex shrink-0 gap-3 px-3 py-2.5">
+                  {activity.map((item) => {
                   const isOut = item.type === 'Withdrawal'
                   const isPayout = item.type === 'Payout'
                   return (
@@ -222,8 +207,7 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
                           {item.displayName}
                         </span>
                         <span className={`block truncate text-[11px] ${isMember ? 'text-[#91b0a2]' : 'text-[#708079]'}`}>
-                          {item.type} · {item.bankHint}
-                          {item.sample ? ' · Example' : ''}
+                          {item.type}{item.planName ? ` · ${item.planName} plan` : ''} · {item.bankHint}
                         </span>
                       </span>
                       <span
@@ -236,14 +220,20 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
                     </article>
                   )
                 })}
-              </div>
-            ))}
-          </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex min-h-20 items-center justify-center px-4 py-6 text-center">
+              <p className={`text-sm ${isMember ? 'text-[#91b0a2]' : 'text-[#708079]'}`}>
+                {error ? 'Ledger activity is temporarily unavailable.' : isLoading ? 'Connecting to the ledger…' : 'Confirmed activity will appear here.'}
+              </p>
+            </div>
+          )}
         </div>
 
         <p className={`mt-2 text-[11px] ${isMember ? 'text-[#789589]' : 'text-[#77857e]'}`}>
-          Names and account numbers are masked. NGN only.
-          {liveItems.length === 0 ? ' Sample entries until live feed is available.' : ''}
+          Names and account numbers are masked where provided. Only ledger activity is shown.
         </p>
       </div>
     </section>
