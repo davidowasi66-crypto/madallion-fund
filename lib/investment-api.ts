@@ -208,6 +208,15 @@ export const getMyWallet = async () => list(await xanoRequest('/api:ledger-api/a
 export const getMyCashflow = async () => list(await xanoRequest('/api:ledger-api/transactions', {}, { auth: true }), ['transactions', 'items', 'data'])
 export const initializeDeposit = (payload: { amount: number; currency?: string }) => xanoPaymentRequest('/deposit/initialize', { method: 'POST', body: JSON.stringify(payload) }, true)
 export const requestWithdrawal = (payload: { amount: number; currency?: string; account_id?: number }) => xanoPaymentRequest('/withdrawal/request', { method: 'POST', body: JSON.stringify(payload) }, true)
+export type PayoutDestinationInput = {
+  bank_name: string
+  bank_code?: string
+  account_name: string
+  account_number: string
+}
+export const getPayoutDestination = () => xanoPaymentRequest<Record<string, any>>('/payout-destination', { method: 'GET' }, true)
+export const savePayoutDestination = (payload: PayoutDestinationInput) =>
+  xanoPaymentRequest<Record<string, any>>('/payout-destination', { method: 'PUT', body: JSON.stringify(payload) }, true)
 export const getDepositStatus = (reference: string) => xanoPaymentRequest(`/status/${encodeURIComponent(reference)}`, {}, true)
 
 export const getReferralLeaderboard = async (): Promise<{ rows: Record<string, any>[]; available: boolean }> => {

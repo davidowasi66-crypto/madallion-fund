@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   ArrowDownLeft,
@@ -21,6 +21,7 @@ import { ActivityTicker } from '@/components/activity-ticker'
 import { MemberTabBar } from '@/components/member-tab-bar'
 import { AutoCompoundToggle, MaturityProgressBar, PortfolioSummary, SavingsGoalCard } from '@/components/investment-widgets'
 import { InvestmentCertificate } from '@/components/investment-certificate'
+import { PayoutDestinationCard } from '@/components/payout-destination-card'
 
 type Section = 'investments' | 'wallet' | 'activity'
 type Row = Record<string, any>
@@ -57,6 +58,8 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
   const [amount, setAmount] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [actionMessage, setActionMessage] = useState('')
+  const [payoutReady, setPayoutReady] = useState(false)
+  const handlePayoutReady = useCallback((ready: boolean) => setPayoutReady(ready), [])
 
   useEffect(() => {
     let mounted = true
@@ -136,6 +139,10 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
     }
     if (mode === 'withdraw' && amountNum > walletBalance) {
       setError('The withdrawal amount is greater than your available balance.')
+      return
+    }
+    if (mode === 'withdraw' && !payoutReady) {
+      setError('Save a bank payout destination before requesting a withdrawal.')
       return
     }
     setSubmitting(true)
@@ -289,31 +296,23 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
             </header>
 
             <div className="mx-auto max-w-lg bg-[#f6f1e8] px-5 pb-8 sm:px-8">
-              <div className="-mt-2 rounded-2xl border border-[#e7e2da] bg-white px-4 py-3 text-center text-sm text-[#51483d] shadow-sm">
-                {mode === 'deposit' ? 'Min deposit · programme rules apply' : 'Min · ₦1,000.00'}
-              </div>
 
               {mode === 'withdraw' && (
-                <section className="mt-4 rounded-3xl border border-[#dfe8e2] bg-white p-4 shadow-sm">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#65a85c]">Destination</p>
-                  <div className="mt-3 flex items-center justify-between rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
-                    <div>
-                      <p className="text-sm font-semibold text-amber-900">Bank payout</p>
-                      <p className="mt-0.5 text-xs text-amber-800/80">Your payout destination must be linked before the provider can complete a withdrawal.</p>
-                    </div>
-                    <ChevronRight size={16} className="text-amber-800" />
-                  </div>
-                  <ul className="mt-4 space-y-2 text-xs text-[#60716b]">
-                    <li className="flex items-center gap-2">
-                      <Clock3 size={14} className="text-[#65a85c]" />
-                      Processing follows ledger settlement windows
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <ArrowUpRight size={14} className="text-[#65a85c]" />
-                      Amounts subject to available balance and programme limits
-                    </li>
-                  </ul>
-                </section>
+                <>
+                  <PayoutDestinationCard onReady={handlePayoutReady} />
+                  <section className="mt-3 rounded-3xl border border-[#dfe8e2] bg-white p-4 shadow-sm">
+                    <ul className="flex flex-col gap-2 text-xs text-[#60716b]">
+                      <li className="flex items-center gap-2">
+                        <Clock3 size={14} className="text-[#65a85c]" />
+                        Processing follows ledger settlement windows
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <ArrowUpRight size={14} className="text-[#65a85c]" />
+                        Amounts subject to available balance and programme limits
+                      </li>
+                    </ul>
+                  </section>
+                </>
               )}
 
               {mode === 'deposit' && (
