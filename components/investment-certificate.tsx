@@ -10,7 +10,7 @@ const xml = (value: unknown) =>
 const money = (value: number, currency: string) =>
   new Intl.NumberFormat('en-NG', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value)
 
-function certificateSvg(plan: string, principal: string, earnings: string, currency: string, exportedAt: string) {
+function certificateSvg(plan: string, principal: string, earnings: string, currency: string, exportedAt: string, shareUrl: string) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
     <defs><linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#0b4537"/><stop offset="1" stop-color="#071a18"/></linearGradient><linearGradient id="glow" x1="0" y1="0" x2="1" y2="0"><stop stop-color="#b9f47f"/><stop offset="1" stop-color="#8fe35c"/></linearGradient></defs>
     <rect width="1200" height="630" rx="38" fill="url(#bg)"/><rect x="54" y="54" width="1092" height="522" rx="28" fill="none" stroke="#ffffff" stroke-opacity=".13"/>
@@ -24,6 +24,7 @@ function certificateSvg(plan: string, principal: string, earnings: string, curre
     <text x="560" y="430" fill="#b9f47f" font-family="Arial,sans-serif" font-size="34" font-weight="700">${xml(earnings)}</text>
     <line x1="90" y1="520" x2="1110" y2="520" stroke="#ffffff" stroke-opacity=".14"/>
     <text x="90" y="554" fill="#789589" font-family="Arial,sans-serif" font-size="15">Exported ${xml(exportedAt)} · Snapshot of the account ledger at export</text>
+    <text x="1110" y="554" text-anchor="end" fill="#b9f47f" font-family="Arial,sans-serif" font-size="15">Explore plans: ${xml(shareUrl)}</text>
   </svg>`
 }
 
@@ -71,7 +72,8 @@ export function InvestmentCertificate({ investment }: { investment: Investment }
     const exportedAt = new Date().toLocaleDateString('en-NG', { dateStyle: 'medium' })
     const principal = money(Number(investment.principal), currency)
     const earnings = money(Number(accrued), currency)
-    const blob = await renderPng(certificateSvg(plan, principal, earnings, currency, exportedAt))
+    const shareUrl = `${window.location.origin}/plans`
+    const blob = await renderPng(certificateSvg(plan, principal, earnings, currency, exportedAt, shareUrl))
     return new File([blob], 'madallion-investment-milestone.png', { type: 'image/png' })
   }
 
@@ -94,7 +96,11 @@ export function InvestmentCertificate({ investment }: { investment: Investment }
     try {
       const file = await createFile()
       if (navigator.canShare?.({ files: [file] }) && navigator.share) {
-        await navigator.share({ files: [file], title: 'Madallion investment milestone' })
+        await navigator.share({
+          files: [file],
+          title: 'Madallion investment milestone',
+          text: `My investment milestone · Explore Madallion plans: ${window.location.origin}/plans`,
+        })
         setMessage('Certificate shared.')
       } else {
         saveFile(file)

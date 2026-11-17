@@ -41,9 +41,11 @@ function rowsFrom(payload: any): RawActivity[] {
   for (const candidate of [
     payload?.items,
     payload?.activities,
+    payload?.events,
     payload?.feed,
     payload?.data?.items,
     payload?.data?.activities,
+    payload?.data?.events,
     payload?.data,
   ]) {
     if (Array.isArray(candidate)) return candidate
@@ -110,6 +112,7 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
     async () => {
       const response = await xanoRequest<any>('/api:ledger-api/activity/feed', { method: 'GET' })
       return rowsFrom(response)
+        .filter((row) => row.is_sample !== true && row.isSample !== true)
         .map(parseActivity)
         .filter((item): item is ActivityItem => item !== null)
         .sort((left, right) => right.createdAt - left.createdAt)

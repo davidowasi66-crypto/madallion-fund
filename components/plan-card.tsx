@@ -12,7 +12,7 @@ export function PlanCard({ plan }: { plan: Plan }) {
 
   return (
     <article
-      className={`group relative overflow-hidden rounded-3xl border bg-white p-7 transition duration-200 hover:-translate-y-0.5 hover:shadow-[0_24px_60px_rgba(25,78,53,.13)] ${
+      className={`group motion-safe-lift relative overflow-hidden rounded-3xl border bg-white p-6 shadow-[0_8px_28px_rgba(25,78,53,.055)] sm:p-7 hover:shadow-[0_24px_60px_rgba(25,78,53,.13)] ${
         plan.featured
           ? 'border-[#b9f47f] shadow-[0_0_0_1px_rgba(185,244,127,.28)]'
           : 'border-[#dfe8e2]'
@@ -128,14 +128,14 @@ export function PlanCard({ plan }: { plan: Plan }) {
           <button
             type="button"
             disabled
-            className="mt-8 flex w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-[#dfe8e2] bg-[#f4f8f3] py-3 text-sm font-semibold text-[#829088]"
+            className="mt-8 flex min-h-12 w-full cursor-not-allowed items-center justify-center gap-2 rounded-xl border border-[#dfe8e2] bg-[#f4f8f3] px-4 py-3 text-sm font-semibold text-[#829088]"
           >
             {soldOut ? 'Currently closed' : 'Temporarily paused'}
           </button>
         ) : (
           <Link
             href="/register"
-            className={`mt-8 flex w-full items-center justify-center gap-2 rounded-xl py-3 text-center text-sm font-semibold transition ${
+            className={`mt-8 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-center text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#75b95c] focus-visible:ring-offset-2 ${
               plan.featured
                 ? 'bg-[#b9f47f] text-[#071a18] hover:bg-[#a9e86d]'
                 : 'bg-[#0b4537] text-white hover:bg-[#123f34]'
