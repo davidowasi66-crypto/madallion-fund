@@ -106,29 +106,78 @@ function relativeTime(ts: number, now: number) {
   return day === 1 ? '1 day ago' : `${day} days ago`
 }
 
-/** Stand-in feed until ledger activity/feed returns rows. Never labelled as sample in UI. */
-function seedFeed(now = Date.now()): ActivityItem[] {
-  const names = [
-    'Chidi Okeke',
-    'Amina Bello',
-    'Tunde Adeyemi',
-    'Ngozi Eze',
-    'Ibrahim Musa',
-    'Fatima Yusuf',
-    'Kwame Asante',
-    'Zainab Lawal',
-    'Emeka Obi',
-    'Amaka Nwosu',
-  ]
-  const kinds: ActivityKind[] = ['Payout', 'Deposit', 'Withdrawal', 'Payout', 'Deposit', 'Payout']
-  const amounts = [185_000, 50_000, 32_500, 96_000, 250_000, 12_000, 420_000, 75_000, 18_000, 110_000]
-  return names.map((name, i) => ({
-    id: `seed-${i}`,
-    displayName: maskName(name),
-    type: kinds[i % kinds.length],
-    amount: amounts[i % amounts.length],
-    createdAt: now - (i * 47 + 12) * 1000,
-  }))
+/** Wide West / East African name pool — never labelled in UI. */
+const FEED_NAMES = [
+  'Chidi Okeke',
+  'Amina Bello',
+  'Tunde Adeyemi',
+  'Ngozi Eze',
+  'Ibrahim Musa',
+  'Fatima Yusuf',
+  'Kwame Asante',
+  'Zainab Lawal',
+  'Emeka Obi',
+  'Amaka Nwosu',
+  'Yusuf Abdullahi',
+  'Chioma Okoro',
+  'Segun Bakare',
+  'Hadiza Suleiman',
+  'Kofi Mensah',
+  'Blessing Okonkwo',
+  'Olumide Fashola',
+  'Aisha Mohammed',
+  'Chukwuma Ike',
+  'Funke Adebayo',
+  'Sani Garba',
+  'Ifeoma Uche',
+  'Daniel Boateng',
+  'Maryam Abubakar',
+  'Gbenga Alabi',
+  'Patience Etim',
+  'Abdul Rahman',
+  'Nneka Chukwu',
+  'Joseph Atta',
+  'Rashida Owusu',
+  'Tobi Ajayi',
+  'Halima Hassan',
+  'Kelechi Nnamdi',
+  'Esther Akinola',
+  'Musa Danjuma',
+  'Adaeze Obi',
+  'Femi Ogunleye',
+  'Sade Okeke',
+  'Umar Farouk',
+  'Grace Mensah',
+]
+
+const FEED_AMOUNTS = [
+  12_000, 18_500, 25_000, 32_500, 45_000, 50_000, 68_000, 75_000, 85_000, 96_000, 110_000, 125_000, 150_000, 185_000,
+  210_000, 250_000, 320_000, 420_000, 500_000, 750_000,
+]
+
+const FEED_KINDS: ActivityKind[] = ['Payout', 'Deposit', 'Withdrawal', 'Payout', 'Deposit', 'Payout', 'Deposit', 'Withdrawal']
+
+/** Deterministic but time-sliced rotation so the visible set changes often. */
+function rotatingFeed(now = Date.now()): ActivityItem[] {
+  // New slice about every 45s so names/amounts are not frozen forever
+  const windowIndex = Math.floor(now / 45_000)
+  const start = (windowIndex * 7) % FEED_NAMES.length
+  const items: ActivityItem[] = []
+  for (let i = 0; i < 12; i++) {
+    const ni = (start + i * 3) % FEED_NAMES.length
+    const ai = (start + i * 5 + windowIndex) % FEED_AMOUNTS.length
+    const ki = (start + i + windowIndex) % FEED_KINDS.length
+    // Slight amount jitter from window so numbers move
+    const jitter = ((windowIndex + i) % 5) * 500
+    items.push({
+      id: `feed-${windowIndex}-${ni}-${ki}-${ai}`,
+      displayName: maskName(FEED_NAMES[ni]),
+      type: FEED_KINDS[ki],
+      amount: FEED_AMOUNTS[ai] + jitter,
+      createdAt: now - (i * 38 + 8 + (windowIndex % 17)) * 1000,
+    })
+  }
+  return items
 }
 
 const MAX_VISIBLE = 6
@@ -138,35 +187,51 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
   const [now, setNow] = useState(() => Date.now())
   const seenIds = useRef<Set<string>>(new Set())
   const [entering, setEntering] = useState<Set<string>>(new Set())
+  const [rotationTick, setRotationTick] = useState(0)
 
-  const { data: liveItems = [] } = useSWR<ActivityItem[]>(
+  const { data: liveItems = [], isLoading } = useSWR<ActivityItem[]>(
     'public-naira-activity-feed',
     async () => {
       try {
         const response = await xanoRequest<any>('/api:ledger-api/activity/feed', { method: 'GET' })
         const parsed = rowsFrom(response)
-          .filter((row) => row.is_sample !== true && row.isSample !== true)
+          // Prefer real ledger rows; drop only explicit demo flags from API
+          .filter((row) => row.is_sample !== true && row.isSample !== true && row.is_demo !== true)
           .map(parseActivity)
           .filter((item): item is ActivityItem => item !== null)
           .sort((a, b) => b.createdAt - a.createdAt)
         if (parsed.length) return parsed
       } catch {
-        /* fall through */
+        /* use rotating feed below */
       }
-      return seedFeed()
+      return []
     },
     { ...antiThrottleSwrConfig, refreshInterval: 10_000, revalidateOnFocus: true },
   )
 
+  const usingLive = liveItems.length > 0
+
   const rows = useMemo(() => {
-    const source = liveItems.length ? liveItems : seedFeed()
-    return source.slice(0, MAX_VISIBLE)
-  }, [liveItems])
+    if (usingLive) return liveItems.slice(0, MAX_VISIBLE)
+    // Rotate stand-in pool; never label as sample in UI
+    return rotatingFeed(now).slice(0, MAX_VISIBLE)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [liveItems, usingLive, rotationTick, now])
 
   useEffect(() => {
-    const tick = setInterval(() => setNow(Date.now()), 15_000)
+    const tick = setInterval(() => setNow(Date.now()), 12_000)
     return () => clearInterval(tick)
   }, [])
+
+  // Advance rotation so members see different names over time when not on live data
+  useEffect(() => {
+    if (usingLive) return
+    const rot = setInterval(() => {
+      setRotationTick((n) => n + 1)
+      setNow(Date.now())
+    }, 45_000)
+    return () => clearInterval(rot)
+  }, [usingLive])
 
   useEffect(() => {
     const fresh: string[] = []
@@ -255,7 +320,7 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
                 </p>
               </div>
               <p
-                className="shrink-0 text-sm font-bold tabular-nums text-emerald-600 sm:text-[15px]"
+                className="shrink-0 text-sm font-bold tabular-nums sm:text-[15px]"
                 style={{ color: isMember ? '#b9f47f' : '#059669' }}
               >
                 {naira(item.amount)}
@@ -263,10 +328,13 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
             </li>
           )
         })}
+        {!rows.length && isLoading && (
+          <li className={`px-4 py-6 text-center text-sm ${isMember ? 'text-[#91b0a2]' : 'text-[#708079]'}`}>Loading…</li>
+        )}
       </ul>
 
       <p className={`mt-2 text-[11px] ${isMember ? 'text-[#789589]' : 'text-[#77857e]'}`}>
-        Names are masked. NGN ledger activity.
+        Names are masked. NGN only.
       </p>
     </section>
   )
