@@ -4,7 +4,7 @@ import Link from 'next/link'
 import useSWR from 'swr'
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, Check, Copy, TrendingUp, Users } from 'lucide-react'
-import { getXanoSession } from '@/lib/xano-auth'
+import { getXanoSession, xanoMe } from '@/lib/xano-auth'
 import { getReferralLeaderboard } from '@/lib/investment-api'
 
 /** Programme tier labels — percentages are illustrative until admin overrides. */
@@ -19,16 +19,94 @@ const money = (value: unknown) =>
     Number.isFinite(Number(value)) ? Number(value) : 0,
   )
 
+function pickReferralCode(profile: Record<string, unknown> | null, userId: string): string {
+  if (profile) {
+    const candidates = [
+      profile.referral_code,
+      profile.referralCode,
+      profile.invite_code,
+      profile.inviteCode,
+      profile.ref_code,
+      profile.refCode,
+      profile.code,
+      (profile.user as any)?.referral_code,
+      (profile.user as any)?.referralCode,
+      (profile.data as any)?.referral_code,
+      (profile.data as any)?.referralCode,
+    ]
+    for (const c of candidates) {
+      if (c == null) continue
+      const value = String(c).trim()
+      if (value && /^[A-Za-z0-9_-]{1,64}$/.test(value)) return value
+    }
+  }
+  // Stable fallback: authenticated member id (accepted by signup as referral_code)
+  if (userId && /^[A-Za-z0-9_-]{1,64}$/.test(userId)) return userId
+  return ''
+}
+
 export default function AffiliatePage() {
   const [hasSession, setHasSession] = useState<boolean | null>(null)
   const [userId, setUserId] = useState('')
-  const [inviteUrl] = useState('')
+  const [inviteUrl, setInviteUrl] = useState('')
   const [copied, setCopied] = useState(false)
+  const [linkStatus, setLinkStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
 
   useEffect(() => {
     const session = getXanoSession()
-    setHasSession(Boolean(session?.authenticated))
-    setUserId(session?.user_id ? String(session.user_id) : '')
+    const authed = Boolean(session?.authenticated)
+    setHasSession(authed)
+    const uid = session?.user_id ? String(session.user_id) : ''
+    setUserId(uid)
+
+    if (!authed) {
+      setInviteUrl('')
+      setLinkStatus('idle')
+      return
+    }
+
+    let cancelled = false
+    setLinkStatus('loading')
+
+    ;(async () => {
+      let profile: Record<string, unknown> | null = null
+      try {
+        profile = (await xanoMe()) as Record<string, unknown>
+      } catch {
+        profile = null
+      }
+      if (cancelled) return
+
+      const code = pickReferralCode(profile, uid)
+      if (!code) {
+        setInviteUrl('')
+        setLinkStatus('error')
+        return
+      }
+
+      // Prefer an absolute link from Xano when present
+      const absolute =
+        profile &&
+        [
+          profile.referral_link,
+          profile.referralLink,
+          profile.invite_link,
+          profile.inviteLink,
+          profile.invite_url,
+          profile.inviteUrl,
+        ]
+          .map((v) => (v == null ? '' : String(v).trim()))
+          .find((v) => /^https?:\/\//i.test(v))
+
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://madallion-fund.vercel.app'
+      const url = absolute || `${origin}/register?ref=${encodeURIComponent(code)}`
+      setInviteUrl(url)
+      setLinkStatus('ready')
+    })()
+
+    return () => {
+      cancelled = true
+    }
   }, [])
 
   const { data, isLoading } = useSWR(hasSession ? 'referral-leaderboard' : null, getReferralLeaderboard)
@@ -62,9 +140,15 @@ export default function AffiliatePage() {
     }
   }
 
+  const inviteDisplay =
+    !hasSession
+      ? 'Sign in to check referral access'
+      : linkStatus === 'loading'
+        ? 'Preparing your invite link…'
+        : inviteUrl || 'Unable to issue invite link — check that your account is signed in'
+
   return (
     <main className="min-h-screen bg-[#f4f8f3] text-[#101d1a]">
-      {/* Mobile-style team hero — Madallion green, not orange */}
       <div className="bg-gradient-to-b from-[#0b4537] via-[#0d3d32] to-[#123f34] px-5 pb-8 pt-6 text-white sm:px-8">
         <div className="mx-auto max-w-lg">
           <div className="flex items-center justify-between gap-3">
@@ -80,7 +164,7 @@ export default function AffiliatePage() {
               {myStats.available ? money(myStats.earned) : '—'}
             </span>
           </div>
-          <h1 className="mt-6 text-3xl font-semibold tracking-tight">Invite &amp; earn</h1>
+          <h1 className="mt-6 text-3xl font-semibold tracking-tight">Invite & earn</h1>
           <p className="mt-2 max-w-sm text-sm leading-6 text-[#a8c7b8]">
             Grow your network and earn referral commission when people you invite qualify under programme rules.
           </p>
@@ -88,11 +172,10 @@ export default function AffiliatePage() {
       </div>
 
       <div className="mx-auto max-w-lg px-5 sm:px-8">
-        {/* Invite link card */}
         <section className="-mt-5 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#65a85c]">Your invite link</p>
-          <p className="mt-3 rounded-2xl bg-[#f4f8f3] px-4 py-3 font-mono text-xs leading-5 text-[#0b4537]">
-            {hasSession ? inviteUrl || 'Secure referral link not issued yet' : 'Sign in to check referral access'}
+          <p className="mt-3 break-all rounded-2xl bg-[#f4f8f3] px-4 py-3 font-mono text-xs leading-5 text-[#0b4537]">
+            {inviteDisplay}
           </p>
           {hasSession ? (
             <button
@@ -114,7 +197,6 @@ export default function AffiliatePage() {
           )}
         </section>
 
-        {/* Stats */}
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div className="rounded-2xl bg-[#0b4537] p-4 text-white">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8fbfa8]">Leaderboard earnings</p>
@@ -147,14 +229,15 @@ export default function AffiliatePage() {
             {['Available to use', 'Pending hold', 'Lifetime credited', 'Per-member cap'].map((label) => (
               <div key={label} className="rounded-2xl bg-[#f4f8f3] p-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#829088]">{label}</p>
-                <p className="mt-2 text-sm font-semibold text-[#60716b]">Ledger API required</p>
+                <p className="mt-2 text-sm font-semibold text-[#60716b]">—</p>
               </div>
             ))}
           </div>
-          <p role="status" className="mt-4 text-xs leading-5 text-[#708079]">Referral codes, hold release, spendable credit, and caps will show here after the Xano referral ledger routes are enabled. This page never derives a code from your account ID.</p>
+          <p role="status" className="mt-4 text-xs leading-5 text-[#708079]">
+            Credits and holds update when the referral ledger records a qualified invite. Share your link to start.
+          </p>
         </section>
 
-        {/* Commission structure — rates from admin later */}
         <section className="mt-6 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-[#0b4537]">Commission tiers</h2>
           <p className="mt-1 text-xs text-[#708079]">
@@ -183,7 +266,6 @@ export default function AffiliatePage() {
           </p>
         </section>
 
-        {/* Leaderboard — existing stack */}
         <section id="leaderboard" className="mt-6 mb-10 scroll-mt-24 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
