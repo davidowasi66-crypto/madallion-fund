@@ -15,12 +15,12 @@ export default function PlansPage() {
       : 'Showing illustrative catalogue until an admin session loads live tiers.'
 
   return (
-    <main className="min-h-screen bg-[#f4f8f3] px-5 py-8 text-[#101d1a] sm:px-8">
+    <main className="min-h-screen bg-[#f4f8f3] px-4 py-6 text-[#101d1a] sm:px-8 sm:py-10">
       <div className="mx-auto max-w-6xl">
         <Link href="/" className="font-bold text-[#0b4537]">
           Madallion fund
         </Link>
-        <div className="mt-20 max-w-2xl">
+        <div className="mt-12 max-w-2xl sm:mt-20">
           <p className="text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">Live plan table</p>
           <h1 className="mt-3 text-5xl font-semibold tracking-[-.06em] text-[#0b4537]">
             Choose your pace of growth.
@@ -32,7 +32,7 @@ export default function PlansPage() {
         {isLoading ? (
           <p className="mt-12 text-sm text-[#60716b]">Loading available plans…</p>
         ) : (
-          <div id="catalogue" className="mt-12 grid gap-5 lg:grid-cols-3">
+          <div id="catalogue" className="mt-8 grid items-stretch gap-4 md:grid-cols-2 xl:mt-12 xl:grid-cols-3 xl:gap-5">
             {plans.map((plan, index) => (
               <PlanCard key={plan.id ?? index} plan={plan} />
             ))}

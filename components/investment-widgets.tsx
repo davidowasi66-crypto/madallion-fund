@@ -406,67 +406,116 @@ export function PlanCalculator({
 }) {
   const { data: catalogue } = useSWR(PLANS_KEY, getPlans)
   const plans = plansProp?.length ? plansProp : catalogue?.plans ?? []
-  const [amount, setAmount] = useState(500_000)
+  const [amount, setAmount] = useState(50_000)
   const [selected, setSelected] = useState(0)
   const plan = plans[selected] ?? plans[0]
   const daily = planDailyRate(plan)
-  const days = Number(plan?.duration_days ?? 30)
-  const profit = Math.round(amount * (daily / 100) * days)
+  const days = Math.max(0, Number(plan?.duration_days ?? 0))
+  const minimum = Math.max(0, Number(plan?.min_amount ?? 10_000))
+  const maximum = Math.max(minimum + 1, Number(plan?.max_amount ?? 5_000_000))
+  const amountIsValid = Number.isFinite(amount) && amount >= minimum && amount <= maximum
+  const profit = amountIsValid && Number.isFinite(daily) ? Math.round(amount * (daily / 100) * days) : 0
   const maturity = useMemo(() => {
     const d = new Date()
     d.setDate(d.getDate() + days)
-    return d.toLocaleDateString('en-NG')
+    return d.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })
   }, [days])
 
   return (
-    <div className="rounded-3xl border border-[#dfe8e2] bg-white p-6">
-      <p className="text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">Plan calculator</p>
-      <h2 className="mt-2 text-2xl font-semibold text-[#0b4537]">See an illustrative outcome</h2>
-      <div className="mt-5 grid gap-4 sm:grid-cols-2">
-        <label className="text-sm text-[#60716b]">
-          Amount (₦)
-          <input
-            type="number"
-            min={0}
-            value={amount}
-            onChange={(e) => setAmount(Number(e.target.value))}
-            className="mt-2 w-full rounded-xl border border-[#dfe8e2] px-3 py-3 text-[#0b4537]"
-          />
-        </label>
-        <label className="text-sm text-[#60716b]">
-          Plan
-          <select
-            value={Math.min(selected, Math.max(0, plans.length - 1))}
-            onChange={(e) => setSelected(Number(e.target.value))}
-            className="mt-2 w-full rounded-xl border border-[#dfe8e2] px-3 py-3 text-[#0b4537]"
-          >
-            {plans.length === 0 && <option value={0}>No plans loaded</option>}
-            {plans.map((p, i) => (
-              <option key={p.id ?? i} value={i}>
-                {p.name} · {planDailyRate(p).toFixed(2)}%/day · {p.duration_days}d
-              </option>
-            ))}
-          </select>
-        </label>
+    <section className="overflow-hidden rounded-3xl border border-[#dfe8e2] bg-white shadow-[0_18px_55px_rgba(16,45,33,.08)]" aria-labelledby="plan-calculator-title">
+      <div className="grid lg:grid-cols-[1.05fr_.95fr]">
+        <div className="p-5 sm:p-7 lg:p-8">
+          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">Plan calculator</p>
+          <h2 id="plan-calculator-title" className="mt-2 text-2xl font-semibold tracking-tight text-[#0b4537] sm:text-3xl">Explore your estimate</h2>
+          <p className="mt-2 max-w-lg text-sm leading-6 text-[#708079]">Compare plan terms and see an illustrative simple-return estimate before you decide.</p>
+
+          <div className="mt-6 grid gap-4 sm:grid-cols-2">
+            <label className="text-sm font-medium text-[#60716b]">
+              Investment amount
+              <div className="mt-2 flex min-h-12 items-center rounded-xl border border-[#dfe8e2] bg-[#fbfcfa] px-3 focus-within:border-[#75b95c] focus-within:ring-2 focus-within:ring-[#75b95c]/20">
+                <span className="mr-2 text-sm font-semibold text-[#829088]">₦</span>
+                <input
+                  type="number"
+                  inputMode="numeric"
+                  min={minimum}
+                  max={maximum}
+                  step={10_000}
+                  value={Number.isFinite(amount) ? amount : ''}
+                  onChange={(event) => setAmount(event.target.value === '' ? 0 : Number(event.target.value))}
+                  className="min-w-0 w-full bg-transparent py-2 text-base font-semibold text-[#0b4537] outline-none"
+                  aria-describedby="calculator-range"
+                />
+              </div>
+              <span id="calculator-range" className="mt-1.5 block text-xs font-normal text-[#829088]">
+                {plan ? `${money(minimum)} minimum · ${money(maximum)} maximum` : 'Select a plan to see its range'}
+              </span>
+            </label>
+            <label className="text-sm font-medium text-[#60716b]">
+              Investment plan
+              <select
+                value={Math.min(selected, Math.max(0, plans.length - 1))}
+                onChange={(event) => {
+                  const nextIndex = Number(event.target.value)
+                  const nextPlan = plans[nextIndex]
+                  const nextMinimum = Math.max(0, Number(nextPlan?.min_amount ?? 10_000))
+                  const nextMaximum = Math.max(nextMinimum + 1, Number(nextPlan?.max_amount ?? 5_000_000))
+                  setSelected(nextIndex)
+                  setAmount((current) => Math.min(nextMaximum, Math.max(nextMinimum, current)))
+                }}
+                className="mt-2 min-h-12 w-full rounded-xl border border-[#dfe8e2] bg-[#fbfcfa] px-3 py-2 text-sm font-semibold text-[#0b4537] outline-none focus:border-[#75b95c] focus:ring-2 focus:ring-[#75b95c]/20"
+              >
+                {plans.length === 0 && <option value={0}>No plans available</option>}
+                {plans.map((item, index) => (
+                  <option key={item.id ?? index} value={index}>
+                    {item.name} · {planDailyRate(item).toFixed(2)}% daily
+                  </option>
+                ))}
+              </select>
+              <span className="mt-1.5 block text-xs font-normal text-[#829088]">Terms are provided by the plan catalogue.</span>
+            </label>
+          </div>
+
+          {plan && (
+            <div className="mt-5 rounded-xl bg-[#f4f8f3] px-4 py-3">
+              <div className="flex items-center justify-between gap-4 text-xs">
+                <span className="text-[#708079]">Adjust amount</span>
+                <span className="font-semibold tabular-nums text-[#0b4537]">{money(amount)}</span>
+              </div>
+              <input
+                type="range"
+                min={minimum}
+                max={maximum}
+                step={Math.max(1_000, Math.round((maximum - minimum) / 100))}
+                value={Math.min(maximum, Math.max(minimum, amount || minimum))}
+                onChange={(event) => setAmount(Number(event.target.value))}
+                className="mt-3 h-2 w-full cursor-pointer accent-[#0b4537]"
+                aria-label="Adjust investment amount"
+              />
+            </div>
+          )}
+          {!amountIsValid && plan && <p className="mt-3 text-xs font-medium text-[#b34f43]" role="status">Enter an amount between {money(minimum)} and {money(maximum)} to calculate.</p>}
+        </div>
+
+        <div className="flex flex-col justify-between gap-5 bg-[#0b4537] p-5 text-white sm:p-7 lg:p-8">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[.15em] text-[#b9f47f]">Illustrative estimate</p>
+            <p className="mt-5 text-sm text-white/70">Potential return over {days || '—'} days</p>
+            <p className="mt-1 break-words text-3xl font-semibold tracking-tight text-[#b9f47f] sm:text-4xl">{amountIsValid && plan ? money(profit) : '—'}</p>
+            <p className="mt-2 text-xs text-white/65">{plan ? `${plan.name} · ${daily.toFixed(2)}% daily target` : 'No plan selected'}</p>
+          </div>
+          <dl className="grid grid-cols-2 gap-3 border-t border-white/15 pt-4">
+            <div>
+              <dt className="text-xs text-white/65">Illustrative total</dt>
+              <dd className="mt-1 break-words text-base font-semibold">{amountIsValid && plan ? money(amount + profit) : '—'}</dd>
+            </div>
+            <div>
+              <dt className="text-xs text-white/65">Estimated maturity</dt>
+              <dd className="mt-1 text-base font-semibold">{plan ? maturity : '—'}</dd>
+            </div>
+          </dl>
+          <p className="text-[11px] leading-5 text-white/65">Estimate only—not a promise or ledger balance. Actual returns, fees, and settlement are determined by the investment terms and account ledger. {sourceNote ?? (catalogue?.source === 'live' ? 'Rates from live Xano catalogue.' : 'Illustrative catalogue rates.')}</p>
+        </div>
       </div>
-      <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <div className="rounded-xl bg-[#eef7eb] p-4">
-          <p className="text-xs text-[#60716b]">Illustrative return</p>
-          <p className="mt-1 text-xl font-semibold text-[#0b4537]">{money(profit)}</p>
-        </div>
-        <div className="rounded-xl bg-[#eef7eb] p-4">
-          <p className="text-xs text-[#60716b]">At maturity</p>
-          <p className="mt-1 text-xl font-semibold text-[#0b4537]">{money(amount + profit)}</p>
-        </div>
-        <div className="rounded-xl bg-[#eef7eb] p-4 col-span-2 sm:col-span-1">
-          <p className="text-xs text-[#60716b]">Maturity date</p>
-          <p className="mt-1 text-xl font-semibold text-[#0b4537]">{maturity}</p>
-        </div>
-      </div>
-      <p className="mt-4 text-xs text-[#829088]">
-        Illustration only. Returns are not guaranteed.
-        {sourceNote ? ` ${sourceNote}` : catalogue?.source === 'live' ? ' Rates from live Xano catalogue.' : ''}
-      </p>
-    </div>
+    </section>
   )
 }
