@@ -5,6 +5,7 @@ import useSWR from 'swr'
 import { useEffect, useMemo, useState } from 'react'
 import { Target } from 'lucide-react'
 import { getXanoSession } from '@/lib/xano-auth'
+import { antiThrottleSwrConfig } from '@/lib/swr'
 import {
   getMyCashflow,
   getMyInvestments,
@@ -73,16 +74,17 @@ export function MemberMaturityPreview() {
         : { authenticated: false, cacheKey: '' },
     )
   }, [])
-  const { data: investments, error, isLoading } = useSWR<Investment[]>(
+  const { data: investments, error, isLoading, mutate, isValidating } = useSWR<Investment[]>(
     session?.authenticated ? session.cacheKey : null,
     getMyInvestments,
-    { revalidateOnFocus: true },
+    { ...antiThrottleSwrConfig, revalidateOnFocus: false },
   )
 
   const active = (investments ?? []).filter((inv) => {
     const status = String(inv.status ?? 'active').toLowerCase()
     return status !== 'cancelled' && status !== 'closed' && status !== 'refunded'
   })
+  const rateLimited = /(?:^|\D)429(?:\D|$)/.test(error instanceof Error ? error.message : '')
 
   return (
     <section
@@ -102,13 +104,23 @@ export function MemberMaturityPreview() {
       </div>
 
       {session === null || isLoading ? (
-        <p className="mt-5 text-sm text-[#708079]">Loading investment progress…</p>
+        <div className="mt-5 rounded-2xl border border-[#e7eee8] bg-[#f7faf6] px-4 py-5 text-sm text-[#708079]" role="status">
+          Loading investment progress…
+        </div>
       ) : !session.authenticated ? (
         <p className="mt-5 text-sm text-[#708079]">Sign in to view your investment progress.</p>
       ) : error ? (
-        <p role="alert" className="mt-5 text-sm text-red-600">
-          Investment progress could not be loaded. Please try again shortly.
-        </p>
+        <div role="alert" className="mt-5 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-4 text-sm text-rose-800">
+          <p className="max-w-md">{rateLimited ? 'The ledger is receiving too many requests. Wait a moment, then retry.' : 'Investment progress is temporarily unavailable. Your progress has not been changed.'}</p>
+          <button
+            type="button"
+            onClick={() => void mutate()}
+            disabled={isValidating}
+            className="rounded-xl border border-rose-200 bg-white px-4 py-2 font-semibold text-rose-800 transition hover:bg-rose-100 disabled:cursor-wait disabled:opacity-60"
+          >
+            {isValidating ? 'Retrying…' : 'Retry'}
+          </button>
+        </div>
       ) : active.length ? (
         <div className="mt-5 grid gap-4">
           {active.slice(0, 3).map((investment, index) => (
@@ -139,7 +151,7 @@ export function MaturityProgressBar({
   investment: Investment
   variant?: 'dark' | 'light'
 }) {
-  const plan: Plan = investment.plan ?? { name: 'Investment', duration_days: 30 }
+  const plan: Plan = investment.plan ?? { name: investment.plan_name ?? 'Investment', duration_days: 30 }
   const principal = Number(investment.principal ?? 0)
   const now = Date.now()
   const cohortStart = investment.scheduled_start_at ?? investment.cohort_start_at
@@ -155,9 +167,11 @@ export function MaturityProgressBar({
   const elapsedMs = scheduled ? 0 : Math.max(0, Math.min(totalMs, now - startMs))
   const computedPercent = Math.min(100, Math.round((elapsedMs / totalMs) * 100))
   const apiProgress = Number(investment.progress)
-  const percent = Number.isFinite(apiProgress) && apiProgress >= 0
-    ? Math.min(100, Math.round(apiProgress <= 1 ? apiProgress * 100 : apiProgress))
-    : hasStart ? computedPercent : 0
+  const percent = scheduled
+    ? 0
+    : Number.isFinite(apiProgress) && apiProgress >= 0
+      ? Math.min(100, Math.round(apiProgress <= 1 ? apiProgress * 100 : apiProgress))
+      : hasStart ? computedPercent : 0
   const daysLeft = Math.max(0, Math.ceil((endMs - now) / 86_400_000))
   const daysUntilStart = Math.max(0, Math.ceil((startMs - now) / 86_400_000))
   const daysElapsed = Math.floor(elapsedMs / 86_400_000)
@@ -170,7 +184,7 @@ export function MaturityProgressBar({
   const projected = Number.isFinite(dailyPercent) ? Math.round(principal * (dailyPercent / 100) * totalDays) : null
   const matured = !scheduled && (now >= endMs || percent >= 100)
   const light = variant === 'light'
-  const planLabel = plan.name ?? investment.plan_name ?? (investment.plan_id ? `Plan #${investment.plan_id}` : 'Investment')
+  const planLabel = investment.plan_name ?? plan.name ?? (investment.plan_id ? `Plan #${investment.plan_id}` : 'Investment')
   const textTone = light ? 'text-[#0b4537]' : 'text-white'
   const mutedTone = light ? 'text-[#708079]' : 'text-[#789589]'
   const statusText = scheduled
