@@ -78,23 +78,16 @@ img, svg, video { max-width: 100%; }
 
 @media (max-width: 640px) { .glass-panel { box-shadow: 0 16px 40px rgba(25,78,53,.1), inset 0 1px 0 rgba(255,255,255,.7); } }
 
-/* Continuous horizontal ticker — does not pause on hover/touch */
-@keyframes activity-slide {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
+/* Live payout ticker — new row enter (fade + 8px rise) */
+@keyframes payout-row-enter {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
 }
-.activity-track {
-  animation: activity-slide 42s linear infinite;
-  will-change: transform;
-  pointer-events: none;
+.payout-ticker-enter {
+  animation: payout-row-enter 380ms ease-out both;
 }
-.activity-static { animation: none; }
 @media (prefers-reduced-motion: reduce) {
-  .activity-track { animation: none; transform: none; }
-  .activity-window { overflow-x: auto !important; }
-  html { scroll-behavior: auto !important; }
-  .member-tab-bar-inner { transition: none; }
-  .member-tab { transition: none; }
+  .payout-ticker-enter { animation: none; }
 }
 
 /* Floating glassmorphic member tab bar */
