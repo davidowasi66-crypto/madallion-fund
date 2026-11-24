@@ -1,14 +1,26 @@
 'use client'
 
+import useSWR from 'swr'
 import { useState } from 'react'
 import { Download, Link2, Share2 } from 'lucide-react'
 import type { Investment } from '@/lib/investment-api'
+import { getInvestmentCertificate } from '@/lib/member-routes'
 
 const xml = (value: unknown) =>
   String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[character]!)
 
 const money = (value: number, currency: string) =>
   new Intl.NumberFormat('en-NG', { style: 'currency', currency, maximumFractionDigits: 0 }).format(value)
+
+function safeCertificateUrl(value: unknown): string {
+  if (typeof value !== 'string') return ''
+  try {
+    const url = new URL(value)
+    return url.protocol === 'https:' && !url.username && !url.password ? url.toString() : ''
+  } catch {
+    return ''
+  }
+}
 
 function certificateSvg(plan: string, principal: string, earnings: string, currency: string, exportedAt: string, shareUrl: string) {
   return `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
@@ -61,19 +73,26 @@ function saveFile(file: File) {
 export function InvestmentCertificate({ investment }: { investment: Investment }) {
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
+  const investmentId = investment.id
+  const { data: certificate, isLoading: certificateLoading } = useSWR(
+    investmentId == null ? null : ['investment-certificate', investmentId],
+    () => getInvestmentCertificate(investmentId!),
+  )
   const accrued = investment.net_accrued_total ?? investment.accrued_total
   const authoritative = accrued !== undefined && accrued !== null && Number.isFinite(Number(accrued))
-  const plan = investment.plan?.name ?? investment.plan_name ?? 'Madallion investment'
-  const currencyCandidate = investment.currency ?? 'NGN'
+  const plan = certificate?.plan_name ?? investment.plan?.name ?? investment.plan_name ?? 'Madallion investment'
+  const currencyCandidate = certificate?.currency ?? investment.currency ?? 'NGN'
   const currency = /^[A-Za-z]{3}$/.test(currencyCandidate) ? currencyCandidate.toUpperCase() : 'NGN'
+  const publicShareUrl = safeCertificateUrl(certificate?.signed_share_url ?? certificate?.share_url)
+  const verified = certificate?.is_verified === true || certificate?.is_verified === 'true'
 
   async function createFile() {
     if (!authoritative) throw new Error('A server-reported accrued total is not available yet.')
     const exportedAt = new Date().toLocaleDateString('en-NG', { dateStyle: 'medium' })
-    const principal = money(Number(investment.principal), currency)
+    const principal = certificate?.display_principal ?? money(Number(certificate?.principal ?? investment.principal), currency)
     const earnings = money(Number(accrued), currency)
-    const shareUrl = `${window.location.origin}/plans`
-    const blob = await renderPng(certificateSvg(plan, principal, earnings, currency, exportedAt, shareUrl))
+    const plansUrl = `${window.location.origin}/plans`
+    const blob = await renderPng(certificateSvg(plan, principal, earnings, currency, exportedAt, plansUrl))
     return new File([blob], 'madallion-investment-milestone.png', { type: 'image/png' })
   }
 
@@ -125,6 +144,15 @@ export function InvestmentCertificate({ investment }: { investment: Investment }
           <p className="mt-1 text-xs text-[#708079]">
             {authoritative ? 'Exports the server-reported account total as an image.' : 'A certificate is available after the ledger returns an accrued total.'}
           </p>
+          <p role="status" className="mt-1 text-xs text-[#708079]">
+            {certificateLoading
+              ? 'Checking for a signed public certificate link…'
+              : publicShareUrl
+                ? verified
+                  ? 'A verified public certificate is ready to open.'
+                  : 'A signed public certificate link is ready to open.'
+                : 'Public link unavailable for this investment. Image export remains available.'}
+          </p>
         </div>
         <div className="flex shrink-0 flex-wrap gap-2">
           <button type="button" disabled={!authoritative || busy} onClick={() => void share()} className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#b9f47f] px-3 py-2.5 text-xs font-semibold text-[#071a18] disabled:cursor-not-allowed disabled:opacity-40">
@@ -133,9 +161,26 @@ export function InvestmentCertificate({ investment }: { investment: Investment }
           <button type="button" disabled={!authoritative || busy} onClick={() => void download()} className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#dfe8e2] px-3 py-2.5 text-xs font-semibold text-[#0b4537] disabled:cursor-not-allowed disabled:opacity-40 lg:border-white/15 lg:text-white">
             <Download size={14} aria-hidden="true" /> Download
           </button>
-          <button type="button" disabled aria-label="Public link previews unavailable until the signed share API is enabled" title="A signed public-share API is required" className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#dfe8e2] px-3 py-2.5 text-xs font-semibold text-[#829088] disabled:cursor-not-allowed disabled:opacity-50 lg:border-white/15">
-            <Link2 size={14} aria-hidden="true" /> Public link
-          </button>
+          {publicShareUrl ? (
+            <a
+              href={publicShareUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#dfe8e2] px-3 py-2.5 text-xs font-semibold text-[#0b4537] hover:bg-[#f4f8f3] lg:border-white/15 lg:text-white lg:hover:bg-white/5"
+            >
+              <Link2 size={14} aria-hidden="true" /> Public link
+            </a>
+          ) : (
+            <button
+              type="button"
+              disabled
+              aria-label="Public certificate link is unavailable"
+              title={certificateLoading ? 'Checking for a signed certificate link' : 'No signed public link was returned'}
+              className="inline-flex items-center justify-center gap-2 rounded-xl border border-[#dfe8e2] px-3 py-2.5 text-xs font-semibold text-[#829088] disabled:cursor-not-allowed disabled:opacity-50 lg:border-white/15"
+            >
+              <Link2 size={14} aria-hidden="true" /> Public link
+            </button>
+          )}
         </div>
       </div>
       {message && <p role="status" className="mt-3 text-xs text-[#60716b] lg:text-[#a8c7b8]">{message}</p>}

@@ -5,6 +5,7 @@ import useSWR from 'swr'
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowLeft, Check, Copy, TrendingUp, Users } from 'lucide-react'
 import { getXanoSession, xanoMe } from '@/lib/xano-auth'
+import { getReferralCredits, getReferralMe } from '@/lib/member-routes'
 import { getReferralLeaderboard } from '@/lib/investment-api'
 
 /** Programme tier labels — percentages are illustrative until admin overrides. */
@@ -14,10 +15,12 @@ const programmeTiers = [
   { level: 3, name: 'Extended', hint: 'Second-degree network', rateLabel: 'Tier C' },
 ]
 
-const money = (value: unknown) =>
-  new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(
-    Number.isFinite(Number(value)) ? Number(value) : 0,
-  )
+const money = (value: unknown, currency = 'NGN') =>
+  new Intl.NumberFormat('en-NG', {
+    style: 'currency',
+    currency: /^[A-Za-z]{3}$/.test(currency) ? currency.toUpperCase() : 'NGN',
+    maximumFractionDigits: 0,
+  }).format(Number.isFinite(Number(value)) ? Number(value) : 0)
 
 function pickReferralCode(profile: Record<string, unknown> | null, userId: string): string {
   if (profile) {
@@ -48,68 +51,39 @@ function pickReferralCode(profile: Record<string, unknown> | null, userId: strin
 export default function AffiliatePage() {
   const [hasSession, setHasSession] = useState<boolean | null>(null)
   const [userId, setUserId] = useState('')
-  const [inviteUrl, setInviteUrl] = useState('')
   const [copied, setCopied] = useState(false)
-  const [linkStatus, setLinkStatus] = useState<'idle' | 'loading' | 'ready' | 'error'>('idle')
 
   useEffect(() => {
     const session = getXanoSession()
-    const authed = Boolean(session?.authenticated)
-    setHasSession(authed)
-    const uid = session?.user_id ? String(session.user_id) : ''
-    setUserId(uid)
-
-    if (!authed) {
-      setInviteUrl('')
-      setLinkStatus('idle')
-      return
-    }
-
-    let cancelled = false
-    setLinkStatus('loading')
-
-    ;(async () => {
-      let profile: Record<string, unknown> | null = null
-      try {
-        profile = (await xanoMe()) as Record<string, unknown>
-      } catch {
-        profile = null
-      }
-      if (cancelled) return
-
-      const code = pickReferralCode(profile, uid)
-      if (!code) {
-        setInviteUrl('')
-        setLinkStatus('error')
-        return
-      }
-
-      // Prefer an absolute link from Xano when present
-      const absolute =
-        profile &&
-        [
-          profile.referral_link,
-          profile.referralLink,
-          profile.invite_link,
-          profile.inviteLink,
-          profile.invite_url,
-          profile.inviteUrl,
-        ]
-          .map((v) => (v == null ? '' : String(v).trim()))
-          .find((v) => /^https?:\/\//i.test(v))
-
-      const origin = typeof window !== 'undefined' ? window.location.origin : 'https://madallion-fund.vercel.app'
-      const url = absolute || `${origin}/register?ref=${encodeURIComponent(code)}`
-      setInviteUrl(url)
-      setLinkStatus('ready')
-    })()
-
-    return () => {
-      cancelled = true
-    }
+    setHasSession(Boolean(session?.authenticated))
+    setUserId(session?.user_id ? String(session.user_id) : '')
   }, [])
 
+  const { data: referralInfo, isLoading: referralInfoLoading } = useSWR(
+    hasSession ? ['referral-info', userId] : null,
+    async () => {
+      const [memberResult, profileResult] = await Promise.allSettled([getReferralMe(), xanoMe()])
+      return {
+        member: memberResult.status === 'fulfilled' ? memberResult.value : null,
+        profile: profileResult.status === 'fulfilled' ? (profileResult.value as Record<string, unknown>) : null,
+      }
+    },
+  )
+  const { data: credits, isLoading: creditsLoading } = useSWR(
+    hasSession ? 'referral-credits' : null,
+    getReferralCredits,
+  )
   const { data, isLoading } = useSWR(hasSession ? 'referral-leaderboard' : null, getReferralLeaderboard)
+
+  const inviteUrl = useMemo(() => {
+    if (!hasSession) return ''
+    const directUrl = referralInfo?.member?.invite_url?.trim()
+    if (directUrl && /^https?:\/\//i.test(directUrl)) return directUrl
+    const code = referralInfo?.member?.referral_code || pickReferralCode(referralInfo?.profile ?? null, userId)
+    if (!code || !/^[A-Za-z0-9_-]{1,64}$/.test(code)) return ''
+    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://madallion-fund.vercel.app'
+    return `${origin}/register?ref=${encodeURIComponent(code)}`
+  }, [hasSession, referralInfo, userId])
 
   const myStats = useMemo(() => {
     const rows = data?.rows ?? []
@@ -143,7 +117,7 @@ export default function AffiliatePage() {
   const inviteDisplay =
     !hasSession
       ? 'Sign in to check referral access'
-      : linkStatus === 'loading'
+      : referralInfoLoading
         ? 'Preparing your invite link…'
         : inviteUrl || 'Unable to issue invite link — check that your account is signed in'
 
@@ -226,15 +200,28 @@ export default function AffiliatePage() {
           <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#65a85c]">Referral ledger</p>
           <h2 id="referral-credit-title" className="mt-1 text-lg font-semibold text-[#0b4537]">Credit status</h2>
           <div className="mt-4 grid grid-cols-2 gap-3">
-            {['Available to use', 'Pending hold', 'Lifetime credited', 'Per-member cap'].map((label) => (
+            {[
+              ['Available to use', credits?.available],
+              ['Pending hold', credits?.pending_hold],
+              ['Lifetime credited', credits?.lifetime],
+              ['Per-member cap', credits?.cap],
+            ].map(([label, amount]) => (
               <div key={label} className="rounded-2xl bg-[#f4f8f3] p-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#829088]">{label}</p>
-                <p className="mt-2 text-sm font-semibold text-[#60716b]">—</p>
+                <p className="mt-2 text-sm font-semibold text-[#60716b]">
+                  {!hasSession ? 'Sign in' : creditsLoading ? 'Loading…' : credits ? money(amount, credits.currency) : 'Unavailable'}
+                </p>
               </div>
             ))}
           </div>
           <p role="status" className="mt-4 text-xs leading-5 text-[#708079]">
-            Credits and holds update when the referral ledger records a qualified invite. Share your link to start.
+            {!hasSession
+              ? 'Sign in to view your referral credit balance.'
+              : creditsLoading
+                ? 'Loading your latest ledger credits.'
+                : credits
+                  ? 'Balances come from the referral ledger and update as qualified invites are recorded.'
+                  : 'Credit details are temporarily unavailable. Your invite link remains ready to share.'}
           </p>
         </section>
 
