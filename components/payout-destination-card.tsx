@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import useSWR from 'swr'
 import { CheckCircle2, ChevronRight, LockKeyhole, PencilLine } from 'lucide-react'
 import { getPayoutDestination, savePayoutDestination, type PayoutDestinationInput } from '@/lib/investment-api'
+import { memberSafeError } from '@/lib/member-routes'
 
 type Destination = {
   bank_name?: string
@@ -16,8 +17,9 @@ type Destination = {
 function unwrapDestination(response: Record<string, any>): Destination | null {
   const value = response?.data?.payout_destination ?? response?.data ?? response?.payout_destination ?? response
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null
-  if (!value.bank_name && !value.account_name && !value.account_number_masked && !value.account_number_last4) return null
-  return value as Destination
+  const last4 = value.account_number_last4 ?? value.account_last4
+  if (!value.bank_name && !value.account_name && !value.account_number_masked && !last4) return null
+  return { ...value, account_number_last4: last4 } as Destination
 }
 
 async function loadDestination() {
@@ -75,7 +77,7 @@ export function PayoutDestinationCard({ onReady }: { onReady: (ready: boolean) =
       setSavedMessage('Bank payout details saved securely.')
       await mutate(result, { revalidate: false })
     } catch (cause) {
-      setSaveError(cause instanceof Error ? cause.message : 'Unable to save bank details. Please try again.')
+      setSaveError(memberSafeError(cause, 'Unable to save bank details. Please try again.'))
     } finally {
       setSaving(false)
     }
@@ -100,7 +102,7 @@ export function PayoutDestinationCard({ onReady }: { onReady: (ready: boolean) =
       {isLoading ? (
         <p className="mt-3 text-sm text-[#60716b]" role="status">Checking saved payout details…</p>
       ) : error ? (
-        <p className="mt-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-800" role="alert">Unable to load payout details. {error.message}</p>
+        <p className="mt-3 rounded-xl bg-rose-50 p-3 text-sm text-rose-800" role="alert">{memberSafeError(error, 'Unable to load payout details. Please try again.')}</p>
       ) : destination && !editing ? (
         <div className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3">
           <div className="flex items-start gap-2">

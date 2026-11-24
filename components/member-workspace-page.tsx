@@ -17,6 +17,7 @@ import {
 import { clearXanoSession, getXanoSession, xanoRequest } from '@/lib/xano-auth'
 import { toMoney, toNumeric, toTitleCase } from '@/lib/xano-client'
 import { getMyInvestments, initializeDeposit, requestWithdrawal, type Investment } from '@/lib/investment-api'
+import { memberSafeError } from '@/lib/member-routes'
 import { ActivityTicker } from '@/components/activity-ticker'
 import { MemberTabBar } from '@/components/member-tab-bar'
 import { AutoCompoundToggle, MaturityProgressBar, PortfolioSummary, SavingsGoalCard } from '@/components/investment-widgets'
@@ -91,7 +92,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
           router.replace(`/login?next=/dashboard/${section}`)
           return
         }
-        setError(message)
+        setError(memberSafeError(cause, 'Unable to load this workspace page.'))
       } finally {
         if (mounted) setLoading(false)
       }
@@ -179,7 +180,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
         : 'Withdrawal request submitted. You can follow its status in History.')
       setAmount('')
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : `Unable to submit your ${mode} request. Please try again.`)
+      setError(memberSafeError(cause, `Unable to submit your ${mode} request. Please try again.`))
     } finally {
       setSubmitting(false)
     }
