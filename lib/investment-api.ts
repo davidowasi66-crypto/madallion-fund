@@ -88,7 +88,6 @@ const list = (value: any, keys: string[] = []): any[] => {
   for (const key of ['items', 'data', 'plans', 'rows', 'users', 'transactions', 'investments', 'leaders']) {
     if (Array.isArray(value[key])) return value[key]
   }
-  // Xano paging object sometimes nests under items.items
   if (value.items && Array.isArray(value.items.items)) return value.items.items
   if (value.inv_page && Array.isArray(value.inv_page.items)) return value.inv_page.items
   return []
@@ -181,7 +180,7 @@ export const resumePlan = (id: number) => updatePlan(id, { is_paused: false, sta
 export const deletePlan = (id: number) =>
   SANDBOX_MOCK ? mockDeletePlan(id) : xanoAdminFunctionRequest(`/fn_admin_plan/${id}`, { method: 'DELETE' })
 
-/** Member investments — never throw on Xano pagination bugs (inv_page.totalCount). */
+/** Member investments — never throw on pagination bugs (inv_page.totalCount). */
 export const getMyInvestments = async (): Promise<Investment[]> => {
   try {
     const payload = await xanoRequest('/api:ledger-api/investments', { method: 'GET' }, { auth: true })
@@ -196,7 +195,6 @@ export const getMyInvestments = async (): Promise<Investment[]> => {
     ]) as Investment[]
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : String(cause)
-    // Known Xano function bug: response expression references inv_page.totalCount when paging object is missing
     if (/inv_page\.totalCount|Unable to locate var/i.test(message)) {
       return []
     }
@@ -238,3 +236,14 @@ export const getReferralLeaderboard = async (): Promise<{ rows: Record<string, a
   }
   return { rows: [], available: false }
 }
+
+// Confirmed Swagger member routes — see lib/member-routes.ts
+export {
+  getReferralCredits,
+  getReferralMe,
+  getInvestmentCertificate,
+  memberSafeError,
+  type ReferralCredits,
+  type ReferralMe,
+  type InvestmentCertificatePayload,
+} from '@/lib/member-routes'
