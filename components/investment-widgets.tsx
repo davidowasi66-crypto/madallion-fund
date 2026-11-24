@@ -485,7 +485,7 @@ export function PlanCalculator({
                 type="range"
                 min={minimum}
                 max={maximum}
-                step={Math.max(1_000, Math.round((maximum - minimum) / 100))}
+                step={10_000}
                 value={Math.min(maximum, Math.max(minimum, amount || minimum))}
                 onChange={(event) => setAmount(Number(event.target.value))}
                 className="mt-3 h-2 w-full cursor-pointer accent-[#0b4537]"
