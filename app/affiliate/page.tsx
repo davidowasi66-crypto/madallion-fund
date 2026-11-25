@@ -48,6 +48,15 @@ function pickReferralCode(profile: Record<string, unknown> | null, userId: strin
   return ''
 }
 
+function referralSiteOrigin(): string {
+  if (typeof window === 'undefined') return 'https://madallion-fund.vercel.app'
+  const hostname = window.location.hostname.toLowerCase()
+  const isLocalhost = hostname === 'localhost' || hostname === '127.0.0.1' || hostname.endsWith('.localhost')
+  const isPreview = hostname.endsWith('.v0.build') ||
+    (hostname.endsWith('.vercel.app') && hostname !== 'madallion-fund.vercel.app')
+  return isLocalhost || isPreview ? 'https://madallion-fund.vercel.app' : window.location.origin
+}
+
 export default function AffiliatePage() {
   const [hasSession, setHasSession] = useState<boolean | null>(null)
   const [userId, setUserId] = useState('')
@@ -77,12 +86,11 @@ export default function AffiliatePage() {
 
   const inviteUrl = useMemo(() => {
     if (!hasSession) return ''
-    const directUrl = referralInfo?.member?.invite_url?.trim()
-    if (directUrl && /^https?:\/\//i.test(directUrl)) return directUrl
-    const code = referralInfo?.member?.referral_code || pickReferralCode(referralInfo?.profile ?? null, userId)
-    if (!code || !/^[A-Za-z0-9_-]{1,64}$/.test(code)) return ''
-    const origin = typeof window !== 'undefined' ? window.location.origin : 'https://madallion-fund.vercel.app'
-    return `${origin}/register?ref=${encodeURIComponent(code)}`
+    const memberCode = referralInfo?.member?.referral_code?.trim()
+    const validMemberCode = memberCode && /^[A-Za-z0-9_-]{1,64}$/.test(memberCode) ? memberCode : ''
+    const code = validMemberCode || pickReferralCode(referralInfo?.profile ?? null, userId)
+    if (!code) return ''
+    return `${referralSiteOrigin()}/register?ref=${encodeURIComponent(code)}`
   }, [hasSession, referralInfo, userId])
 
   const myStats = useMemo(() => {
