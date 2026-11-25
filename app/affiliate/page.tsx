@@ -7,6 +7,7 @@ import { ArrowLeft, Check, Copy, TrendingUp, Users } from 'lucide-react'
 import { getXanoSession, xanoMe } from '@/lib/xano-auth'
 import { getReferralCredits, getReferralMe } from '@/lib/member-routes'
 import { getReferralLeaderboard } from '@/lib/investment-api'
+import { MemberTabBar } from '@/components/member-tab-bar'
 
 /** Programme tier labels — percentages are illustrative until admin overrides. */
 const programmeTiers = [
@@ -130,7 +131,7 @@ export default function AffiliatePage() {
         : inviteUrl || 'Unable to issue invite link — check that your account is signed in'
 
   return (
-    <main className="min-h-screen bg-[#f4f8f3] text-[#101d1a]">
+    <main className={`min-h-screen bg-[#f4f8f3] text-[#101d1a] ${hasSession ? 'member-tab-page' : ''}`}>
       <div className="bg-gradient-to-b from-[#0b4537] via-[#0d3d32] to-[#123f34] px-5 pb-8 pt-6 text-white sm:px-8">
         <div className="mx-auto max-w-lg">
           <div className="flex items-center justify-between gap-3">
@@ -321,6 +322,7 @@ export default function AffiliatePage() {
           </div>
         </section>
       </div>
+      {hasSession && <MemberTabBar />}
     </main>
   )
 }
