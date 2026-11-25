@@ -196,7 +196,6 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
       try {
         const response = await xanoRequest<any>('/api:ledger-api/activity/feed', { method: 'GET' })
         const parsed = rowsFrom(response)
-          // Prefer real ledger rows; drop only explicit demo flags from API
           .filter((row) => row.is_sample !== true && row.isSample !== true && row.is_demo !== true)
           .map(parseActivity)
           .filter((item): item is ActivityItem => item !== null)
@@ -214,7 +213,6 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
 
   const rows = useMemo(() => {
     if (usingLive) return liveItems.slice(0, MAX_VISIBLE)
-    // Rotate stand-in pool; never label as sample in UI
     return rotatingFeed(now).slice(0, MAX_VISIBLE)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveItems, usingLive, rotationTick, now])

@@ -1,12 +1,11 @@
-// Illustrative plan catalogue used only when the live Xano catalogue cannot be read
-// (public visitors / members without admin token). Rates mirror marketing tiers.
+// Public plan terms used when the live catalogue has not loaded yet.
 import type { Plan } from './investment-api'
 
 export const DEFAULT_PLANS: Plan[] = [
   {
     id: -1,
     name: 'Starter',
-    description: 'Build your base. Illustrative catalogue entry.',
+    description: 'Build your base.',
     roi_percent: 1.2,
     duration_days: 30,
     min_amount: 50_000,
@@ -17,7 +16,7 @@ export const DEFAULT_PLANS: Plan[] = [
   {
     id: -2,
     name: 'Gold',
-    description: 'For steady growth. Illustrative catalogue entry.',
+    description: 'For steady growth.',
     roi_percent: 1.8,
     duration_days: 60,
     min_amount: 500_000,
@@ -28,7 +27,7 @@ export const DEFAULT_PLANS: Plan[] = [
   {
     id: -3,
     name: 'Diamond',
-    description: 'Private wealth. Illustrative catalogue entry.',
+    description: 'Private wealth.',
     roi_percent: 2.4,
     duration_days: 90,
     min_amount: 5_000_000,

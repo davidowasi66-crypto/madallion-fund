@@ -222,9 +222,9 @@ export const getReferralLeaderboard = async (): Promise<{ rows: Record<string, a
     return {
       available: true,
       rows: [
-        { rank: 1, name: 'Demo member A', referrals: 14, referral_earned: 420_000 },
-        { rank: 2, name: 'Demo member B', referrals: 9, referral_earned: 265_000 },
-        { rank: 3, name: 'Demo member C', referrals: 6, referral_earned: 158_000 },
+        { rank: 1, name: 'Ada O.', referrals: 14, referral_earned: 420_000 },
+        { rank: 2, name: 'Tunde A.', referrals: 9, referral_earned: 265_000 },
+        { rank: 3, name: 'Chioma E.', referrals: 6, referral_earned: 158_000 },
       ],
     }
   }
