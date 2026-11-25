@@ -20,7 +20,7 @@ import { getMyInvestments, initializeDeposit, requestWithdrawal, type Investment
 import { memberSafeError } from '@/lib/member-routes'
 import { ActivityTicker } from '@/components/activity-ticker'
 import { MemberTabBar } from '@/components/member-tab-bar'
-import { AutoCompoundToggle, MaturityProgressBar, PortfolioSummary, SavingsGoalCard } from '@/components/investment-widgets'
+import { AutoCompoundToggle, MaturityProgressBar, PortfolioSummary } from '@/components/investment-widgets'
 import { InvestmentCertificate } from '@/components/investment-certificate'
 import { PayoutDestinationCard } from '@/components/payout-destination-card'
 
@@ -109,14 +109,9 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
       ? 'Deposit, withdraw, and review your ledger balances.'
       : section === 'activity'
         ? 'Recent transactions recorded on your ledger.'
-        : 'Your investment positions, maturity progress, and savings goal.'
+        : 'Your investment positions and maturity progress.'
 
   const investments = rows as Investment[]
-  const portfolioValue = useMemo(
-    () => investments.reduce((sum, inv) => sum + toNumeric(inv.principal) + toNumeric(inv.accrued_total), 0),
-    [investments],
-  )
-
   const walletBalance = useMemo(
     () =>
       section === 'wallet'
@@ -443,7 +438,6 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
               {!loading && section === 'investments' && (
                 <div className="mt-6 space-y-6">
                   <PortfolioSummary investments={investments} />
-                  <SavingsGoalCard currentValue={portfolioValue} />
                   {investments.length === 0 ? (
                     <div className="rounded-3xl border border-dashed border-[#dfe8e2] bg-white p-7 lg:border-white/10 lg:bg-transparent">
                       <p className="font-medium text-[#0b4537] lg:text-white">No investments yet</p>
