@@ -3,7 +3,6 @@
 import Link from 'next/link'
 import useSWR from 'swr'
 import { useEffect, useMemo, useState } from 'react'
-import { Target } from 'lucide-react'
 import { getXanoSession } from '@/lib/xano-auth'
 import { antiThrottleSwrConfig } from '@/lib/swr'
 import {
@@ -248,72 +247,6 @@ export function MaturityProgressBar({
   )
 }
 
-const GOAL_KEY = 'madallion_savings_goal'
-
-export function SavingsGoalCard({ currentValue }: { currentValue: number }) {
-  const [goal, setGoal] = useState<number | null>(null)
-  const [draft, setDraft] = useState('')
-  useEffect(() => {
-    try {
-      const saved = Number(window.localStorage.getItem(GOAL_KEY) ?? 0)
-      if (saved > 0) {
-        setGoal(saved)
-        setDraft(String(saved))
-      }
-    } catch {}
-  }, [])
-  const save = (value: number) => {
-    setGoal(value > 0 ? value : null)
-    try {
-      value > 0 ? window.localStorage.setItem(GOAL_KEY, String(value)) : window.localStorage.removeItem(GOAL_KEY)
-    } catch {}
-  }
-  const percent = goal && goal > 0 ? Math.min(100, Math.round((currentValue / goal) * 100)) : 0
-  return (
-    <div className="rounded-2xl border border-[#b9f47f]/20 bg-[#0b2420] p-4">
-      <div className="flex items-center gap-2">
-        <Target size={16} className="text-[#b9f47f]" />
-        <p className="text-sm font-semibold text-white">Savings goal</p>
-      </div>
-      {goal && goal > 0 ? (
-        <div className="mt-3">
-          <div className="flex items-end justify-between">
-            <p className="text-2xl font-semibold text-white">{money(currentValue)}</p>
-            <p className="text-xs text-[#789589]">
-              of {money(goal)} · {percent}%
-            </p>
-          </div>
-          <div
-            className="mt-2 h-2.5 overflow-hidden rounded-full bg-[#183e31]"
-            role="progressbar"
-            aria-valuenow={percent}
-            aria-valuemin={0}
-            aria-valuemax={100}
-          >
-            <div className="h-full rounded-full bg-[#b9f47f]" style={{ width: `${percent}%` }} />
-          </div>
-        </div>
-      ) : (
-        <p className="mt-3 text-xs text-[#789589]">Set a target amount to track progress.</p>
-      )}
-      <div className="mt-3 flex gap-2">
-        <input
-          inputMode="numeric"
-          placeholder="Goal amount (₦)"
-          value={draft}
-          onChange={(e) => setDraft(e.target.value.replace(/[^\d]/g, ''))}
-          className="w-full rounded-xl border border-white/10 bg-[#0e2b26] px-3 py-2 text-sm text-white outline-none"
-        />
-        <button
-          onClick={() => save(Number(draft || 0))}
-          className="rounded-xl bg-[#b9f47f] px-3 py-2 text-sm font-semibold text-[#071a18]"
-        >
-          Set
-        </button>
-      </div>
-    </div>
-  )
-}
 
 export function PortfolioSummary({ investments }: { investments: Investment[] }) {
   const principal = investments.reduce((sum, item) => sum + Number(item.principal ?? 0), 0)
