@@ -1,12 +1,19 @@
 'use client'
 
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import useSWR from 'swr'
 import { PlanCard } from '@/components/plan-card'
 import { PlanCalculator } from '@/components/investment-widgets'
 import { getPlans, PLANS_KEY } from '@/lib/investment-api'
+import { getXanoSession } from '@/lib/xano-auth'
+import { MemberTabBar } from '@/components/member-tab-bar'
 
 export default function PlansPage() {
+  const [hasSession, setHasSession] = useState(false)
+  useEffect(() => {
+    setHasSession(Boolean(getXanoSession()?.authenticated))
+  }, [])
   const { data: catalogue, isLoading } = useSWR(PLANS_KEY, getPlans)
   const plans = catalogue?.plans ?? []
   const sourceNote =
@@ -15,7 +22,7 @@ export default function PlansPage() {
       : 'Showing the public catalogue until live plan terms load.'
 
   return (
-    <main className="min-h-screen bg-[#f4f8f3] px-4 py-6 text-[#101d1a] sm:px-8 sm:py-10">
+    <main className={`min-h-screen bg-[#f4f8f3] px-4 py-6 text-[#101d1a] sm:px-8 sm:py-10 ${hasSession ? 'member-tab-page' : ''}`}>
       <div className="mx-auto max-w-6xl">
         <Link href="/" className="font-bold text-[#0b4537]">
           Madallion fund
@@ -46,6 +53,7 @@ export default function PlansPage() {
           {sourceNote}
         </p>
       </div>
+      {hasSession && <MemberTabBar />}
     </main>
   )
 }

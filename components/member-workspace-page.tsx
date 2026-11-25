@@ -182,7 +182,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
   }
 
   return (
-    <main className="min-h-screen bg-[#f4f8f3] text-[#101d1a] pb-24 lg:bg-[#071a18] lg:pb-8 lg:text-[#edf7f1]">
+    <main className="member-tab-page min-h-screen bg-[#f4f8f3] text-[#101d1a] lg:bg-[#071a18] lg:text-[#edf7f1]">
       <aside
         className={`fixed inset-y-0 left-0 z-50 w-72 border-r border-white/10 bg-[#0a211e] p-5 text-[#edf7f1] transition-transform lg:translate-x-0 ${
           menuOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'

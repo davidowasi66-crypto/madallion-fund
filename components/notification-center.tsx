@@ -8,6 +8,7 @@ import { ArrowDownLeft, ArrowUpRight, Bell, Clock3, Settings2 } from 'lucide-rea
 import { getMemberTransactions } from '@/lib/xano-ledger'
 import { clearXanoSession, getXanoSession } from '@/lib/xano-auth'
 import { toNumeric, toTitleCase } from '@/lib/xano-client'
+import { MemberTabBar } from '@/components/member-tab-bar'
 
 type Row = Record<string, any>
 
@@ -60,7 +61,7 @@ export function NotificationCenter() {
   }, [errorMessage, router])
 
   return (
-    <main className="min-h-screen bg-[#f4f8f3] pb-24 text-[#101d1a] lg:pb-8">
+    <main className="member-tab-page min-h-screen bg-[#f4f8f3] text-[#101d1a]">
       <header className="bg-gradient-to-b from-[#0b4537] via-[#0d3d32] to-[#123f34] px-5 py-6 text-white sm:px-8">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-3">
@@ -137,6 +138,7 @@ export function NotificationCenter() {
           </fieldset>
         </section>
       </div>
+      {authenticated && <MemberTabBar />}
     </main>
   )
 }

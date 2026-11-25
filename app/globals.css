@@ -90,6 +90,12 @@ img, svg, video { max-width: 100%; }
   .payout-ticker-enter { animation: none; }
 }
 
+/* Leave enough room for the fixed member navigation and device safe area. */
+.member-tab-page { padding-bottom: calc(7.5rem + env(safe-area-inset-bottom, 0px)); }
+@media (min-width: 1024px) {
+  .member-tab-page { padding-bottom: 2rem; }
+}
+
 /* Floating glassmorphic member tab bar */
 .member-tab-bar {
   position: fixed;
