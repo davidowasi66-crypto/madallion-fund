@@ -16,18 +16,13 @@ type ActivityItem = {
 type RawActivity = Record<string, any>
 type ActivityTickerProps = { variant?: 'landing' | 'member' }
 
-/** Chidi Okeke → Chidi O. */
+/** Chidi Okeke → Ch***e — short public alias, never a full name. */
 function maskName(raw: string): string {
-  const name = raw.trim().replace(/\s+/g, ' ')
-  if (!name) return 'Member'
-  const parts = name.split(' ').filter(Boolean)
-  if (parts.length === 1) {
-    const w = parts[0]
-    return w.length <= 2 ? `${w[0] ?? 'M'}***` : `${w.slice(0, Math.min(5, w.length))}***`
-  }
-  const first = parts[0]
-  const lastInitial = parts[parts.length - 1][0] ?? ''
-  return `${first} ${lastInitial}.`
+  const compact = raw.trim().replace(/[^A-Za-z0-9]/g, '')
+  if (compact.length < 2) return 'Me***r'
+  const head = compact.slice(0, 2)
+  const tail = compact.slice(-1)
+  return `${head[0]!.toUpperCase()}${head[1]!.toLowerCase()}***${tail}`
 }
 
 function rowsFrom(payload: any): RawActivity[] {
@@ -180,6 +175,12 @@ function rotatingFeed(now = Date.now()): ActivityItem[] {
   return items
 }
 
+function verb(type: ActivityKind) {
+  if (type === 'Withdrawal') return 'withdrew'
+  if (type === 'Deposit') return 'deposited'
+  return 'received'
+}
+
 const MAX_VISIBLE = 6
 
 export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
@@ -293,43 +294,39 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
       </div>
 
       <ul
-        className={`payout-ticker-list divide-y overflow-hidden rounded-xl border ${
-          isMember ? 'divide-white/10 border-white/10 bg-[#0e2b26]' : 'divide-[#e7eee8] border-[#e6ede7] bg-[#f7faf6]'
-        }`}
+        className="flex flex-col gap-1.5"
         aria-live="polite"
         aria-relevant="additions"
       >
         {rows.map((item) => {
           const isNew = entering.has(item.id)
+          const line = `${item.displayName} ${verb(item.type)} ${naira(item.amount)}`
           return (
             <li
               key={item.id}
-              className={`payout-ticker-row flex min-h-[52px] items-center justify-between gap-3 px-3 py-2.5 sm:px-4 ${
+              className={`flex min-h-11 items-center justify-between gap-3 rounded-xl px-3 py-2 sm:px-3.5 ${
                 isNew ? 'payout-ticker-enter' : ''
-              }`}
+              } ${isMember ? 'bg-[#0e2b26]' : 'bg-[#f4f8f3]'}`}
             >
-              <div className="min-w-0 flex-1">
-                <p className={`truncate text-sm font-medium ${isMember ? 'text-[#edf7f1]' : 'text-[#173c30]'}`}>
-                  {item.displayName}
-                </p>
-                <p className={`mt-0.5 text-[11px] ${isMember ? 'text-[#91b0a2]' : 'text-[#708079]'}`}>
-                  <span className="sr-only">{item.type}. </span>
-                  {item.type}
-                  <span aria-hidden="true"> · </span>
-                  <time dateTime={new Date(item.createdAt).toISOString()}>{relativeTime(item.createdAt, now)}</time>
-                </p>
-              </div>
-              <p
-                className="shrink-0 text-sm font-bold tabular-nums sm:text-[15px]"
-                style={{ color: isMember ? '#b9f47f' : '#059669' }}
-              >
-                {naira(item.amount)}
+              <p className={`min-w-0 truncate text-sm ${isMember ? 'text-[#edf7f1]' : 'text-[#173c30]'}`}>
+                <span className="font-semibold">{item.displayName}</span>
+                <span className={isMember ? 'text-[#91b0a2]' : 'text-[#60716b]'}> {verb(item.type)} </span>
+                <span className="font-semibold tabular-nums" style={{ color: isMember ? '#b9f47f' : '#0b4537' }}>
+                  {naira(item.amount)}
+                </span>
+                <span className="sr-only">. {line}</span>
               </p>
+              <time
+                dateTime={new Date(item.createdAt).toISOString()}
+                className={`shrink-0 text-[11px] font-medium ${isMember ? 'text-[#91b0a2]' : 'text-[#708079]'}`}
+              >
+                {relativeTime(item.createdAt, now)}
+              </time>
             </li>
           )
         })}
         {!rows.length && isLoading && (
-          <li className={`px-4 py-6 text-center text-sm ${isMember ? 'text-[#91b0a2]' : 'text-[#708079]'}`}>Loading…</li>
+          <li className={`px-4 py-6 text-center text-sm ${isMember ? 'text-[#91b0a2]' : 'text-[#708079]'}`}>Loading activity…</li>
         )}
       </ul>
 

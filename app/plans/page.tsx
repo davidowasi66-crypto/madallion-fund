@@ -11,8 +11,8 @@ export default function PlansPage() {
   const plans = catalogue?.plans ?? []
   const sourceNote =
     catalogue?.source === 'live'
-      ? 'Rates from live Xano catalogue.'
-      : 'Showing illustrative catalogue until an admin session loads live tiers.'
+      ? 'Rates follow the current plan catalogue.'
+      : 'Showing the public catalogue until live plan terms load.'
 
   return (
     <main className="min-h-screen bg-[#f4f8f3] px-4 py-6 text-[#101d1a] sm:px-8 sm:py-10">
