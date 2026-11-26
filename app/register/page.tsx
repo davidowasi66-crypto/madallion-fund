@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { FormEvent, Suspense, useState } from 'react'
 import { saveXanoSession, xanoSignup } from '@/lib/xano-auth'
+import { clearStoredReferralCode, storedReferralCode } from '@/lib/referral-link'
 
 export default function RegisterPage() {
   return <Suspense fallback={<main className="auth-page"><div className="auth-card">Loading account form…</div></main>}><RegisterForm /></Suspense>
@@ -30,10 +31,11 @@ function RegisterForm() {
     }
     setLoading(true)
     try {
-      const referralCode = searchParams.get('ref')?.trim()
+      const referralCode = searchParams.get('ref')?.trim() || storedReferralCode()
       const session = await xanoSignup(trimmedName, trimmedEmail, trimmedPassword, referralCode)
       if (!session?.authenticated) throw new Error('Xano created the account but did not establish a session. Try signing in, or check whether email verification is required.')
       saveXanoSession(session)
+      clearStoredReferralCode()
       const next = searchParams.get('next')
       router.push(next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard')
     } catch (cause) {

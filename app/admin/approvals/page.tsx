@@ -16,8 +16,16 @@ export default function ApprovalsPage() {
   return <AdminShell eyebrow="Risk and controls" title="Approvals">
     <SectionCard title="Pending approvals" action={isLoading ? 'Loading Xano data' : error ? 'Xano unavailable' : 'Live Xano data'}>
       <p className="mb-4 max-w-2xl text-xs leading-5 text-slate-400">Every decision records who decided, the reason, and the note in the Xano audit log before money moves.</p>
-      <div className="mb-5 flex gap-2" role="tablist" aria-label="Approval type">
+      <p className="mb-4 max-w-2xl text-xs leading-5 text-amber-200/80">
+        If Xano says “different ledger”, the deposit account and the ledger posting account do not match. If it says
+        “idempotency key is currently processing”, the previous attempt is still running; wait a few seconds and refresh
+        before retrying.
+      </p>
+      <div className="mb-5 flex flex-wrap items-center gap-2" role="tablist" aria-label="Approval type">
         {(['deposits', 'withdrawals'] as const).map((value) => <button key={value} role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={`rounded-lg px-3 py-2 text-sm ${tab === value ? 'bg-emerald-500/15 text-emerald-300' : 'text-slate-400 hover:bg-slate-800'}`}>{value[0].toUpperCase() + value.slice(1)}</button>)}
+        <button type="button" onClick={() => void mutate()} className="ml-auto rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:border-emerald-400/50">
+          Refresh queue
+        </button>
       </div>
       {error ? (
         <p className="text-sm text-red-300">Unable to load approvals from Xano: {error.message}</p>

@@ -92,7 +92,7 @@ export default function AffiliatePage() {
     const validMemberCode = memberCode && /^[A-Za-z0-9_-]{1,64}$/.test(memberCode) ? memberCode : ''
     const code = validMemberCode || pickReferralCode(referralInfo?.profile ?? null, userId)
     if (!code) return ''
-    return `${referralSiteOrigin()}/register?ref=${encodeURIComponent(code)}`
+    return `${referralSiteOrigin()}/?ref=${encodeURIComponent(code)}`
   }, [hasSession, referralInfo, userId])
 
   const myStats = useMemo(() => {

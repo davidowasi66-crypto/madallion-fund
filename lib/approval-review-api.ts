@@ -28,6 +28,33 @@ export type ApprovalReviewResult = {
   message?: string
 }
 
+/** Turns raw Xano ledger errors into an instruction the admin can act on. */
+export function approvalErrorMessage(cause: unknown): string {
+  const message = cause instanceof Error ? cause.message : String(cause ?? '')
+  if (/different ledger/i.test(message)) {
+    return 'This deposit is linked to an account in another ledger. Fix the account/ledger mapping in Xano, then refresh the queue and retry.'
+  }
+  if (/idempotency key is currently processing/i.test(message)) {
+    return 'This approval is already processing. Wait a few seconds, refresh the queue, and check the item status before retrying.'
+  }
+  if (/idempotency/i.test(message)) {
+    return 'Xano rejected this as a duplicate approval. Refresh the queue to see the latest status.'
+  }
+  if (/insufficient|available balance/i.test(message)) {
+    return 'The member does not have enough available balance for this withdrawal.'
+  }
+  if (/not authenticated|401/i.test(message)) {
+    return 'Your admin session expired. Sign in again and retry.'
+  }
+  if (/403|forbidden/i.test(message)) {
+    return 'This account does not have permission to approve this item.'
+  }
+  if (/timed out|network|failed to fetch/i.test(message)) {
+    return 'The approval service did not respond. Refresh the queue before retrying.'
+  }
+  return message || 'Unable to record this decision.'
+}
+
 /** The RPC accepts singular kinds; the admin tables use plural tab names. */
 const BACKEND_KIND: Record<ApprovalKind, string> = {
   deposits: 'deposit',
