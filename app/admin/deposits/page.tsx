@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { AdminShell, SectionCard } from '@/components/admin-shell'
+import { OtcRecordForm } from '@/components/otc-record-form'
 import { getAdminPending, type AdminPendingResponse } from '@/lib/xano-admin'
 
 const naira = (v: unknown) => `₦${Number(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`
@@ -10,9 +11,11 @@ export default function AdminDepositsPage() {
   const [data, setData] = useState<AdminPendingResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+  const [refreshKey, setRefreshKey] = useState(0)
 
   useEffect(() => {
     let mounted = true
+    setLoading(true)
     getAdminPending({ p_kind: 'deposits', per_page: 50 })
       .then((payload) => {
         if (!mounted) return
@@ -28,7 +31,7 @@ export default function AdminDepositsPage() {
     return () => {
       mounted = false
     }
-  }, [])
+  }, [refreshKey])
 
   const rows = data?.items ?? []
 
@@ -39,6 +42,11 @@ export default function AdminDepositsPage() {
           {error}
         </p>
       )}
+      <div className="mb-6">
+        <SectionCard title="Record OTC or manual deposit" action="Creates a pending row">
+          <OtcRecordForm kind="deposit" onRecorded={() => setRefreshKey((value) => value + 1)} />
+        </SectionCard>
+      </div>
       <SectionCard title="Pending & recent deposits" action={loading ? 'Loading' : `${rows.length} rows`}>
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
@@ -47,7 +55,10 @@ export default function AdminDepositsPage() {
                 <th className="pb-3 pr-4">Reference</th>
                 <th className="pb-3 pr-4">Member</th>
                 <th className="pb-3 pr-4">Amount</th>
+                <th className="pb-3 pr-4">Channel</th>
+                <th className="pb-3 pr-4">Partner</th>
                 <th className="pb-3 pr-4">Status</th>
+                <th className="pb-3 pr-4">Proof</th>
                 <th className="pb-3">Date</th>
               </tr>
             </thead>
@@ -57,7 +68,18 @@ export default function AdminDepositsPage() {
                   <td className="py-3 pr-4">{row.reference || row.id}</td>
                   <td className="py-3 pr-4">{row.user?.name ?? row.user?.email ?? '—'}</td>
                   <td className="py-3 pr-4 font-medium">{naira(row.amount)}</td>
+                  <td className="py-3 pr-4">{row.channel ?? row.method ?? '—'}</td>
+                  <td className="py-3 pr-4">{row.partner_name ?? '—'}</td>
                   <td className="py-3 pr-4">{row.status}{row.is_overdue ? ' · overdue' : ''}</td>
+                  <td className="py-3 pr-4">
+                    {row.proof_url ? (
+                      <a href={row.proof_url} target="_blank" rel="noreferrer" className="text-emerald-300 underline">
+                        View
+                      </a>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
                   <td className="py-3 text-slate-400">
                     {row.created_at
                       ? new Date(Number(row.created_at) < 1e12 ? Number(row.created_at) * 1000 : row.created_at).toLocaleString('en-NG')
@@ -67,7 +89,7 @@ export default function AdminDepositsPage() {
               ))}
               {!loading && rows.length === 0 && (
                 <tr>
-                  <td colSpan={5} className="py-8 text-center text-slate-500">
+                  <td colSpan={8} className="py-8 text-center text-slate-500">
                     No deposits in the pending queue.
                   </td>
                 </tr>

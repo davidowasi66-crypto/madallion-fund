@@ -186,6 +186,10 @@ export const AdminPendingItemSchema = z.object({
   gateway_ref: z.string(),
   tx_hash: z.string(),
   risk_flags: z.array(z.any()),
+  channel: z.string().nullish(),
+  partner_name: z.string().nullish(),
+  partner_reference: z.string().nullish(),
+  proof_url: z.string().nullish(),
 })
 
 export const AdminPendingResponseSchema = z.object({

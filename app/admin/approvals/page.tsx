@@ -19,7 +19,53 @@ export default function ApprovalsPage() {
       <div className="mb-5 flex gap-2" role="tablist" aria-label="Approval type">
         {(['deposits', 'withdrawals'] as const).map((value) => <button key={value} role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={`rounded-lg px-3 py-2 text-sm ${tab === value ? 'bg-emerald-500/15 text-emerald-300' : 'text-slate-400 hover:bg-slate-800'}`}>{value[0].toUpperCase() + value.slice(1)}</button>)}
       </div>
-      {error ? <p className="text-sm text-red-300">Unable to load approvals from Xano: {error.message}</p> : <div className="overflow-x-auto"><table className="min-w-full text-left text-sm"><thead><tr className="text-slate-400"><th className="pb-3 pr-4">Reference</th><th className="pb-3 pr-4">Investor</th><th className="pb-3 pr-4">Amount</th><th className="pb-3 pr-4">Received</th><th className="pb-3">Decision</th></tr></thead><tbody>{(data?.items ?? []).map((item) => <tr key={item.id} className="border-t border-slate-800 align-top text-slate-200"><td className="py-3 pr-4">{item.reference}</td><td className="py-3 pr-4">{item.user?.name ?? 'Unknown'}</td><td className="py-3 pr-4 font-medium">{ngn.format(item.amount)}</td><td className="py-3 pr-4 text-slate-400">{lagosDate.format(new Date(item.created_at * 1000))}</td><td className="py-3"><ApprovalDecisionForm kind={tab} item={item} onRecorded={() => mutate()} /></td></tr>)}{!isLoading && !data?.items?.length && <tr><td colSpan={5} className="py-8 text-center text-slate-500">No pending {tab}.</td></tr>}</tbody></table></div>}
+      {error ? (
+        <p className="text-sm text-red-300">Unable to load approvals from Xano: {error.message}</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-left text-sm">
+            <thead>
+              <tr className="text-slate-400">
+                <th className="pb-3 pr-4">Reference</th>
+                <th className="pb-3 pr-4">Investor</th>
+                <th className="pb-3 pr-4">Amount</th>
+                <th className="pb-3 pr-4">Channel</th>
+                <th className="pb-3 pr-4">Partner</th>
+                <th className="pb-3 pr-4">Proof</th>
+                <th className="pb-3 pr-4">Received</th>
+                <th className="pb-3">Decision</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data?.items ?? []).map((item) => (
+                <tr key={item.id} className="border-t border-slate-800 align-top text-slate-200">
+                  <td className="py-3 pr-4">{item.reference}</td>
+                  <td className="py-3 pr-4">{item.user?.name ?? 'Unknown'}</td>
+                  <td className="py-3 pr-4 font-medium">{ngn.format(item.amount)}</td>
+                  <td className="py-3 pr-4">{item.channel ?? item.method ?? '—'}</td>
+                  <td className="py-3 pr-4">{item.partner_name ?? '—'}</td>
+                  <td className="py-3 pr-4">
+                    {item.proof_url ? (
+                      <a href={item.proof_url} target="_blank" rel="noreferrer" className="text-emerald-300 underline">
+                        View
+                      </a>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
+                  <td className="py-3 pr-4 text-slate-400">{lagosDate.format(new Date(item.created_at * 1000))}</td>
+                  <td className="py-3"><ApprovalDecisionForm kind={tab} item={item} onRecorded={() => mutate()} /></td>
+                </tr>
+              ))}
+              {!isLoading && !data?.items?.length && (
+                <tr>
+                  <td colSpan={8} className="py-8 text-center text-slate-500">No pending {tab}.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
     </SectionCard>
   </AdminShell>
 }
