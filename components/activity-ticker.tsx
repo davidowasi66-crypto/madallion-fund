@@ -182,13 +182,19 @@ function verb(type: ActivityKind) {
 }
 
 const MAX_VISIBLE = 6
+const EMPTY_ROWS: ActivityItem[] = []
 
 export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
   const isMember = variant === 'member'
+  const [mounted, setMounted] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const seenIds = useRef<Set<string>>(new Set())
   const [entering, setEntering] = useState<Set<string>>(new Set())
   const [rotationTick, setRotationTick] = useState(0)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   const { data: liveItems = [], isLoading } = useSWR<ActivityItem[]>(
     'public-naira-activity-feed',
@@ -212,10 +218,13 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
   const usingLive = liveItems.length > 0
 
   const rows = useMemo(() => {
+    // The rotating feed depends on the current time, so render it only after
+    // hydration to keep the server and first client render identical.
+    if (!mounted) return EMPTY_ROWS
     if (usingLive) return liveItems.slice(0, MAX_VISIBLE)
     return rotatingFeed(now).slice(0, MAX_VISIBLE)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [liveItems, usingLive, rotationTick, now])
+  }, [mounted, liveItems, usingLive, rotationTick, now])
 
   useEffect(() => {
     const tick = setInterval(() => setNow(Date.now()), 12_000)
@@ -323,7 +332,7 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
             </li>
           )
         })}
-        {!rows.length && isLoading && (
+        {!rows.length && (isLoading || !mounted) && (
           <li className={`px-4 py-6 text-center text-sm ${isMember ? 'text-[#91b0a2]' : 'text-[#708079]'}`}>Loading activity…</li>
         )}
       </ul>
