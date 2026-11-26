@@ -4,7 +4,8 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
-import { ArrowDownLeft, ArrowUpRight, Bell, Clock3, Settings2 } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, Bell, Settings2 } from 'lucide-react'
+import { NotificationPreferences } from '@/components/notification-preferences'
 import { getMemberTransactions } from '@/lib/xano-ledger'
 import { clearXanoSession, getXanoSession } from '@/lib/xano-auth'
 import { toNumeric, toTitleCase } from '@/lib/xano-client'
@@ -117,25 +118,8 @@ export function NotificationCenter() {
 
         <section className="h-fit rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm sm:p-6" aria-labelledby="notification-preferences-title">
           <div className="flex items-center gap-2 text-[#65a85c]"><Settings2 size={16} aria-hidden="true" /><p className="text-[10px] font-bold uppercase tracking-[.18em]">Preferences</p></div>
-          <h2 id="notification-preferences-title" className="mt-2 text-lg font-semibold text-[#0b4537]">Quiet hours</h2>
-          <p className="mt-2 text-sm leading-6 text-[#708079]">Choose when product and account notifications should be quiet. These settings must be stored by the notification service before they can be changed.</p>
-          <div className="mt-5 rounded-2xl border border-dashed border-[#dfe8e2] bg-[#f8fbf7] p-4">
-            <div className="flex items-start gap-3">
-              <Clock3 className="mt-0.5 shrink-0 text-[#65a85c]" size={17} aria-hidden="true" />
-              <div>
-                <p className="text-sm font-semibold text-[#173c30]">Preference sync unavailable</p>
-                <p className="mt-1 text-xs leading-5 text-[#708079]">Quiet-hours controls will be enabled after Xano exposes the notification preferences route. No settings are stored in this browser.</p>
-              </div>
-            </div>
-          </div>
-          <fieldset disabled className="mt-5 space-y-3 opacity-50" aria-label="Notification preferences unavailable">
-            <label className="flex items-center justify-between text-sm text-[#60716b]">In-app notifications <input type="checkbox" disabled /></label>
-            <label className="flex items-center justify-between text-sm text-[#60716b]">Quiet hours <input type="checkbox" disabled /></label>
-            <div className="grid grid-cols-2 gap-3">
-              <label className="text-xs text-[#829088]">Start<input type="time" disabled className="mt-1 block w-full rounded-lg border border-[#dfe8e2] px-2 py-2" /></label>
-              <label className="text-xs text-[#829088]">End<input type="time" disabled className="mt-1 block w-full rounded-lg border border-[#dfe8e2] px-2 py-2" /></label>
-            </div>
-          </fieldset>
+          <h2 id="notification-preferences-title" className="mt-2 text-lg font-semibold text-[#0b4537]">Preferences</h2>
+          <NotificationPreferences />
         </section>
       </div>
       {authenticated && <MemberTabBar />}

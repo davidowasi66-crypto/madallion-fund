@@ -5,6 +5,7 @@ import { useState } from 'react'
 import { Download, Link2, Share2 } from 'lucide-react'
 import type { Investment } from '@/lib/investment-api'
 import { getInvestmentCertificate } from '@/lib/member-routes'
+import { ShareLinkManager } from '@/components/share-link-manager'
 
 const xml = (value: unknown) =>
   String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;' })[character]!)
@@ -183,6 +184,7 @@ export function InvestmentCertificate({ investment }: { investment: Investment }
           )}
         </div>
       </div>
+      {investmentId != null && <ShareLinkManager investmentId={investmentId} existingUrl={publicShareUrl} />}
       {message && <p role="status" className="mt-3 text-xs text-[#60716b] lg:text-[#a8c7b8]">{message}</p>}
     </section>
   )

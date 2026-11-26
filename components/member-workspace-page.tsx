@@ -23,6 +23,9 @@ import { MemberTabBar } from '@/components/member-tab-bar'
 import { AutoCompoundToggle, MaturityProgressBar, PortfolioSummary } from '@/components/investment-widgets'
 import { InvestmentCertificate } from '@/components/investment-certificate'
 import { PayoutDestinationCard } from '@/components/payout-destination-card'
+import { FeeBreakdown } from '@/components/fee-breakdown'
+import { MaturityActions } from '@/components/maturity-actions'
+import { DepositProof } from '@/components/deposit-proof'
 
 type Section = 'investments' | 'wallet' | 'activity'
 type Row = Record<string, any>
@@ -33,6 +36,8 @@ const navigation = [
   { href: '/dashboard/wallet', label: 'Wallet' },
   { href: '/dashboard/activity', label: 'Activity' },
   { href: '/dashboard/notifications', label: 'Notifications' },
+  { href: '/dashboard/verification', label: 'Verification' },
+  { href: '/dashboard/security', label: 'Security' },
   { href: '/affiliate', label: 'Referrals' }
 ]
 
@@ -341,13 +346,16 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
               )}
 
               {mode === 'deposit' && (
-                <section className="mt-4 rounded-3xl border border-[#dfe8e2] bg-white p-4 shadow-sm">
-                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#65a85c]">How deposits work</p>
-                  <p className="mt-2 text-sm leading-6 text-[#60716b]">
-                    Choose an amount, then complete funding through your configured payment channel. Credited balances
-                    appear on your ledger accounts below.
-                  </p>
-                </section>
+                <>
+                  <section className="mt-4 rounded-3xl border border-[#dfe8e2] bg-white p-4 shadow-sm">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#65a85c]">How deposits work</p>
+                    <p className="mt-2 text-sm leading-6 text-[#60716b]">
+                      Choose an amount, then complete funding through your configured payment channel. Credited balances
+                      appear on your ledger accounts below.
+                    </p>
+                  </section>
+                  <DepositProof amount={amountNum} />
+                </>
               )}
 
               <button
@@ -457,7 +465,9 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                       {investments.map((investment, index) => (
                         <div key={investment.id ?? index} className="space-y-3">
                           <MaturityProgressBar investment={investment} />
+                          <MaturityActions investment={investment} />
                           <AutoCompoundToggle investment={investment} />
+                          <FeeBreakdown investment={investment} />
                           <InvestmentCertificate investment={investment} />
                         </div>
                       ))}

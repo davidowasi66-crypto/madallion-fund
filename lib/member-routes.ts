@@ -7,19 +7,21 @@ export type ReferralCredits = {
   lifetime: number
   cap: number
   currency: string
-  qualified?: number | boolean
+  qualified?: number | boolean | string
+  referrals?: number
 }
 
 /** GET /api:ledger-api/referral/me */
 export type ReferralMe = {
   referral_code?: string
   invite_url?: string
-  qualified?: number | boolean
+  qualified?: number | boolean | string
   available?: number
   pending_hold?: number
   lifetime?: number
   cap?: number
   credits?: number
+  referrals?: number
 }
 
 /** GET /api:ledger-api/investments/{investment_id}/certificate */
@@ -83,6 +85,7 @@ export async function getReferralCredits(): Promise<ReferralCredits | null> {
       cap: numField(body.cap),
       currency: String(body.currency ?? 'NGN'),
       qualified: body.qualified,
+      referrals: body.referrals != null ? numField(body.referrals) : undefined,
     }
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : String(cause)
@@ -104,6 +107,10 @@ export async function getReferralMe(): Promise<ReferralMe | null> {
       lifetime: body.lifetime != null ? numField(body.lifetime) : undefined,
       cap: body.cap != null ? numField(body.cap) : undefined,
       credits: body.credits != null ? numField(body.credits) : undefined,
+      referrals:
+        body.referrals != null || body.referrals_count != null
+          ? numField(body.referrals ?? body.referrals_count)
+          : undefined,
     }
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : String(cause)

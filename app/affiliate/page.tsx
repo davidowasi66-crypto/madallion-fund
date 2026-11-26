@@ -8,6 +8,7 @@ import { getXanoSession, xanoMe } from '@/lib/xano-auth'
 import { getReferralCredits, getReferralMe } from '@/lib/member-routes'
 import { getReferralLeaderboard } from '@/lib/investment-api'
 import { MemberTabBar } from '@/components/member-tab-bar'
+import { ReferralCreditsHistory, ReferralTierProgress } from '@/components/referral-program-panels'
 
 /** Programme tier labels — percentages are illustrative until admin overrides. */
 const programmeTiers = [
@@ -233,6 +234,19 @@ export default function AffiliatePage() {
                   : 'Credit details are temporarily unavailable. Your invite link remains ready to share.'}
           </p>
         </section>
+
+        {hasSession && (
+          <>
+            <ReferralTierProgress
+              qualified={
+                credits && credits.qualified != null && Number.isFinite(Number(credits.qualified))
+                  ? Number(credits.qualified)
+                  : (credits?.referrals ?? myStats.referrals)
+              }
+            />
+            <ReferralCreditsHistory />
+          </>
+        )}
 
         <section className="mt-6 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm">
           <h2 className="text-lg font-semibold text-[#0b4537]">Commission tiers</h2>
