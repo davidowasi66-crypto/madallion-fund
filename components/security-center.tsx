@@ -217,7 +217,12 @@ export function SecurityCenter() {
           <p className="mt-2 text-sm leading-6 text-[#708079]">Sign out any device you do not recognise.</p>
           <div className="mt-4 divide-y divide-[#eef2ee]">
             {isLoading && <p className="py-4 text-xs text-[#708079]">Loading sessions…</p>}
-            {!isLoading && data?.sessions.length === 0 && (
+            {unavailable && (
+              <p className="py-4 text-xs leading-5 text-[#708079]">
+                Signed-in devices are not connected yet, so no device list is available.
+              </p>
+            )}
+            {!isLoading && !unavailable && data?.sessions.length === 0 && (
               <p className="py-4 text-xs text-[#708079]">No other sessions are recorded.</p>
             )}
             {(data?.sessions ?? []).map((session) => (

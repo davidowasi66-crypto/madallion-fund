@@ -49,9 +49,10 @@ export function VerificationCenter() {
     antiThrottleSwrConfig,
   )
 
+  const unavailable = !isLoading && !loadError && data === null
   const status = data?.status ?? 'not_started'
   const copy = STATUS_COPY[status]
-  const showForm = !isLoading && !loadError && (status === 'not_started' || status === 'rejected')
+  const showForm = !isLoading && !loadError && !unavailable && (status === 'not_started' || status === 'rejected')
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -104,7 +105,7 @@ export function VerificationCenter() {
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 id="kyc-status-title" className="text-lg font-semibold text-[#0b4537]">Verification status</h2>
             <span className={`rounded-full px-3 py-1 text-xs font-semibold ${copy.tone}`}>
-              {isLoading ? 'Checking…' : loadError ? 'Unavailable' : copy.label}
+              {isLoading ? 'Checking…' : loadError ? 'Unavailable' : unavailable ? 'Not connected' : copy.label}
             </span>
           </div>
           <p className="mt-2 text-sm leading-6 text-[#708079]">{loadError ? 'We could not read your verification state. Try again shortly.' : copy.hint}</p>
@@ -113,7 +114,7 @@ export function VerificationCenter() {
           {status === 'rejected' && data?.reason && (
             <p className="mt-3 rounded-xl bg-red-50 px-3 py-2 text-xs leading-5 text-red-700">Reviewer note: {data.reason}</p>
           )}
-          {!isLoading && !loadError && data === null && (
+          {unavailable && (
             <p className="mt-3 flex items-start gap-2 rounded-xl border border-dashed border-[#dfe8e2] bg-[#f8fbf7] px-3 py-2 text-xs leading-5 text-[#708079]">
               <Clock3 size={14} className="mt-0.5 shrink-0" aria-hidden="true" />
               Verification storage is not connected yet, so submissions cannot be recorded.
