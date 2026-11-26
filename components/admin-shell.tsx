@@ -15,7 +15,7 @@ function getNestedRole(value: unknown): unknown {
 const groups = [
   { label: 'Overview', items: [{ href: '/admin', label: 'Command Centre' }, { href: '/admin/approvals', label: 'Approvals' }, { href: '/admin/treasury', label: 'Treasury' }, { href: '/admin/plans', label: 'Plans' }] },
 { label: 'People', items: [{ href: '/admin/users', label: 'Users' }] },
- { label: 'Money', items: [{ href: '/admin/deposits', label: 'Deposits' }, { href: '/admin/withdrawals', label: 'Withdrawals' }, { href: '/admin/disbursements', label: 'Disbursements' }, { href: '/admin/channels', label: 'Money Channels' }, { href: '/admin/accruals', label: 'Accruals & Maturity' }] },
+ { label: 'Money', items: [{ href: '/admin/liabilities', label: 'Liability & Settlement' }, { href: '/admin/deposits', label: 'Deposits' }, { href: '/admin/withdrawals', label: 'Withdrawals' }, { href: '/admin/disbursements', label: 'Disbursements' }, { href: '/admin/channels', label: 'Money Channels' }, { href: '/admin/accruals', label: 'Accruals & Maturity' }] },
  { label: 'System', items: [{ href: '/admin/settings', label: 'Settings' }] },
 ]
 
