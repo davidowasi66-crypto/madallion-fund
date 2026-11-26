@@ -15,6 +15,7 @@ const nextConfig = {
   },
   typescript: { ignoreBuildErrors: false },
   images: { unoptimized: true },
+  experimental: { agentUpgrade: 'security' },
 }
 
 export default nextConfig
