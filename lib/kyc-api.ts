@@ -10,18 +10,17 @@ export type KycState = {
   reason?: string
 }
 
-export type KycIdType = 'nin' | 'bvn' | 'passport' | 'drivers_license'
+export type KycIdType = 'national_id' | 'bvn' | 'passport' | 'drivers_license'
 
 export type KycSubmission = {
+  document_type: KycIdType
+  document_number: string
   full_name: string
-  date_of_birth: string
-  id_type: KycIdType
-  id_number: string
   address: string
 }
 
 export const KYC_ID_TYPES: Array<{ value: KycIdType; label: string }> = [
-  { value: 'nin', label: 'National Identification Number (NIN)' },
+  { value: 'national_id', label: 'National Identification Number (NIN)' },
   { value: 'bvn', label: 'Bank Verification Number (BVN)' },
   { value: 'passport', label: 'International passport' },
   { value: 'drivers_license', label: "Driver's licence" },
@@ -42,13 +41,19 @@ const optionalString = (value: unknown): string | undefined =>
 
 const STATUSES: KycStatus[] = ['not_started', 'pending', 'approved', 'rejected']
 
+function normalizeStatus(value: unknown): KycStatus {
+  const status = String(value ?? '').toLowerCase().replace(/[\s-]+/g, '_')
+  if (status === 'verified' || status === 'approved') return 'approved'
+  return STATUSES.find((candidate) => candidate === status) ?? 'not_started'
+}
+
 function normalizeKycState(payload: unknown): KycState {
   const body = unwrap(payload)
-  const status = String(body.status ?? '').toLowerCase().replace(/[\s-]+/g, '_')
+  const isVerified = body.is_verified === true || body.is_verified === 'true'
   return {
-    status: STATUSES.find((candidate) => candidate === status) ?? 'not_started',
+    status: normalizeStatus(body.status ?? (isVerified ? 'verified' : '')),
     submitted_at: optionalString(body.submitted_at),
-    reviewed_at: optionalString(body.reviewed_at),
+    reviewed_at: optionalString(body.reviewed_at) ?? optionalString(body.reviewed_on),
     reason: optionalString(body.reason) ?? optionalString(body.rejection_reason),
   }
 }
@@ -73,10 +78,20 @@ export async function submitKyc(submission: KycSubmission): Promise<KycState | n
   try {
     const payload = await xanoRequest(
       '/api:ledger-api/kyc/submissions',
-      { method: 'POST', body: JSON.stringify(submission) },
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          document_type: submission.document_type,
+          document_number: submission.document_number,
+          full_name: submission.full_name,
+          address: submission.address,
+        }),
+      },
       { auth: true },
     )
-    return normalizeKycState(payload)
+    const state = normalizeKycState(payload)
+    // A successful POST means the submission is queued even if the response omits status.
+    return state.status === 'not_started' ? { ...state, status: 'pending' } : state
   } catch (cause) {
     if (isPendingRoute(cause)) return null
     throw cause

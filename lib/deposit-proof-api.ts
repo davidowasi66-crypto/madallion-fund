@@ -1,19 +1,21 @@
 import { xanoRequest } from '@/lib/xano-auth'
 import { isPendingRoute } from '@/lib/pending-route'
 
-export const DEPOSIT_PROOF_MAX_BYTES = 5 * 1024 * 1024
-export const DEPOSIT_PROOF_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'application/pdf']
-
 export type DepositProofInput = {
-  amount: number
-  file: File
-  note?: string
+  proof_url: string
   reference?: string
+  amount?: number
+  sender_name?: string
+  sender_bank?: string
+  narration?: string
 }
 
 export type DepositProofResult = {
+  success?: boolean
+  transaction_id?: string
   reference?: string
-  status: string
+  status?: string
+  message?: string
 }
 
 const asRecord = (value: unknown): Record<string, unknown> => {
@@ -21,33 +23,70 @@ const asRecord = (value: unknown): Record<string, unknown> => {
   return body && typeof body === 'object' && !Array.isArray(body) ? body : {}
 }
 
-/** Client-side guard so an oversized or unsupported receipt never leaves the device. */
-export function depositProofError(file: File | null, amount: number): string {
-  if (!file) return 'Attach the receipt for your transfer.'
-  if (!DEPOSIT_PROOF_TYPES.includes(file.type)) return 'Upload a PNG, JPEG, WebP image or a PDF receipt.'
-  if (file.size > DEPOSIT_PROOF_MAX_BYTES) return 'Receipts must be 5 MB or smaller.'
-  if (!Number.isFinite(amount) || amount <= 0) return 'Enter the amount you transferred.'
+const unwrap = (value: unknown) => {
+  const body = asRecord(value)
+  return asRecord(body.data ?? body)
+}
+
+const optionalString = (value: unknown): string | undefined =>
+  value == null || value === '' ? undefined : String(value)
+
+const optionalBoolean = (value: unknown): boolean | undefined => {
+  if (typeof value === 'boolean') return value
+  if (value === 1 || value === '1' || value === 'true') return true
+  if (value === 0 || value === '0' || value === 'false') return false
+  return undefined
+}
+
+/** Accept only plain http(s) links; embedded credentials are rejected. */
+export function normalizeReceiptUrl(value: string): string {
+  const trimmed = value.trim()
+  if (!trimmed || trimmed.length > 2048) return ''
+  try {
+    const url = new URL(trimmed)
+    if ((url.protocol !== 'https:' && url.protocol !== 'http:') || url.username || url.password) return ''
+    return url.toString()
+  } catch {
+    return ''
+  }
+}
+
+export function depositProofError(receiptUrl: string): string {
+  if (!receiptUrl.trim()) return 'Paste a link to your payment receipt.'
+  if (!normalizeReceiptUrl(receiptUrl)) return 'Enter a valid http(s) receipt link without a username or password.'
   return ''
 }
 
 /**
- * POST /api:dKuEO75q/deposit/proof — multipart upload to the authenticated payment
- * group. The file is sent to the private backend endpoint and is never given a
- * public URL; only the member and operations staff can retrieve it.
+ * POST /api:ledger-api/deposit/proof
+ * The ledger stores a public receipt URL rather than the file itself, so the
+ * member shares a link from their bank or cloud storage.
  */
-export async function uploadDepositProof(input: DepositProofInput): Promise<DepositProofResult | null> {
-  const form = new FormData()
-  form.set('amount', String(input.amount))
-  form.set('proof', input.file)
-  if (input.note?.trim()) form.set('note', input.note.trim())
-  if (input.reference?.trim()) form.set('reference', input.reference.trim())
+export async function submitDepositProof(input: DepositProofInput): Promise<DepositProofResult | null> {
   try {
-    const body = asRecord(
-      await xanoRequest('/api:dKuEO75q/deposit/proof', { method: 'POST', body: form }, { auth: true }),
+    const body = unwrap(
+      await xanoRequest(
+        '/api:ledger-api/deposit/proof',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            proof_url: input.proof_url,
+            ...(input.reference ? { reference: input.reference } : {}),
+            ...(input.amount != null ? { amount: input.amount } : {}),
+            ...(input.sender_name ? { sender_name: input.sender_name } : {}),
+            ...(input.sender_bank ? { sender_bank: input.sender_bank } : {}),
+            ...(input.narration ? { narration: input.narration } : {}),
+          }),
+        },
+        { auth: true },
+      ),
     )
     return {
-      reference: body.reference == null ? undefined : String(body.reference),
-      status: body.status == null ? 'received' : String(body.status),
+      success: optionalBoolean(body.success),
+      transaction_id: optionalString(body.transaction_id),
+      reference: optionalString(body.reference),
+      status: optionalString(body.status),
+      message: optionalString(body.message),
     }
   } catch (cause) {
     if (isPendingRoute(cause)) return null

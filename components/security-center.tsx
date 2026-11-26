@@ -7,12 +7,13 @@ import useSWR from 'swr'
 import { KeyRound, Laptop, ShieldCheck } from 'lucide-react'
 import { clearXanoSession, getXanoSession } from '@/lib/xano-auth'
 import {
+  beginTwoFactorEnrollment,
   confirmTwoFactorEnrollment,
   disableTwoFactor,
+  getSecuritySessions,
   getSecurityState,
   revokeSession,
-  startTwoFactorEnrollment,
-  type TotpEnrollment,
+  type TwoFactorEnrollment,
 } from '@/lib/security-api'
 import { memberSafeError } from '@/lib/member-routes'
 import { antiThrottleSwrConfig } from '@/lib/swr'
@@ -23,7 +24,7 @@ export function SecurityCenter() {
   const router = useRouter()
   const [sessionReady, setSessionReady] = useState(false)
   const [authenticated, setAuthenticated] = useState(false)
-  const [enrollment, setEnrollment] = useState<TotpEnrollment | null>(null)
+  const [enrollment, setEnrollment] = useState<TwoFactorEnrollment | null>(null)
   const [code, setCode] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [message, setMessage] = useState('')
@@ -36,21 +37,34 @@ export function SecurityCenter() {
     if (!session?.authenticated) router.replace('/login?next=/dashboard/security')
   }, [router])
 
-  const { data, error: loadError, isLoading, mutate } = useSWR(
-    sessionReady && authenticated ? 'security-state' : null,
-    getSecurityState,
+  const {
+    data,
+    error: loadError,
+    isLoading,
+    mutate,
+  } = useSWR(sessionReady && authenticated ? 'security-state' : null, getSecurityState, antiThrottleSwrConfig)
+
+  const {
+    data: sessions,
+    error: sessionsError,
+    isLoading: sessionsLoading,
+    mutate: mutateSessions,
+  } = useSWR(
+    sessionReady && authenticated ? 'security-sessions' : null,
+    getSecuritySessions,
     antiThrottleSwrConfig,
   )
 
   const enabled = data?.two_factor_enabled === true
   const unavailable = !isLoading && !loadError && data === null
+  const sessionsUnavailable = !sessionsLoading && !sessionsError && sessions === null
 
   async function beginEnrollment() {
     setBusy('enroll')
     setError('')
     setMessage('')
     try {
-      const result = await startTwoFactorEnrollment()
+      const result = await beginTwoFactorEnrollment()
       if (!result) {
         setError('Two-factor setup needs the security routes in Xano. Nothing was enabled.')
         return
@@ -70,14 +84,18 @@ export function SecurityCenter() {
     setMessage('')
     try {
       const result = await confirmTwoFactorEnrollment(code)
-      if (!result) {
+      if (result === null) {
         setError('Confirmation needs the security routes in Xano. Two-factor stays off.')
+        return
+      }
+      if (!result) {
+        setError('That code was not accepted. Check the authenticator app and try again.')
         return
       }
       setEnrollment(null)
       setCode('')
       setMessage('Two-factor authentication is on.')
-      await mutate(result, { revalidate: false })
+      await mutate()
     } catch (cause) {
       setError(memberSafeError(cause, 'Unable to confirm the code.'))
     } finally {
@@ -92,13 +110,17 @@ export function SecurityCenter() {
     setMessage('')
     try {
       const result = await disableTwoFactor(code)
-      if (!result) {
+      if (result === null) {
         setError('Turning two-factor off needs the security routes in Xano. It stays on.')
+        return
+      }
+      if (!result) {
+        setError('That code was not accepted. Two-factor stays on.')
         return
       }
       setCode('')
       setMessage('Two-factor authentication is off.')
-      await mutate(result, { revalidate: false })
+      await mutate()
     } catch (cause) {
       setError(memberSafeError(cause, 'Unable to turn off two-factor authentication.'))
     } finally {
@@ -117,12 +139,17 @@ export function SecurityCenter() {
         return
       }
       setMessage('Session signed out.')
-      await mutate()
+      await Promise.all([mutate(), mutateSessions()])
     } catch (cause) {
       setError(memberSafeError(cause, 'Unable to sign out that session.'))
     } finally {
       setBusy(null)
     }
+  }
+
+  function signOutEverywhere() {
+    clearXanoSession()
+    router.replace('/login?next=/dashboard/security')
   }
 
   return (
@@ -164,6 +191,21 @@ export function SecurityCenter() {
                 <form onSubmit={confirm} className="mt-4 rounded-2xl bg-[#f4f8f3] p-4">
                   <p className="text-xs font-semibold text-[#0b4537]">Add this key to your authenticator app</p>
                   <p className="mt-2 break-all rounded-lg bg-white px-3 py-2 font-mono text-xs text-[#0b4537]">{enrollment.secret}</p>
+                  {enrollment.otpauth_uri && (
+                    <a href={enrollment.otpauth_uri} className="mt-2 inline-block text-[11px] font-semibold text-[#2f7a4a] underline">
+                      Open in authenticator app
+                    </a>
+                  )}
+                  {enrollment.backup_codes.length > 0 && (
+                    <div className="mt-3 rounded-lg border border-[#dfe8e2] bg-white p-3">
+                      <p className="text-[11px] font-semibold text-[#0b4537]">Recovery codes — save these now</p>
+                      <div className="mt-2 grid grid-cols-2 gap-1 font-mono text-[11px] text-[#60716b]">
+                        {enrollment.backup_codes.map((backup) => (
+                          <span key={backup}>{backup}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                   <label className="mt-3 block text-xs font-semibold text-[#60716b]">
                     6-digit code
                     <input
@@ -216,23 +258,26 @@ export function SecurityCenter() {
           <h2 id="sessions-title" className="text-lg font-semibold text-[#0b4537]">Signed-in devices</h2>
           <p className="mt-2 text-sm leading-6 text-[#708079]">Sign out any device you do not recognise.</p>
           <div className="mt-4 divide-y divide-[#eef2ee]">
-            {isLoading && <p className="py-4 text-xs text-[#708079]">Loading sessions…</p>}
-            {unavailable && (
+            {sessionsLoading && <p className="py-4 text-xs text-[#708079]">Loading sessions…</p>}
+            {sessionsError && (
+              <p role="alert" className="py-4 text-xs text-red-700">Signed-in devices are temporarily unavailable.</p>
+            )}
+            {sessionsUnavailable && (
               <p className="py-4 text-xs leading-5 text-[#708079]">
                 Signed-in devices are not connected yet, so no device list is available.
               </p>
             )}
-            {!isLoading && !unavailable && data?.sessions.length === 0 && (
+            {!sessionsLoading && !sessionsError && sessions?.length === 0 && (
               <p className="py-4 text-xs text-[#708079]">No other sessions are recorded.</p>
             )}
-            {(data?.sessions ?? []).map((session) => (
+            {(sessions ?? []).map((session) => (
               <div key={session.id} className="flex items-center justify-between gap-3 py-3">
                 <div className="flex min-w-0 items-center gap-3">
                   <span className="rounded-full bg-[#eef7eb] p-2 text-[#2f7a4a]" aria-hidden="true"><Laptop size={14} /></span>
                   <div className="min-w-0">
                     <p className="truncate text-xs font-semibold text-[#0b4537]">{session.device ?? 'Unknown device'}</p>
                     <p className="mt-0.5 text-[11px] text-[#829088]">
-                      Last active {formatTimestamp(session.last_seen_at ?? session.created_at)}
+                      {session.location ? `${session.location} · ` : ''}Last active {formatTimestamp(session.last_active_at ?? session.created_at)}
                     </p>
                   </div>
                 </div>
@@ -251,6 +296,13 @@ export function SecurityCenter() {
               </div>
             ))}
           </div>
+          <button
+            type="button"
+            onClick={signOutEverywhere}
+            className="mt-4 w-full rounded-xl border border-[#f0d7d0] px-4 py-2.5 text-xs font-semibold text-[#a3402a]"
+          >
+            Sign out of this browser
+          </button>
         </section>
 
         {message && <p role="status" className="text-xs text-[#2f7a4a]">{message}</p>}

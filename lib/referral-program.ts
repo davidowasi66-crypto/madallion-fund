@@ -1,27 +1,3 @@
-import { xanoRequest } from '@/lib/xano-auth'
-import { isPendingRoute } from '@/lib/pending-route'
-import type { ReferralCredit, ReferralCreditStatus } from '@/lib/product-feature-contracts'
-
-const asRecord = (value: unknown): Record<string, unknown> => {
-  const body = value as Record<string, unknown> | null
-  return body && typeof body === 'object' && !Array.isArray(body) ? body : {}
-}
-
-const optionalString = (value: unknown): string | undefined =>
-  value == null || value === '' ? undefined : String(value)
-
-const optionalNumber = (value: unknown): number => {
-  const parsed = Number(value)
-  return Number.isFinite(parsed) ? parsed : 0
-}
-
-const STATUSES: ReferralCreditStatus[] = ['pending_hold', 'available', 'redeemed', 'reversed']
-
-function normalizeStatus(value: unknown): ReferralCreditStatus {
-  const status = String(value ?? '').toLowerCase().replace(/[\s-]+/g, '_')
-  return STATUSES.find((candidate) => candidate === status) ?? 'pending_hold'
-}
-
 /**
  * Programme tiers. Thresholds are the programme structure; the actual commission
  * rates stay in admin settings and are never hard-coded in the member UI.
@@ -43,29 +19,3 @@ export function referralTier(qualified: unknown) {
   return { count, current, next, toNext: next ? next.minQualified - count : 0, progress }
 }
 
-/** GET /api:ledger-api/referrals/credits — individual credits with hold windows. */
-export async function getReferralCreditHistory(): Promise<ReferralCredit[] | null> {
-  try {
-    const payload = await xanoRequest<unknown>('/api:ledger-api/referrals/credits', { method: 'GET' }, { auth: true })
-    const body = asRecord(payload)
-    const rows = Array.isArray(payload)
-      ? payload
-      : [body.credits, body.items, body.data, asRecord(body.data).credits].find(Array.isArray) ?? []
-    return (rows as unknown[]).map((row, index) => {
-      const entry = asRecord(row)
-      return {
-        id: optionalString(entry.id) ?? `credit-${index}`,
-        referral_id: optionalString(entry.referral_id) ?? '',
-        amount: optionalNumber(entry.amount),
-        currency: optionalString(entry.currency) ?? 'NGN',
-        status: normalizeStatus(entry.status),
-        hold_until: optionalString(entry.hold_until) ?? '',
-        created_at: optionalString(entry.created_at) ?? '',
-        ledger_entry_id: optionalString(entry.ledger_entry_id),
-      }
-    })
-  } catch (cause) {
-    if (isPendingRoute(cause)) return null
-    throw cause
-  }
-}

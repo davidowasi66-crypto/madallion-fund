@@ -1,15 +1,16 @@
 'use client'
 
 import { useState } from 'react'
-import { Upload } from 'lucide-react'
-import { depositProofError, uploadDepositProof } from '@/lib/deposit-proof-api'
+import { Link2 } from 'lucide-react'
+import { depositProofError, normalizeReceiptUrl, submitDepositProof } from '@/lib/deposit-proof-api'
 import { memberSafeError } from '@/lib/member-routes'
 
 export function DepositProof({ amount }: { amount: number }) {
-  const [file, setFile] = useState<File | null>(null)
-  const [note, setNote] = useState('')
+  const [receiptUrl, setReceiptUrl] = useState('')
   const [reference, setReference] = useState('')
-  const [resetKey, setResetKey] = useState(0)
+  const [senderName, setSenderName] = useState('')
+  const [senderBank, setSenderBank] = useState('')
+  const [narration, setNarration] = useState('')
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -17,29 +18,42 @@ export function DepositProof({ amount }: { amount: number }) {
   async function submit() {
     setError('')
     setMessage('')
-    const validation = depositProofError(file, amount)
+    const validation = depositProofError(receiptUrl)
     if (validation) {
       setError(validation)
       return
     }
     setBusy(true)
     try {
-      const result = await uploadDepositProof({ amount, file: file!, note, reference })
+      const result = await submitDepositProof({
+        proof_url: normalizeReceiptUrl(receiptUrl),
+        reference: reference.trim() || undefined,
+        amount: Number.isFinite(amount) && amount > 0 ? Math.round(amount) : undefined,
+        sender_name: senderName.trim() || undefined,
+        sender_bank: senderBank.trim() || undefined,
+        narration: narration.trim() || undefined,
+      })
       if (!result) {
-        setError('Receipt upload needs the deposit proof route in Xano. Nothing was sent.')
+        setError('Receipt links need the deposit proof route in Xano. Nothing was sent.')
+        return
+      }
+      if (result.success === false) {
+        setError(result.message ?? 'The receipt link was not accepted. Check the link and try again.')
         return
       }
       setMessage(
-        result.reference
-          ? `Receipt received (${result.reference}). Operations will match it to your transfer.`
-          : 'Receipt received. Operations will match it to your transfer.',
+        result.message ??
+          (result.reference
+            ? `Receipt link received (${result.reference}). Operations will match it to your transfer.`
+            : 'Receipt link received. Operations will match it to your transfer.'),
       )
-      setFile(null)
-      setNote('')
+      setReceiptUrl('')
       setReference('')
-      setResetKey((value) => value + 1)
+      setSenderName('')
+      setSenderBank('')
+      setNarration('')
     } catch (cause) {
-      setError(memberSafeError(cause, 'Unable to upload your receipt.'))
+      setError(memberSafeError(cause, 'Unable to send your receipt link.'))
     } finally {
       setBusy(false)
     }
@@ -47,54 +61,79 @@ export function DepositProof({ amount }: { amount: number }) {
 
   return (
     <section className="mt-4 rounded-3xl border border-[#dfe8e2] bg-white p-4 shadow-sm" aria-labelledby="deposit-proof-title">
-      <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#65a85c]">Already transferred?</p>
-      <h2 id="deposit-proof-title" className="mt-1 text-sm font-semibold text-[#0b4537]">Attach your payment receipt</h2>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#65a85c]">Already transferred?</p>
+          <h2 id="deposit-proof-title" className="mt-1 text-sm font-semibold text-[#0b4537]">Send your payment receipt</h2>
+        </div>
+        <Link2 size={18} className="shrink-0 text-[#65a85c]" aria-hidden="true" />
+      </div>
       <p className="mt-2 text-xs leading-5 text-[#60716b]">
-        Upload the receipt for a transfer you have already made so operations can credit it faster. Receipts are stored
-        privately — no public URL — and only you and operations can open them.
+        Upload the receipt to your bank app or cloud storage, then paste the link here so operations can match your
+        transfer faster. Only the link is sent — never your card PIN, OTP, or banking password.
       </p>
 
       <div className="mt-3 space-y-3">
         <label className="block text-xs font-semibold text-[#60716b]">
-          Receipt (PNG, JPEG, WebP or PDF, max 5 MB)
+          Receipt link
           <input
-            key={resetKey}
-            type="file"
-            accept="image/png,image/jpeg,image/webp,application/pdf"
-            onChange={(event) => {
-              setFile(event.target.files?.[0] ?? null)
-              setError('')
-            }}
-            className="mt-1 block w-full rounded-xl border border-[#dfe8e2] px-3 py-2.5 text-xs font-normal text-[#101d1a] file:mr-3 file:rounded-lg file:border-0 file:bg-[#eef7eb] file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-[#0b4537]"
+            type="url"
+            value={receiptUrl}
+            onChange={(event) => setReceiptUrl(event.target.value)}
+            placeholder="https://…"
+            autoComplete="off"
+            className="mt-1 w-full rounded-xl border border-[#dfe8e2] px-3 py-2.5 text-sm font-normal text-[#101d1a]"
           />
         </label>
+
         <div className="grid gap-3 sm:grid-cols-2">
           <label className="block text-xs font-semibold text-[#60716b]">
             Transfer reference (optional)
             <input
               value={reference}
               onChange={(event) => setReference(event.target.value)}
-              placeholder="Bank narration or session ID"
+              autoComplete="off"
               className="mt-1 w-full rounded-xl border border-[#dfe8e2] px-3 py-2.5 text-sm font-normal text-[#101d1a]"
             />
           </label>
           <label className="block text-xs font-semibold text-[#60716b]">
-            Note (optional)
+            Sender name (optional)
             <input
-              value={note}
-              onChange={(event) => setNote(event.target.value)}
-              placeholder="Anything operations should know"
+              value={senderName}
+              onChange={(event) => setSenderName(event.target.value)}
+              autoComplete="name"
               className="mt-1 w-full rounded-xl border border-[#dfe8e2] px-3 py-2.5 text-sm font-normal text-[#101d1a]"
             />
           </label>
         </div>
+
+        <label className="block text-xs font-semibold text-[#60716b]">
+          Sender bank (optional)
+          <input
+            value={senderBank}
+            onChange={(event) => setSenderBank(event.target.value)}
+            autoComplete="off"
+            className="mt-1 w-full rounded-xl border border-[#dfe8e2] px-3 py-2.5 text-sm font-normal text-[#101d1a]"
+          />
+        </label>
+
+        <label className="block text-xs font-semibold text-[#60716b]">
+          Note for operations (optional)
+          <textarea
+            value={narration}
+            onChange={(event) => setNarration(event.target.value)}
+            rows={2}
+            className="mt-1 w-full rounded-xl border border-[#dfe8e2] px-3 py-2.5 text-sm font-normal text-[#101d1a]"
+          />
+        </label>
+
         <button
           type="button"
-          disabled={busy}
           onClick={() => void submit()}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-[#0b4537] py-3 text-xs font-semibold text-[#0b4537] disabled:opacity-50"
+          disabled={busy}
+          className="w-full rounded-xl bg-[#0b4537] py-3 text-sm font-semibold text-white disabled:opacity-50"
         >
-          <Upload size={14} aria-hidden="true" /> {busy ? 'Uploading…' : `Upload receipt for ₦${amount.toLocaleString('en-NG')}`}
+          {busy ? 'Sending…' : 'Send receipt link'}
         </button>
       </div>
 

@@ -21,9 +21,8 @@ const STATUS_COPY: Record<KycState['status'], { label: string; tone: string; hin
 
 const emptyForm = () => ({
   full_name: '',
-  date_of_birth: '',
-  id_type: 'nin' as KycIdType,
-  id_number: '',
+  document_type: 'national_id' as KycIdType,
+  document_number: '',
   address: '',
 })
 
@@ -58,7 +57,7 @@ export function VerificationCenter() {
     event.preventDefault()
     setError('')
     setMessage('')
-    if (!form.full_name.trim() || !form.date_of_birth || !form.id_number.trim() || !form.address.trim()) {
+    if (!form.full_name.trim() || !form.document_number.trim() || !form.address.trim()) {
       setError('Complete every field before submitting.')
       return
     }
@@ -66,9 +65,8 @@ export function VerificationCenter() {
     try {
       const result = await submitKyc({
         full_name: form.full_name.trim(),
-        date_of_birth: form.date_of_birth,
-        id_type: form.id_type,
-        id_number: form.id_number.trim(),
+        document_type: form.document_type,
+        document_number: form.document_number.trim(),
         address: form.address.trim(),
       })
       if (!result) {
@@ -140,21 +138,12 @@ export function VerificationCenter() {
                   className="mt-1 w-full rounded-xl border border-[#dfe8e2] px-3 py-2.5 text-sm font-normal text-[#101d1a]"
                 />
               </label>
-              <label className="block text-xs font-semibold text-[#60716b]">
-                Date of birth
-                <input
-                  type="date"
-                  value={form.date_of_birth}
-                  onChange={(event) => setForm((current) => ({ ...current, date_of_birth: event.target.value }))}
-                  className="mt-1 w-full rounded-xl border border-[#dfe8e2] px-3 py-2.5 text-sm font-normal text-[#101d1a]"
-                />
-              </label>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="block text-xs font-semibold text-[#60716b]">
                   Document type
                   <select
-                    value={form.id_type}
-                    onChange={(event) => setForm((current) => ({ ...current, id_type: event.target.value as KycIdType }))}
+                    value={form.document_type}
+                    onChange={(event) => setForm((current) => ({ ...current, document_type: event.target.value as KycIdType }))}
                     className="mt-1 w-full rounded-xl border border-[#dfe8e2] bg-white px-3 py-2.5 text-sm font-normal text-[#101d1a]"
                   >
                     {KYC_ID_TYPES.map((option) => (
@@ -165,8 +154,8 @@ export function VerificationCenter() {
                 <label className="block text-xs font-semibold text-[#60716b]">
                   Document number
                   <input
-                    value={form.id_number}
-                    onChange={(event) => setForm((current) => ({ ...current, id_number: event.target.value }))}
+                    value={form.document_number}
+                    onChange={(event) => setForm((current) => ({ ...current, document_number: event.target.value }))}
                     inputMode="numeric"
                     className="mt-1 w-full rounded-xl border border-[#dfe8e2] px-3 py-2.5 text-sm font-normal text-[#101d1a]"
                   />

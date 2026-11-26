@@ -32,7 +32,7 @@ export function ShareLinkManager({
     setError('')
     setMessage('')
     try {
-      const share = await createPublicShare(investmentId, shareExpiry(days))
+      const share = await createPublicShare(investmentId, days)
       if (!share) {
         setError('Creating a signed link needs the public-shares route in Xano. Nothing was created.')
         return

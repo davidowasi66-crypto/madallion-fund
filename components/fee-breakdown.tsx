@@ -3,9 +3,9 @@
 import useSWR from 'swr'
 import { ReceiptText } from 'lucide-react'
 import type { Investment } from '@/lib/investment-api'
-import { getFeePolicy, getInvestmentFees } from '@/lib/investment-controls-api'
+import { getFeePolicy, getInvestmentFeeSummary } from '@/lib/investment-controls-api'
 import { antiThrottleSwrConfig } from '@/lib/swr'
-import { formatTimestamp } from '@/lib/pending-route'
+import { formatTimestamp, toTimestamp } from '@/lib/pending-route'
 
 const money = (value: number, currency = 'NGN') =>
   new Intl.NumberFormat('en-NG', {
@@ -15,28 +15,40 @@ const money = (value: number, currency = 'NGN') =>
   }).format(Number.isFinite(value) ? value : 0)
 
 const rate = (bps?: number) =>
-  bps == null ? '—' : `${(bps / 100).toLocaleString('en-NG', { maximumFractionDigits: 2 })}%`
+  bps == null || bps === 0 ? 'Free' : `${(bps / 100).toLocaleString('en-NG', { maximumFractionDigits: 2 })}%`
 
 const FEE_ROWS = [
   ['management_fee_bps', 'Management fee'],
-  ['performance_fee_bps', 'Performance fee'],
   ['withdrawal_fee_bps', 'Withdrawal fee'],
-  ['early_exit_fee_bps', 'Early exit fee'],
-  ['referral_commission_bps', 'Referral commission'],
+  ['early_exit_fee_bps', 'Early exit penalty'],
+  ['deposit_fee_bps', 'Deposit fee'],
+  ['rollover_fee_bps', 'Rollover fee'],
 ] as const
+
+function effectiveLabel(value?: string): string {
+  if (!value) return ''
+  if (toTimestamp(value)) return `Effective from ${formatTimestamp(value)}`
+  return value.toLowerCase() === 'now' ? 'Effective now' : `Effective ${value}`
+}
 
 export function FeeBreakdown({ investment }: { investment: Investment }) {
   const investmentId = investment.id
   const { data: policy, isLoading: policyLoading } = useSWR('investment-fee-policy', getFeePolicy, antiThrottleSwrConfig)
-  const { data: entries, isLoading: entriesLoading } = useSWR(
-    investmentId == null ? null : ['investment-fees', investmentId],
-    () => getInvestmentFees(investmentId!),
+  const { data: summary, isLoading: summaryLoading } = useSWR(
+    investmentId == null ? null : ['investment-fee-summary', investmentId],
+    () => getInvestmentFeeSummary(investmentId!),
     antiThrottleSwrConfig,
   )
 
-  const recorded = entries ?? []
-  const recordedTotal = recorded.reduce((sum, entry) => sum + entry.amount, 0)
-  const currency = policy?.currency ?? 'NGN'
+  const currency = summary?.currency ?? policy?.currency ?? 'NGN'
+  const settlementRows = summary
+    ? ([
+        ['Early exit penalty', summary.early_exit_fee],
+        ['Withdrawal fee', summary.withdrawal_fee],
+        ['Management fee', summary.management_fee],
+        ['Rollover fee', summary.rollover_fee],
+      ].filter(([, value]) => value != null) as Array<[string, number]>)
+    : []
 
   return (
     <section className="rounded-2xl border border-[#dfe8e2] bg-white p-4" aria-labelledby={`fees-${investmentId ?? 'new'}`}>
@@ -61,16 +73,18 @@ export function FeeBreakdown({ investment }: { investment: Investment }) {
                 <dd className="font-semibold text-[#0b4537]">{rate(policy[key])}</dd>
               </div>
             ))}
-            {policy.performance_hurdle_bps != null && (
-              <div className="flex items-center justify-between gap-3 py-2">
-                <dt className="text-[#60716b]">Performance hurdle</dt>
-                <dd className="font-semibold text-[#0b4537]">{rate(policy.performance_hurdle_bps)}</dd>
-              </div>
-            )}
           </dl>
-          {policy.effective_from && (
-            <p className="mt-2 text-[11px] text-[#829088]">Effective from {formatTimestamp(policy.effective_from)}</p>
+          {policy.withdrawal_fee_bps != null && (policy.min_withdrawal_fee != null || policy.max_withdrawal_fee != null) && (
+            <p className="mt-2 text-[11px] text-[#829088]">
+              Withdrawal fee
+              {policy.min_withdrawal_fee != null && policy.max_withdrawal_fee != null
+                ? ` is between ${money(policy.min_withdrawal_fee, currency)} and ${money(policy.max_withdrawal_fee, currency)}.`
+                : policy.min_withdrawal_fee != null
+                  ? ` is at least ${money(policy.min_withdrawal_fee, currency)}.`
+                  : ` is at most ${money(policy.max_withdrawal_fee as number, currency)}.`}
+            </p>
           )}
+          {policy.effective_from && <p className="mt-2 text-[11px] text-[#829088]">{effectiveLabel(policy.effective_from)}</p>}
         </>
       ) : (
         <p className="mt-3 rounded-xl bg-[#f4f8f3] px-3 py-2 text-xs leading-5 text-[#60716b]">
@@ -80,24 +94,36 @@ export function FeeBreakdown({ investment }: { investment: Investment }) {
       )}
 
       <div className="mt-3 border-t border-[#eef2ee] pt-3">
-        <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#829088]">Fees already posted</p>
-        {entriesLoading ? (
-          <p className="mt-2 text-xs text-[#708079]">Checking posted fees…</p>
-        ) : recorded.length ? (
+        <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#829088]">If settled today</p>
+        {summaryLoading ? (
+          <p className="mt-2 text-xs text-[#708079]">Calculating settlement fees…</p>
+        ) : summary ? (
           <>
-            <ul className="mt-2 space-y-2 text-xs">
-              {recorded.slice(0, 4).map((entry) => (
-                <li key={entry.id} className="flex items-center justify-between gap-3">
-                  <span className="capitalize text-[#60716b]">{entry.fee_type.replace(/[_-]+/g, ' ')}</span>
-                  <span className="font-semibold text-[#0b4537]">{money(entry.amount, entry.currency)}</span>
-                </li>
+            <dl className="mt-2 space-y-2 text-xs">
+              {settlementRows.map(([label, value]) => (
+                <div key={label} className="flex items-center justify-between gap-3">
+                  <dt className="text-[#60716b]">{label}</dt>
+                  <dd className="font-semibold text-[#0b4537]">{money(value, currency)}</dd>
+                </div>
               ))}
-            </ul>
-            <p className="mt-2 text-xs font-semibold text-[#0b4537]">Total posted: {money(recordedTotal, currency)}</p>
+              <div className="flex items-center justify-between gap-3 border-t border-[#eef2ee] pt-2">
+                <dt className="font-semibold text-[#31574b]">Total fees</dt>
+                <dd className="font-semibold text-[#0b4537]">{money(summary.total_fees ?? 0, currency)}</dd>
+              </div>
+              {summary.net_payout != null && (
+                <div className="flex items-center justify-between gap-3">
+                  <dt className="text-[#60716b]">Net payout</dt>
+                  <dd className="font-semibold text-[#2f7a4a]">{money(summary.net_payout, currency)}</dd>
+                </div>
+              )}
+            </dl>
+            {summary.is_early_exit && (
+              <p className="mt-2 text-[11px] leading-4 text-[#a36d2c]">This calculation includes the early-exit penalty.</p>
+            )}
           </>
         ) : (
           <p className="mt-2 text-xs text-[#708079]">
-            No fees have been posted to this investment yet.
+            Settlement fees are not available yet.
             {investment.fee_total != null ? ` Ledger total: ${money(Number(investment.fee_total), currency)}.` : ''}
           </p>
         )}

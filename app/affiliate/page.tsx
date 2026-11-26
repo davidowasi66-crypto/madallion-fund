@@ -237,7 +237,13 @@ export default function AffiliatePage() {
 
         {hasSession && (
           <>
-            <ReferralTierProgress qualified={credits && typeof credits.qualified === 'number' ? credits.qualified : myStats.referrals} />
+            <ReferralTierProgress
+              qualified={
+                credits && credits.qualified != null && Number.isFinite(Number(credits.qualified))
+                  ? Number(credits.qualified)
+                  : (credits?.referrals ?? myStats.referrals)
+              }
+            />
             <ReferralCreditsHistory />
           </>
         )}

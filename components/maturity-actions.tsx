@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import { CalendarClock, RotateCw, Wallet } from 'lucide-react'
 import type { Investment } from '@/lib/investment-api'
-import { resolveMaturity, setAutoRollover, type MaturityAction } from '@/lib/investment-controls-api'
+import { resolveMaturity, setAutoRollover, type MaturityResolutionAction } from '@/lib/investment-controls-api'
 import { memberSafeError } from '@/lib/member-routes'
 import { formatTimestamp, toTimestamp } from '@/lib/pending-route'
 
@@ -11,6 +11,22 @@ const money = (value: unknown) =>
   new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', maximumFractionDigits: 0 }).format(
     Number.isFinite(Number(value)) ? Number(value) : 0,
   )
+
+const RESOLUTION_OPTIONS: Array<{
+  value: MaturityResolutionAction
+  label: string
+  icon: typeof Wallet
+}> = [
+  { value: 'payout_all', label: 'Withdraw all to wallet', icon: Wallet },
+  { value: 'rollover_all', label: 'Roll over principal and interest', icon: RotateCw },
+  { value: 'rollover_principal', label: 'Roll over principal only', icon: RotateCw },
+]
+
+const RESOLUTION_MESSAGES: Record<MaturityResolutionAction, string> = {
+  payout_all: 'Payout instruction recorded. Funds will be released to your payout destination.',
+  rollover_all: 'Rollover instruction recorded. Principal and interest will renew into the same plan.',
+  rollover_principal: 'Rollover instruction recorded. Principal renews and interest becomes withdrawable.',
+}
 
 export function MaturityActions({ investment }: { investment: Investment }) {
   const investmentId = investment.id
@@ -21,8 +37,8 @@ export function MaturityActions({ investment }: { investment: Investment }) {
   const [rollover, setRollover] = useState<boolean | null>(
     typeof investment.rollover_enabled === 'boolean' ? investment.rollover_enabled : null,
   )
-  const [choice, setChoice] = useState<MaturityAction | null>(null)
-  const [busy, setBusy] = useState<'rollover' | MaturityAction | null>(null)
+  const [choice, setChoice] = useState<MaturityResolutionAction | null>(null)
+  const [busy, setBusy] = useState<'rollover' | MaturityResolutionAction | null>(null)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
 
@@ -39,9 +55,14 @@ export function MaturityActions({ investment }: { investment: Investment }) {
         setError('Saving the rollover preference needs the rollover route in Xano. Nothing was changed.')
         return
       }
-      setRollover(saved.rollover_enabled ?? next)
+      if (saved.success === false) {
+        setError('The ledger did not accept the rollover preference.')
+        return
+      }
+      const enabled = saved.rollover_enabled ?? next
+      setRollover(enabled)
       setMessage(
-        saved.rollover_enabled
+        enabled
           ? 'Auto-rollover is on. Matured funds renew into the same plan.'
           : 'Auto-rollover is off. Matured funds return to your wallet.',
       )
@@ -52,7 +73,7 @@ export function MaturityActions({ investment }: { investment: Investment }) {
     }
   }
 
-  async function resolve(action: MaturityAction) {
+  async function resolve(action: MaturityResolutionAction) {
     setBusy(action)
     setError('')
     setMessage('')
@@ -62,12 +83,12 @@ export function MaturityActions({ investment }: { investment: Investment }) {
         setError('Maturity instructions need the maturity-resolution route in Xano. Nothing was changed.')
         return
       }
+      if (result.status === 'failed') {
+        setError(result.message ?? 'The ledger did not accept that maturity instruction.')
+        return
+      }
       setChoice(null)
-      setMessage(
-        action === 'rollover'
-          ? 'Rollover instruction recorded. Operations will confirm the renewal.'
-          : 'Withdrawal instruction recorded. Payout follows the withdrawal window.',
-      )
+      setMessage(result.message ?? RESOLUTION_MESSAGES[result.resolution] ?? RESOLUTION_MESSAGES[action])
     } catch (cause) {
       setError(memberSafeError(cause, 'Unable to record your maturity instruction.'))
     } finally {
@@ -92,23 +113,22 @@ export function MaturityActions({ investment }: { investment: Investment }) {
 
       {matured ? (
         <div className="mt-3">
-          <div className="grid gap-2 sm:grid-cols-2">
-            <button
-              type="button"
-              onClick={() => setChoice('withdraw')}
-              aria-pressed={choice === 'withdraw'}
-              className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-semibold transition ${choice === 'withdraw' ? 'border-[#0b4537] bg-[#eef7eb] text-[#0b4537]' : 'border-[#dfe8e2] text-[#60716b]'}`}
-            >
-              <Wallet size={14} aria-hidden="true" /> Withdraw to wallet
-            </button>
-            <button
-              type="button"
-              onClick={() => setChoice('rollover')}
-              aria-pressed={choice === 'rollover'}
-              className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-xs font-semibold transition ${choice === 'rollover' ? 'border-[#0b4537] bg-[#eef7eb] text-[#0b4537]' : 'border-[#dfe8e2] text-[#60716b]'}`}
-            >
-              <RotateCw size={14} aria-hidden="true" /> Roll over
-            </button>
+          <div className="grid gap-2">
+            {RESOLUTION_OPTIONS.map((option) => {
+              const Icon = option.icon
+              const selected = choice === option.value
+              return (
+                <button
+                  key={option.value}
+                  type="button"
+                  onClick={() => setChoice(option.value)}
+                  aria-pressed={selected}
+                  className={`flex items-center gap-2 rounded-xl border px-3 py-2.5 text-left text-xs font-semibold transition ${selected ? 'border-[#0b4537] bg-[#eef7eb] text-[#0b4537]' : 'border-[#dfe8e2] text-[#60716b]'}`}
+                >
+                  <Icon size={14} aria-hidden="true" /> {option.label}
+                </button>
+              )
+            })}
           </div>
           {choice && (
             <button
@@ -117,7 +137,7 @@ export function MaturityActions({ investment }: { investment: Investment }) {
               onClick={() => void resolve(choice)}
               className="mt-3 w-full rounded-xl bg-[#0b4537] py-3 text-xs font-semibold text-white disabled:opacity-50"
             >
-              {busy ? 'Recording…' : `Confirm ${choice === 'withdraw' ? 'withdrawal' : 'rollover'}`}
+              {busy ? 'Recording…' : 'Confirm maturity instruction'}
             </button>
           )}
         </div>

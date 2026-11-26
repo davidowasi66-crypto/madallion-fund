@@ -43,7 +43,7 @@ function normalizeShare(payload: unknown): PublicShare | null {
 /** POST /api:ledger-api/public-shares */
 export async function createPublicShare(
   investmentId: string | number,
-  expiresAt?: string,
+  durationDays?: number,
 ): Promise<PublicShare | null> {
   try {
     return normalizeShare(
@@ -51,7 +51,10 @@ export async function createPublicShare(
         '/api:ledger-api/public-shares',
         {
           method: 'POST',
-          body: JSON.stringify({ investment_id: investmentId, ...(expiresAt ? { expires_at: expiresAt } : {}) }),
+          body: JSON.stringify({
+            investment_id: investmentId,
+            ...(durationDays != null ? { duration_days: durationDays } : {}),
+          }),
         },
         { auth: true },
       ),

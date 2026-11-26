@@ -1,49 +1,77 @@
 import { xanoRequest } from '@/lib/xano-auth'
 import { isPendingRoute } from '@/lib/pending-route'
-import type { NotificationCategory, NotificationPreferences, QuietHours } from '@/lib/product-feature-contracts'
+import type { NotificationPreferences } from '@/lib/product-feature-contracts'
 
-const CATEGORIES: NotificationCategory[] = ['investment', 'payment', 'referral', 'security', 'product']
+export const NOTIFICATION_PREFERENCE_FIELDS = [
+  'email_alerts',
+  'sms_alerts',
+  'push_notifications',
+  'deposit_confirmation',
+  'withdrawal_updates',
+  'maturity_reminders',
+  'daily_accrual_digest',
+  'security_alerts',
+  'marketing_emails',
+] as const
+
+export type NotificationPreferenceField = (typeof NOTIFICATION_PREFERENCE_FIELDS)[number]
+
+export type NotificationPreferencesInput = Partial<Pick<NotificationPreferences, NotificationPreferenceField>>
+
+const DEFAULTS: NotificationPreferences = {
+  email_alerts: true,
+  sms_alerts: false,
+  push_notifications: true,
+  deposit_confirmation: true,
+  withdrawal_updates: true,
+  maturity_reminders: true,
+  daily_accrual_digest: true,
+  security_alerts: true,
+  marketing_emails: false,
+}
 
 const asRecord = (value: unknown): Record<string, unknown> => {
   const body = value as Record<string, unknown> | null
   return body && typeof body === 'object' && !Array.isArray(body) ? body : {}
 }
 
-const unwrap = (value: unknown) => {
-  const body = asRecord(value)
-  return asRecord(body.data ?? body)
-}
-
 const optionalString = (value: unknown): string | undefined =>
   value == null || value === '' ? undefined : String(value)
 
-function normalizeQuietHours(value: unknown): QuietHours {
-  const body = asRecord(value)
-  return {
-    enabled: body.enabled === true,
-    start_local: optionalString(body.start_local) ?? '22:00',
-    end_local: optionalString(body.end_local) ?? '07:00',
-    timezone: optionalString(body.timezone) ?? 'Africa/Lagos',
+const optionalBoolean = (value: unknown): boolean | undefined => {
+  if (typeof value === 'boolean') return value
+  if (value === 1 || value === '1' || value === 'true') return true
+  if (value === 0 || value === '0' || value === 'false') return false
+  return undefined
+}
+
+function parseRecord(value: unknown): Record<string, unknown> {
+  if (typeof value === 'string' && value.trim()) {
+    try {
+      return asRecord(JSON.parse(value))
+    } catch {
+      return {}
+    }
   }
+  return asRecord(value)
 }
 
 export function normalizeNotificationPreferences(payload: unknown): NotificationPreferences | null {
-  const body = unwrap(payload)
+  const body = asRecord(payload)
   if (!Object.keys(body).length) return null
-  const incoming = asRecord(body.categories)
-  const categories = CATEGORIES.reduce(
-    (acc, category) => ({ ...acc, [category]: incoming[category] !== false }),
-    {} as Record<NotificationCategory, boolean>,
-  )
-  return {
-    in_app_enabled: body.in_app_enabled !== false,
-    categories,
-    quiet_hours: normalizeQuietHours(body.quiet_hours),
-    updated_at: optionalString(body.updated_at) ?? new Date().toISOString(),
-  }
-}
+  const nested = parseRecord(body.preferences ?? body.data)
+  const source = Object.keys(nested).length ? nested : body
+  const hasKnownField = NOTIFICATION_PREFERENCE_FIELDS.some((field) => field in source)
+  if (!hasKnownField) return null
 
-export const NOTIFICATION_CATEGORIES = CATEGORIES
+  const result: NotificationPreferences = { ...DEFAULTS }
+  for (const field of NOTIFICATION_PREFERENCE_FIELDS) {
+    const value = optionalBoolean(source[field])
+    if (value !== undefined) result[field] = value
+  }
+  result.updated_at = optionalString(source.updated_at) ?? optionalString(body.updated_at)
+  return result
+}
 
 /** GET /api:ledger-api/notification-preferences */
 export async function getNotificationPreferences(): Promise<NotificationPreferences | null> {
@@ -57,25 +85,17 @@ export async function getNotificationPreferences(): Promise<NotificationPreferen
   }
 }
 
-export type NotificationPreferencesInput = {
-  in_app_enabled: boolean
-  categories: Record<NotificationCategory, boolean>
-  quiet_hours: QuietHours
-  expected_updated_at?: string
-}
-
-/** PATCH /api:ledger-api/notification-preferences */
+/** PUT /api:ledger-api/notification-preferences */
 export async function saveNotificationPreferences(
   input: NotificationPreferencesInput,
 ): Promise<NotificationPreferences | null> {
   try {
-    return normalizeNotificationPreferences(
-      await xanoRequest(
-        '/api:ledger-api/notification-preferences',
-        { method: 'PATCH', body: JSON.stringify(input) },
-        { auth: true },
-      ),
+    const payload = await xanoRequest(
+      '/api:ledger-api/notification-preferences',
+      { method: 'PUT', body: JSON.stringify(input) },
+      { auth: true },
     )
+    return normalizeNotificationPreferences(payload) ?? { ...DEFAULTS, ...input }
   } catch (cause) {
     if (isPendingRoute(cause)) return null
     throw cause

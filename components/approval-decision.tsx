@@ -3,7 +3,6 @@
 import { useState } from 'react'
 import { Check, X } from 'lucide-react'
 import { APPROVAL_REASONS, submitApprovalDecision, type ApprovalDecision, type ApprovalKind } from '@/lib/approval-review-api'
-import { approveDeposit, settleWithdrawal } from '@/lib/xano-admin'
 
 type PendingItem = { id: string | number; reference?: string }
 
@@ -40,30 +39,24 @@ export function ApprovalDecisionForm({
         note,
       })
 
-      if (result) {
-        setMessage(
-          result.requiresSecondApprover
+      if (!result) {
+        setError('Approvals need the fn_approval_decision route in Xano. This request was left pending.')
+        return
+      }
+      if (result.status === 'failed') {
+        setError(result.message ?? 'The approval service rejected this decision.')
+        return
+      }
+      setMessage(
+        result.message ??
+          (result.requiresSecondApprover
             ? 'Decision recorded. A second approver must confirm before money moves.'
             : decision === 'approve'
               ? 'Approved and recorded with a reason.'
-              : 'Rejected and recorded with a reason.',
-        )
-        setReason('')
-        setNote('')
-        await onRecorded()
-        return
-      }
-
-      // The maker-checker route is not published yet: keep the existing single-step
-      // settlement available for approvals, but never reject without an audit record.
-      if (decision === 'reject') {
-        setError('Rejections need the fn_approval_decision route in Xano, so this request was left pending.')
-        return
-      }
-      const payload = { p_id: item.id, p_reference: item.reference }
-      if (kind === 'deposits') await approveDeposit(payload)
-      else await settleWithdrawal(payload)
-      setMessage('Settled with the existing approval action. The audit reason could not be stored yet.')
+              : 'Rejected and recorded with a reason.'),
+      )
+      setReason('')
+      setNote('')
       await onRecorded()
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'Unable to record this decision.')
