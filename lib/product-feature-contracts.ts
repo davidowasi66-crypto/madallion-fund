@@ -194,6 +194,16 @@ export const PRODUCT_FEATURE_API_CONTRACT = {
     source: 'POST /api:auth/signup',
     field: 'referral_code',
   },
+  referralCreditHistory: { method: 'GET', path: '/api:ledger-api/referrals/credits' },
+  kycStatus: { method: 'GET', path: '/api:ledger-api/kyc/status' },
+  kycSubmission: { method: 'POST', path: '/api:ledger-api/kyc/submissions' },
+  depositProof: { method: 'POST', path: '/api:dKuEO75q/deposit/proof' },
+  securityState: { method: 'GET', path: '/api:ledger-api/security/state' },
+  twoFactorEnrollment: { method: 'POST', path: '/api:ledger-api/security/2fa/enroll' },
+  twoFactorConfirm: { method: 'POST', path: '/api:ledger-api/security/2fa/confirm' },
+  twoFactorDisable: { method: 'POST', path: '/api:ledger-api/security/2fa/disable' },
+  securitySessionRevoke: { method: 'DELETE', path: '/api:ledger-api/security/sessions/{session_id}' },
+  approvalDecision: { method: 'POST', path: '/api:yYNRHo4K/fn_approval_decision' },
 } as const
 
 export const PRODUCT_FEATURE_BACKEND_STATUS = {
@@ -208,4 +218,9 @@ export const PRODUCT_FEATURE_BACKEND_STATUS = {
   feePolicy: 'pending-xano-fee-policy-route',
   feePosting: 'pending-xano-ledger-posting-route',
   planLimits: 'read-only-when-present-in-plan-response',
+  referralCreditHistory: 'pending-xano-routes',
+  kyc: 'pending-xano-routes',
+  depositProof: 'pending-xano-routes',
+  securityControls: 'pending-xano-routes',
+  approvalDecisions: 'pending-xano-routes',
 } as const
