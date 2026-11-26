@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Plus } from 'lucide-react'
 import { normalizeReceiptUrl } from '@/lib/deposit-proof-api'
+import { listMoneyChannels } from '@/lib/money-channel-api'
 import { recordOtcDeposit, recordOtcWithdrawal, type MoneyChannel } from '@/lib/otc-partner-api'
 
-const CHANNELS: { value: MoneyChannel; label: string }[] = [
+const DEFAULT_CHANNELS: { value: MoneyChannel; label: string }[] = [
   { value: 'otc_partner', label: 'OTC / agency partner' },
   { value: 'bank_transfer', label: 'Manual bank transfer' },
   { value: 'cash', label: 'Cash / agent' },
@@ -18,6 +19,7 @@ export function OtcRecordForm({ kind, onRecorded }: { kind: 'deposit' | 'withdra
   const [memberId, setMemberId] = useState('')
   const [amount, setAmount] = useState('')
   const [channel, setChannel] = useState<MoneyChannel>('otc_partner')
+  const [channels, setChannels] = useState(DEFAULT_CHANNELS)
   const [partnerName, setPartnerName] = useState('')
   const [partnerReference, setPartnerReference] = useState('')
   const [proofUrl, setProofUrl] = useState('')
@@ -25,6 +27,24 @@ export function OtcRecordForm({ kind, onRecorded }: { kind: 'deposit' | 'withdra
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    listMoneyChannels()
+      .then((items) => {
+        if (!active || !items) return
+        const available = items
+          .filter((item) => String(item.status).toLowerCase() !== 'paused')
+          .map((item) => ({ value: item.code, label: item.name }))
+        if (!available.length) return
+        setChannels(available)
+        setChannel((current) => (available.some((item) => item.value === current) ? current : available[0].value))
+      })
+      .catch(() => {})
+    return () => {
+      active = false
+    }
+  }, [])
 
   async function submit() {
     setError('')
@@ -122,8 +142,8 @@ export function OtcRecordForm({ kind, onRecorded }: { kind: 'deposit' | 'withdra
         </label>
         <label className="text-xs font-medium text-slate-400">
           Channel
-          <select value={channel} onChange={(event) => setChannel(event.target.value as MoneyChannel)} className={fieldClass}>
-            {CHANNELS.map((option) => (
+          <select value={channel} onChange={(event) => setChannel(event.target.value)} className={fieldClass}>
+            {channels.map((option) => (
               <option key={option.value} value={option.value}>{option.label}</option>
             ))}
           </select>
@@ -156,6 +176,10 @@ export function OtcRecordForm({ kind, onRecorded }: { kind: 'deposit' | 'withdra
           />
         </label>
       </div>
+
+      <p className="text-[11px] leading-4 text-slate-500">
+        Channel options come from Admin → Money Channels. Add a channel there to make it available here.
+      </p>
 
       <label className="block text-xs font-medium text-slate-400">
         Note

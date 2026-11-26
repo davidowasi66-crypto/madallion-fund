@@ -6,7 +6,8 @@ import { isPendingRoute } from '@/lib/pending-route'
  * The channel only tells operations where the money came from; the ledger is
  * still credited or debited by the existing approval/settlement functions.
  */
-export type MoneyChannel = 'bank_transfer' | 'otc_partner' | 'cash' | 'other'
+/** Channel codes come from the admin-managed channels table; built-ins are seeded in Xano. */
+export type MoneyChannel = string
 
 export type RecordMovementInput = {
   userId: number
