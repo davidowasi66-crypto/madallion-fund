@@ -220,7 +220,7 @@ function memberTypeTone(type: ActivityKind) {
 
 function MemberActivityCard({ item, now }: { item: ActivityItem; now: number }) {
   return (
-    <article className="w-[272px] shrink-0 rounded-xl border border-white/10 bg-[#0e2b26] px-3 py-2.5">
+    <article className="w-[300px] shrink-0 rounded-xl border border-white/10 bg-[#0e2b26] px-3.5 py-3">
       <div className="flex items-center justify-between gap-2">
         <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.12em] ${memberTypeTone(item.type)}`}>
           <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
@@ -230,11 +230,10 @@ function MemberActivityCard({ item, now }: { item: ActivityItem; now: number }) 
           {relativeTime(item.createdAt, now)}
         </time>
       </div>
-      <p className="mt-1.5 truncate text-sm text-[#edf7f1]">
-        <span className="font-semibold">{item.displayName}</span>
-        <span className="text-[#91b0a2]"> {verb(item.type)} </span>
-        <span className="font-semibold tabular-nums text-[#b9f47f]">{naira(item.amount)}</span>
+      <p className="mt-2 truncate text-sm text-[#91b0a2]">
+        <span className="font-semibold text-[#edf7f1]">{item.displayName}</span> {verb(item.type)}
       </p>
+      <p className="mt-1 text-2xl font-semibold leading-none tabular-nums text-[#b9f47f]">{naira(item.amount)}</p>
     </article>
   )
 }
@@ -252,7 +251,7 @@ function ActivityCard({ item, now, sample }: { item: ActivityItem; now: number; 
         </time>
       </div>
       <p className="mt-2 truncate text-sm font-semibold text-[#0b4537]">{item.displayName}</p>
-      <p className="mt-1 text-lg font-semibold tabular-nums text-[#0b4537]">{naira(item.amount)}</p>
+      <p className="mt-1 text-xl font-semibold tabular-nums text-[#0b4537]">{naira(item.amount)}</p>
       <p className="mt-1 text-[10px] text-[#829088]">
         {sample ? 'Sample activity · NGN' : 'Ledger activity · NGN'}
       </p>
@@ -307,7 +306,7 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
   if (isHeader) {
     return (
       <div
-        className={isMemberHeader ? 'border-y border-white/10 bg-[#0a211e] py-2' : 'border-t border-[#dfe8e2]/80 bg-[#fbfcfa] py-2'}
+        className={isMemberHeader ? 'overflow-hidden rounded-xl border border-white/10 bg-[#0a211e] py-2' : 'border-t border-[#dfe8e2]/80 bg-[#fbfcfa] py-2'}
         aria-label="Recent member activity"
       >
         <div className="relative overflow-hidden activity-marquee-mask">
@@ -393,7 +392,7 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
           ) : (
             <div className="flex gap-2">
               {[0, 1, 2].map((index) => (
-                <div key={index} className="h-[62px] w-[272px] shrink-0 animate-pulse rounded-xl bg-[#12342d]" />
+                <div key={index} className="h-[100px] w-[300px] shrink-0 animate-pulse rounded-xl bg-[#12342d]" />
               ))}
             </div>
           )}

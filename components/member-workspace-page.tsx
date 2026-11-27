@@ -377,9 +377,8 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
             </header>
 
             <div className="mx-auto max-w-lg bg-[#f6f1e8] px-5 pb-8 sm:px-8">
-              <div className="space-y-3 pt-4">
+              <div className="pt-4">
                 <ActivityTicker variant="memberHeader" />
-                <ActivityTicker variant="member" />
               </div>
 
               {mode === 'withdraw' && (
@@ -542,9 +541,8 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                 </Link>
               </div>
             </header>
-            <div className="mx-auto max-w-7xl space-y-3 px-5 pt-5 sm:px-8">
-              <ActivityTicker variant="memberHeader" />
-              <ActivityTicker variant="member" />
+            <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-8">
+              <ActivityTicker variant={section === 'activity' ? 'member' : 'memberHeader'} />
             </div>
             <section className="mx-auto max-w-7xl p-5 sm:p-8">
               <p className="text-sm text-[#60716b] lg:text-[#8eaea0]">{subtitle}</p>

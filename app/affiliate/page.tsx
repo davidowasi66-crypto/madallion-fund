@@ -192,9 +192,8 @@ export default function AffiliatePage() {
         </section>
 
         {hasSession && (
-          <div className="mt-4 space-y-3">
+          <div className="mt-4">
             <ActivityTicker variant="memberHeader" />
-            <ActivityTicker variant="member" />
           </div>
         )}
 
