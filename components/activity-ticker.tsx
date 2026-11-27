@@ -18,6 +18,12 @@ type ActivityTickerProps = { variant?: 'landing' | 'member' | 'header' | 'member
 
 const MAX_LIVE = 12
 const MIN_MARQUEE_ITEMS = 12
+const MIN_DEPOSIT = 5_000
+const MIN_WITHDRAWAL = 3_000
+
+function meetsDisplayFloor(item: ActivityItem) {
+  return item.amount >= (item.type === 'Deposit' ? MIN_DEPOSIT : MIN_WITHDRAWAL)
+}
 
 /** Chidi Okeke → Ch***e — short public alias, never a full name. */
 function maskName(raw: string): string {
@@ -281,6 +287,7 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
           .filter((row) => row.is_sample !== true && row.isSample !== true && row.is_demo !== true)
           .map(parseActivity)
           .filter((item): item is ActivityItem => item !== null)
+          .filter(meetsDisplayFloor)
           .sort((a, b) => b.createdAt - a.createdAt)
       } catch {
         return []
@@ -426,7 +433,7 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
       )}
 
       <p className={`mt-2 text-[11px] ${isMember ? 'text-[#789589]' : 'text-[#77857e]'}`}>
-        Names are masked. NGN only.{' '}
+        Names are masked. NGN only. Deposits from ₦{MIN_DEPOSIT.toLocaleString('en-NG')}; withdrawals from ₦{MIN_WITHDRAWAL.toLocaleString('en-NG')}.{' '}
         {showSample
           ? 'Sample entries illustrate the feed and are replaced automatically when the real ledger feed returns activity.'
           : usingLive
