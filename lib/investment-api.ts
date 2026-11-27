@@ -1,4 +1,5 @@
 import { xanoAdminFunctionRequest, xanoPaymentRequest, xanoRequest } from '@/lib/xano-auth'
+import { isPendingRoute } from '@/lib/pending-route'
 import { DEFAULT_PLANS } from '@/lib/default-plans'
 import { mockCreatePlan, mockDeletePlan, mockGetPlans, mockUpdatePlan, SANDBOX_MOCK } from '@/lib/mock-mode'
 
@@ -198,6 +199,22 @@ export const getMyInvestments = async (): Promise<Investment[]> => {
     if (/inv_page\.totalCount|Unable to locate var/i.test(message)) {
       return []
     }
+    throw cause
+  }
+}
+
+export const createInvestment = async (payload: {
+  plan_id: number
+  principal: number
+  currency?: string
+  rollover_enabled?: boolean
+  rollover_mode?: 'both' | 'principal_only'
+  metadata?: Record<string, unknown>
+}) => {
+  try {
+    return await xanoRequest('/api:ledger-api/investments', { method: 'POST', body: JSON.stringify(payload) }, { auth: true })
+  } catch (cause) {
+    if (isPendingRoute(cause)) return null
     throw cause
   }
 }

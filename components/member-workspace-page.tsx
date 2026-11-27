@@ -15,6 +15,7 @@ import {
   Wallet,
 } from 'lucide-react'
 import { clearXanoSession, getXanoSession, xanoRequest } from '@/lib/xano-auth'
+import { getMemberAccount, getMemberAccountEntries } from '@/lib/xano-ledger'
 import { toMoney, toNumeric, toTitleCase } from '@/lib/xano-client'
 import { getMyInvestments, initializeDeposit, requestWithdrawal, type Investment } from '@/lib/investment-api'
 import { memberSafeError } from '@/lib/member-routes'
@@ -66,6 +67,28 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
   const [actionMessage, setActionMessage] = useState('')
   const [payoutReady, setPayoutReady] = useState(false)
   const handlePayoutReady = useCallback((ready: boolean) => setPayoutReady(ready), [])
+  const [accountDetail, setAccountDetail] = useState<{ account: Row; entries: Row[] } | null>(null)
+  const [accountLoading, setAccountLoading] = useState(false)
+  const [accountError, setAccountError] = useState('')
+
+  async function openAccount(row: Row) {
+    const id = row.id ?? row.account_id
+    if (id == null) return
+    setAccountDetail({ account: row, entries: [] })
+    setAccountLoading(true)
+    setAccountError('')
+    try {
+      const [account, entries] = await Promise.all([getMemberAccount(id), getMemberAccountEntries(id)])
+      setAccountDetail({
+        account: (account?.data ?? account ?? row) as Row,
+        entries: rowsFrom(entries, 'entries', 'items', 'data.entries', 'data.items', 'data'),
+      })
+    } catch (cause) {
+      setAccountError(memberSafeError(cause, 'Unable to load the account ledger.'))
+    } finally {
+      setAccountLoading(false)
+    }
+  }
 
   useEffect(() => {
     let mounted = true
@@ -406,6 +429,13 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                           <p className="mt-4 text-2xl font-semibold text-[#0b4537] lg:text-white">
                             {toMoney(row.balance ?? row.current_balance ?? row.amount, '₦0')}
                           </p>
+                          <button
+                            type="button"
+                            onClick={() => void openAccount(row)}
+                            className="mt-3 text-xs font-medium text-[#2f7a4a] underline lg:text-[#b9f47f]"
+                          >
+                            View ledger
+                          </button>
                         </article>
                       ))
                     ) : (
@@ -414,6 +444,54 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                   </div>
                 )}
               </section>
+
+              {accountDetail && (
+                <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 backdrop-blur-sm sm:items-center">
+                  <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[#dfe8e2] bg-white p-5 shadow-2xl">
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <p className="text-xs uppercase tracking-[0.18em] text-[#65a85c]">Account ledger</p>
+                        <h2 className="mt-1 text-lg font-semibold text-[#0b4537]">
+                          {String(accountDetail.account.name ?? accountDetail.account.account_name ?? 'Account')}
+                        </h2>
+                        <p className="mt-1 text-sm text-[#60716b]">
+                          {toMoney(accountDetail.account.balance ?? accountDetail.account.current_balance, '₦0')}
+                        </p>
+                      </div>
+                      <button type="button" onClick={() => setAccountDetail(null)} className="rounded-lg border border-[#dfe8e2] px-3 py-2 text-xs text-[#0b4537]">
+                        Close
+                      </button>
+                    </div>
+                    {accountLoading && <p className="mt-4 text-sm text-[#60716b]">Loading entries…</p>}
+                    {accountError && <p className="mt-4 text-sm text-red-600">{accountError}</p>}
+                    {!accountLoading && !accountError && (
+                      <div className="mt-4 divide-y divide-[#e7eee8]">
+                        {accountDetail.entries.length ? (
+                          accountDetail.entries.map((entry, index) => (
+                            <div key={entry.id ?? index} className="flex items-center justify-between gap-3 py-3 text-sm">
+                              <div className="min-w-0">
+                                <p className="truncate font-medium text-[#0b4537]">
+                                  {String(entry.description ?? entry.reference ?? entry.type ?? 'Entry')}
+                                </p>
+                                <p className="mt-1 text-xs text-[#708079]">
+                                  {entry.created_at
+                                    ? new Date(Number(entry.created_at) < 1e12 ? Number(entry.created_at) * 1000 : entry.created_at).toLocaleString('en-NG')
+                                    : '—'}
+                                </p>
+                              </div>
+                              <span className="shrink-0 font-semibold text-[#0b4537]">
+                                {toMoney(entry.amount ?? entry.debit ?? entry.credit, '₦0')}
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="py-6 text-sm text-[#708079]">No entries returned for this account.</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </>
         ) : (

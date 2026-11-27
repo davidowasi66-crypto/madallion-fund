@@ -4,12 +4,14 @@ import Link from 'next/link'
 import { useMemo } from 'react'
 import useSWR from 'swr'
 import { AdminShell, Metric, SectionCard } from '@/components/admin-shell'
+import { ReportTable } from '@/components/admin-report-table'
 import {
   getAdminDashboard,
   getAdminPending,
   type AdminDashboardResponse,
   type AdminPendingResponse,
 } from '@/lib/xano-admin'
+import { getAdminLiabilityReport, reportRows, type ReportPayload } from '@/lib/admin-reports-api'
 
 const naira = (value: unknown) => `₦${Math.round(Number(value || 0)).toLocaleString('en-NG')}`
 const count = (value: unknown) => Number(value || 0).toLocaleString('en-NG')
@@ -125,6 +127,9 @@ export default function LiabilitiesPage() {
     () => getAdminPending({ p_kind: 'withdrawals', per_page: 100 }),
     { revalidateOnFocus: false },
   )
+  const liabilityReport = useSWR<ReportPayload | null>('admin-liability-report', () => getAdminLiabilityReport(100), {
+    revalidateOnFocus: false,
+  })
 
   const channels = useMemo<ChannelRow[]>(() => {
     const map = new Map<string, ChannelRow>()
@@ -154,6 +159,18 @@ export default function LiabilitiesPage() {
       (a, b) => b.depositAmount + b.withdrawalAmount - (a.depositAmount + a.withdrawalAmount),
     )
   }, [deposits.data, withdrawals.data])
+
+  const serverChannels = useMemo<ChannelRow[]>(() => {
+    return reportRows(liabilityReport.data, ['channels', 'by_channel', 'items', 'rows']).map((row) => ({
+      channel: String(row.channel ?? row.name ?? 'unknown'),
+      deposits: Number(row.deposit_count ?? row.deposits ?? 0),
+      depositAmount: Number(row.deposit_amount ?? row.deposits_amount ?? 0),
+      withdrawals: Number(row.withdrawal_count ?? row.withdrawals ?? 0),
+      withdrawalAmount: Number(row.withdrawal_amount ?? row.withdrawals_amount ?? 0),
+    }))
+  }, [liabilityReport.data])
+
+  const effectiveChannels = serverChannels.length ? serverChannels : channels
 
   const liabilityMix = data?.charts.liability_vs_asset ?? []
   const liabilityMax = Math.max(...liabilityMix.map((item) => Number(item.value ?? 0)), 1)
@@ -268,7 +285,7 @@ export default function LiabilitiesPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Channel performance" action={deposits.isLoading || withdrawals.isLoading ? 'Loading' : `${channels.length} channels`}>
+        <SectionCard title="Channel performance" action={liabilityReport.data ? 'Xano lifetime totals' : deposits.isLoading || withdrawals.isLoading ? 'Loading' : `${effectiveChannels.length} channels`}>
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead>
@@ -280,7 +297,7 @@ export default function LiabilitiesPage() {
                 </tr>
               </thead>
               <tbody>
-                {channels.map((channel) => (
+                {effectiveChannels.map((channel) => (
                   <tr key={channel.channel} className="border-t border-slate-800 text-slate-200">
                     <td className="py-3 pr-4 font-medium text-white">{channel.channel}</td>
                     <td className="py-3 pr-4">{channel.deposits} · {naira(channel.depositAmount)}</td>
@@ -288,7 +305,7 @@ export default function LiabilitiesPage() {
                     <td className="py-3">{naira(channel.depositAmount - channel.withdrawalAmount)}</td>
                   </tr>
                 ))}
-                {!deposits.isLoading && !withdrawals.isLoading && channels.length === 0 && (
+                {!deposits.isLoading && !withdrawals.isLoading && effectiveChannels.length === 0 && (
                   <tr>
                     <td colSpan={4} className="py-6 text-center text-slate-500">No channel movements in the current queue.</td>
                   </tr>
@@ -296,7 +313,21 @@ export default function LiabilitiesPage() {
               </tbody>
             </table>
           </div>
-          <p className="mt-3 text-xs text-slate-500">Based on the pending and recent deposit and withdrawal queue, not lifetime totals.</p>
+          <p className="mt-3 text-xs text-slate-500">
+            {serverChannels.length
+              ? 'Lifetime totals from fn_admin_liability_report.'
+              : 'Based on the pending and recent deposit and withdrawal queue, not lifetime totals.'}
+          </p>
+        </SectionCard>
+      </div>
+
+      <div className="mt-6">
+        <SectionCard title="Liability report" action={liabilityReport.isLoading ? 'Loading' : liabilityReport.data ? 'Live Xano data' : 'Unavailable'}>
+          <ReportTable
+            rows={reportRows(liabilityReport.data, ['items', 'rows', 'liabilities', 'by_channel', 'channels'])}
+            empty="No liability rows returned."
+            maxColumns={7}
+          />
         </SectionCard>
       </div>
 

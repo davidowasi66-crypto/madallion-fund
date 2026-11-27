@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react'
 import useSWR from 'swr'
 import { AdminShell, Metric, SectionCard } from '@/components/admin-shell'
 import { getAdminInvestments, type AdminInvestmentsResponse } from '@/lib/xano-admin'
+import { getAdminPlanAccruals, reportNumber, reportRows, type ReportPayload } from '@/lib/admin-reports-api'
+import { runAccrual } from '@/lib/admin-ops-api'
 import { toTimestamp } from '@/lib/pending-route'
 
 type Investment = AdminInvestmentsResponse['items'][number]
@@ -38,14 +40,37 @@ const daysLeft = (maturity: number | null, now: number | null) => {
 }
 
 export default function AccrualsPage() {
-  const { data, error, isLoading } = useSWR<AdminInvestmentsResponse>(
+  const { data, error, isLoading, mutate } = useSWR<AdminInvestmentsResponse>(
     'admin-accruals-investments',
     () => getAdminInvestments({ per_page: 100 }),
     { revalidateOnFocus: false },
   )
+  const planAccruals = useSWR<ReportPayload | null>('admin-plan-accruals', getAdminPlanAccruals, { revalidateOnFocus: false })
   const [now, setNow] = useState<number | null>(null)
   const [planFilter, setPlanFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'matured'>('all')
+  const [running, setRunning] = useState(false)
+  const [runMessage, setRunMessage] = useState('')
+  const [runError, setRunError] = useState('')
+
+  async function runEngine() {
+    setRunning(true)
+    setRunMessage('')
+    setRunError('')
+    try {
+      const result = await runAccrual(1)
+      if (!result) {
+        setRunError('The accrual engine route is not available in Xano.')
+        return
+      }
+      setRunMessage('Accrual and maturity engine completed. Refreshing investments.')
+      await Promise.all([mutate(), planAccruals.mutate()])
+    } catch (cause) {
+      setRunError(cause instanceof Error ? cause.message : 'Unable to run the accrual engine.')
+    } finally {
+      setRunning(false)
+    }
+  }
 
   useEffect(() => {
     setNow(Date.now())
@@ -92,10 +117,30 @@ export default function AccrualsPage() {
     return [...map.values()].sort((a, b) => b.principal - a.principal)
   }, [investments, now])
 
-  const totals = useMemo(() => {
-    const principal = summaries.reduce((sum, plan) => sum + plan.principal, 0)
-    const accrued = summaries.reduce((sum, plan) => sum + plan.accrued, 0)
-    const projected = summaries.reduce((sum, plan) => sum + plan.projectedYield, 0)
+  const serverSummaries = useMemo<PlanSummary[] | null>(() => {
+    const plans = reportRows(planAccruals.data, ['plans', 'items', 'rows'])
+    if (!plans.length) return null
+    return plans.map((plan) => ({
+      planId: Number(plan.plan_id ?? plan.id ?? -1),
+      planName: String(plan.plan_name ?? plan.name ?? 'Unassigned plan'),
+      dailyRateBps: Number(plan.daily_rate_bps ?? 0),
+      durationDays: Number(plan.duration_days ?? 0),
+      count: Number(plan.active ?? 0) + Number(plan.matured ?? 0),
+      principal: Number(plan.principal ?? 0),
+      accrued: Number(plan.accrued ?? 0),
+      projectedYield: Number(plan.projected_yield ?? 0),
+      active: Number(plan.active ?? 0),
+      matured: Number(plan.matured ?? 0),
+      nextMaturity: toTimestamp(plan.next_maturity),
+    }))
+  }, [planAccruals.data])
+
+  const effectiveSummaries = serverSummaries ?? summaries
+
+  const calculatedTotal = useMemo(() => {
+    const principal = effectiveSummaries.reduce((sum, plan) => sum + plan.principal, 0)
+    const accrued = effectiveSummaries.reduce((sum, plan) => sum + plan.accrued, 0)
+    const projected = effectiveSummaries.reduce((sum, plan) => sum + plan.projectedYield, 0)
     const dueSoon = now == null
       ? 0
       : investments.filter((investment) => {
@@ -105,7 +150,14 @@ export default function AccrualsPage() {
           return maturity - now <= 7 * 86_400_000
         }).length
     return { principal, accrued, projected, dueSoon }
-  }, [summaries, investments, now])
+  }, [effectiveSummaries, investments, now])
+
+  const totals = {
+    principal: reportNumber(planAccruals.data, ['principal']) ?? calculatedTotal.principal,
+    accrued: reportNumber(planAccruals.data, ['accrued']) ?? calculatedTotal.accrued,
+    projected: reportNumber(planAccruals.data, ['projected_yield']) ?? calculatedTotal.projected,
+    dueSoon: reportNumber(planAccruals.data, ['due_in_7_days']) ?? calculatedTotal.dueSoon,
+  }
 
   const rows = useMemo(() => {
     return investments
@@ -142,7 +194,21 @@ export default function AccrualsPage() {
       )}
 
       <div className="mt-6">
-        <SectionCard title="Accruals by plan" action={isLoading ? 'Loading' : `${summaries.length} plans`}>
+        <SectionCard title="Accrual engine" action="POST /api:ledger-api/accrual/run">
+          <p className="max-w-3xl text-xs leading-5 text-slate-400">
+            Runs the daily interest accrual and matured principal return engine with idempotency protection. Run it after
+            reviewing the plan totals below.
+          </p>
+          <button type="button" onClick={() => void runEngine()} disabled={running} className="mt-4 rounded-lg bg-emerald-400 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-60">
+            {running ? 'Running engine…' : 'Run accrual engine'}
+          </button>
+          {runMessage && <p role="status" className="mt-3 text-xs text-emerald-300">{runMessage}</p>}
+          {runError && <p role="alert" className="mt-3 text-xs text-red-300">{runError}</p>}
+        </SectionCard>
+      </div>
+
+      <div className="mt-6">
+        <SectionCard title="Accruals by plan" action={isLoading ? 'Loading' : `${effectiveSummaries.length} plans`}>
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead>
@@ -159,7 +225,7 @@ export default function AccrualsPage() {
                 </tr>
               </thead>
               <tbody>
-                {summaries.map((plan) => (
+                {effectiveSummaries.map((plan) => (
                   <tr key={plan.planId} className="border-t border-slate-800 text-slate-200">
                     <td className="py-3 pr-4 font-medium text-white">{plan.planName}</td>
                     <td className="py-3 pr-4 text-emerald-300">{rate(plan.dailyRateBps)}</td>
@@ -172,7 +238,7 @@ export default function AccrualsPage() {
                     <td className="py-3 text-slate-400">{dateLabel(plan.nextMaturity)}</td>
                   </tr>
                 ))}
-                {!isLoading && summaries.length === 0 && (
+                {!isLoading && effectiveSummaries.length === 0 && (
                   <tr>
                     <td colSpan={9} className="py-8 text-center text-slate-500">No investment records returned from the ledger.</td>
                   </tr>
@@ -190,7 +256,7 @@ export default function AccrualsPage() {
               Plan
               <select value={planFilter} onChange={(event) => setPlanFilter(event.target.value)} className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-200">
                 <option value="all">All plans</option>
-                {summaries.map((plan) => (
+                {effectiveSummaries.map((plan) => (
                   <option key={plan.planId} value={String(plan.planId)}>{plan.planName}</option>
                 ))}
               </select>

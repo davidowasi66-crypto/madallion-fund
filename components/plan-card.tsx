@@ -1,6 +1,7 @@
 import Link from 'next/link'
-import { ArrowRight, LockKeyhole } from 'lucide-react'
+import { LockKeyhole } from 'lucide-react'
 import { planDailyRate, planIsPaused, type Plan } from '@/lib/investment-api'
+import { PlanSubscribe } from '@/components/plan-subscribe'
 
 const money = (value: number) => `₦${value.toLocaleString('en-NG')}`
 
@@ -133,16 +134,7 @@ export function PlanCard({ plan }: { plan: Plan }) {
             {soldOut ? 'Currently closed' : 'Temporarily paused'}
           </button>
         ) : (
-          <Link
-            href="/register"
-            className={`mt-8 flex min-h-12 w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-center text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#75b95c] focus-visible:ring-offset-2 ${
-              plan.featured
-                ? 'bg-[#b9f47f] text-[#071a18] hover:bg-[#a9e86d]'
-                : 'bg-[#0b4537] text-white hover:bg-[#123f34]'
-            }`}
-          >
-            Start with {plan.name} <ArrowRight size={15} aria-hidden="true" />
-          </Link>
+          <PlanSubscribe plan={plan} />
         )}
       </div>
     </article>
