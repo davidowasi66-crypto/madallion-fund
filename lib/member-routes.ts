@@ -77,7 +77,10 @@ export function memberSafeError(cause: unknown, fallback = 'Something went wrong
 export async function getReferralCredits(): Promise<ReferralCredits | null> {
   try {
     const body = unwrapObject(await xanoRequest('/api:ledger-api/referral/credits', { method: 'GET' }, { auth: true }))
-    if (!body || (body.available == null && body.lifetime == null && body.cap == null)) return null
+    // The route answered (no 404): no credit record yet means zero earned.
+    if (!body || (body.available == null && body.lifetime == null && body.cap == null)) {
+      return { available: 0, pending_hold: 0, lifetime: 0, cap: 0, currency: 'NGN' }
+    }
     return {
       available: numField(body.available),
       pending_hold: numField(body.pending_hold ?? body.pendingHold),

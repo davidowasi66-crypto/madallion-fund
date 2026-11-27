@@ -81,7 +81,11 @@ function normalizeSession(row: unknown, index: number): SecuritySession {
 
 export function normalizeSecurityState(payload: unknown): SecurityState | null {
   const body = unwrap(payload)
-  if (!Object.keys(body).length) return null
+  // The route answered (no 404): a member without a security record yet is
+  // simply not enrolled, so report a safe editable default instead of "offline".
+  if (!Object.keys(body).length) {
+    return { two_factor_enabled: false, has_backup_codes: false, active_sessions_count: 0 }
+  }
   return {
     two_factor_enabled: optionalBoolean(body.two_factor_enabled) ?? false,
     two_factor_method: optionalString(body.two_factor_method),
@@ -107,7 +111,8 @@ export async function getSecuritySessions(): Promise<SecuritySession[] | null> {
   try {
     const payload = await xanoRequest<unknown>('/api:ledger-api/security/sessions', { method: 'GET' }, { auth: true })
     const body = asRecord(payload)
-    if (!Object.keys(body).length && !Array.isArray(payload)) return null
+    // An empty list is a valid answer (only one device, nothing to revoke).
+    if (!Object.keys(body).length && !Array.isArray(payload)) return []
     const rows = Array.isArray(payload)
       ? payload
       : toArray(body.sessions ?? body.items ?? body.data ?? asRecord(body.data).sessions)

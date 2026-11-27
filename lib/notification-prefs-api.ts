@@ -76,9 +76,10 @@ export function normalizeNotificationPreferences(payload: unknown): Notification
 /** GET /api:ledger-api/notification-preferences */
 export async function getNotificationPreferences(): Promise<NotificationPreferences | null> {
   try {
-    return normalizeNotificationPreferences(
-      await xanoRequest('/api:ledger-api/notification-preferences', { method: 'GET' }, { auth: true }),
-    )
+    const payload = await xanoRequest('/api:ledger-api/notification-preferences', { method: 'GET' }, { auth: true })
+    // The route answered (no 404): an empty body just means this member has no
+    // saved preferences yet, so start from defaults instead of hiding the form.
+    return normalizeNotificationPreferences(payload) ?? { ...DEFAULTS }
   } catch (cause) {
     if (isPendingRoute(cause)) return null
     throw cause

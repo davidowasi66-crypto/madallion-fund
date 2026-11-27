@@ -194,7 +194,11 @@ export async function setAutoRollover(
         { auth: true },
       ),
     )
-    if (!Object.keys(body).length) return null
+    // A successful PATCH may answer with an empty body; that still means the
+    // preference was saved, so never report it back as an unconnected route.
+    if (!Object.keys(body).length) {
+      return { success: true, investment_id: String(investmentId), rollover_enabled: enabled, rollover_mode: mode }
+    }
     return {
       success: optionalBoolean(body.success),
       investment_id: optionalString(body.investment_id),
@@ -237,7 +241,11 @@ export async function resolveMaturity(
         { auth: true },
       ),
     )
-    if (!Object.keys(body).length) return null
+    // A successful POST may answer with an empty body; the instruction is
+    // already recorded, so treat it as accepted rather than "not connected".
+    if (!Object.keys(body).length) {
+      return { success: true, resolution, status: 'recorded' }
+    }
     const success = optionalBoolean(body.success)
     return {
       success,
