@@ -102,7 +102,9 @@ function relativeTime(ts: number, now: number) {
   const hr = Math.floor(min / 60)
   if (hr < 24) return hr === 1 ? '1 hr ago' : `${hr} hrs ago`
   const day = Math.floor(hr / 24)
-  return day === 1 ? '1 day ago' : `${day} days ago`
+  if (day < 7) return day === 1 ? '1 day ago' : `${day} days ago`
+  const week = Math.floor(day / 7)
+  return week === 1 ? '1 week ago' : `${week} weeks ago`
 }
 
 function verb(type: ActivityKind) {
@@ -160,32 +162,32 @@ const SAMPLE_KINDS: ActivityKind[] = [
   'Withdrawal',
 ]
 
-// Mix recent and older activity so the first screen already shows day-scale ages.
+// Mix recent, day-scale and week-scale activity so the first screen shows variety.
 const SAMPLE_AGES = [
   18,
   2 * 86_400,
   95,
   4 * 86_400,
   240,
-  6 * 86_400,
+  2 * 604_800,
   600,
-  8 * 86_400,
+  6 * 86_400,
   1_500,
-  11 * 86_400,
+  3 * 604_800,
   3_600,
-  14 * 86_400,
+  8 * 86_400,
   2 * 3_600,
-  18 * 86_400,
+  4 * 604_800,
   4 * 3_600,
-  23 * 86_400,
+  11 * 86_400,
   7 * 3_600,
-  29 * 86_400,
+  6 * 604_800,
   11 * 3_600,
-  37 * 86_400,
+  18 * 86_400,
   16 * 3_600,
+  8 * 604_800,
   22 * 3_600,
-  86_400 + 3_600,
-  3 * 86_400,
+  12 * 604_800,
 ]
 
 function sampleActivity(now: number): ActivityItem[] {
