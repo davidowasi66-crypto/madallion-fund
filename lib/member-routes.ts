@@ -28,10 +28,20 @@ export type ReferralMe = {
 export type InvestmentCertificatePayload = {
   certificate_id?: string | number
   investment_id?: string | number
+  user_name?: string
+  member_name?: string
+  investor_name?: string
   plan_name?: string
   principal?: number | string
   display_principal?: string
+  daily_rate_bps?: number | string
+  duration_days?: number | string
+  expected_return?: number | string
+  expected_return_amount?: number | string
+  expected_return_display?: string
   currency?: string
+  issued_at?: number | string
+  maturity_at?: number | string
   share_url?: string
   signed_share_url?: string
   is_verified?: boolean | string

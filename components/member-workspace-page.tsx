@@ -15,7 +15,7 @@ import {
   Wallet,
 } from 'lucide-react'
 import { clearXanoSession, getXanoSession, xanoRequest } from '@/lib/xano-auth'
-import { getMemberAccount, getMemberAccountEntries } from '@/lib/xano-ledger'
+import { getLedgerProfile, getMemberAccount, getMemberAccountEntries } from '@/lib/xano-ledger'
 import { toMoney, toNumeric, toTitleCase } from '@/lib/xano-client'
 import { getMyInvestments, initializeDeposit, requestWithdrawal, type Investment } from '@/lib/investment-api'
 import { memberSafeError } from '@/lib/member-routes'
@@ -28,7 +28,7 @@ import { FeeBreakdown } from '@/components/fee-breakdown'
 import { MaturityActions } from '@/components/maturity-actions'
 import { MaturityNudges } from '@/components/maturity-nudges'
 import { DepositProof } from '@/components/deposit-proof'
-import { WithdrawalProof } from '@/components/withdrawal-proof'
+import { PaymentProof } from '@/components/payment-proof'
 
 type Section = 'investments' | 'wallet' | 'activity'
 type Row = Record<string, any>
@@ -51,6 +51,11 @@ function rowsFrom(response: any, ...keys: string[]): Row[] {
   return []
 }
 
+function profileNameFrom(response: any): string {
+  const user = response?.user ?? response?.data?.user ?? response?.data ?? response
+  return String(user?.name ?? user?.full_name ?? user?.display_name ?? '').trim()
+}
+
 function authFailure(message: string) {
   return /(?:^|\D)401(?:\D|$)|unauthenticated|not authenticated|invalid token|token expired/i.test(message)
 }
@@ -67,6 +72,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
   const [actionMessage, setActionMessage] = useState('')
   const [payoutReady, setPayoutReady] = useState(false)
   const [planContext, setPlanContext] = useState('')
+  const [memberName, setMemberName] = useState('')
   const handlePayoutReady = useCallback((ready: boolean) => setPayoutReady(ready), [])
   const [accountDetail, setAccountDetail] = useState<{ account: Row; entries: Row[] } | null>(null)
   const [accountLoading, setAccountLoading] = useState(false)
@@ -111,6 +117,9 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
         return
       }
       try {
+        void getLedgerProfile()
+          .then((profile) => { if (mounted) setMemberName(profileNameFrom(profile)) })
+          .catch(() => undefined)
         if (section === 'investments') {
           const investments = await getMyInvestments()
           if (mounted) setRows(investments as Row[])
@@ -570,7 +579,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                           <MaturityActions investment={investment} />
                           <AutoCompoundToggle investment={investment} />
                           <FeeBreakdown investment={investment} />
-                          <InvestmentCertificate investment={investment} />
+                          <InvestmentCertificate investment={investment} memberName={memberName} />
                         </div>
                       ))}
                     </div>
@@ -580,7 +589,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
               {!loading && !error && section === 'activity' && (
                 <div className="mt-6 divide-y divide-[#e7eee8] rounded-2xl border border-[#dfe8e2] bg-white px-5 lg:divide-white/10 lg:border-white/10 lg:bg-[#0b2420]">
                   {rows.length ? (
-                    rows.map((row, index) => <Transaction key={row.id ?? index} row={row} />)
+                    rows.map((row, index) => <Transaction key={row.id ?? index} row={row} memberName={memberName} />)
                   ) : (
                     <Empty text="No transactions have been recorded yet." />
                   )}
@@ -596,13 +605,13 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
   )
 }
 
-function Transaction({ row }: { row: Row }) {
+function Transaction({ row, memberName }: { row: Row; memberName: string }) {
   const amount = toNumeric(row.amount ?? row.total_amount ?? row.value)
   const label = String(row.description ?? row.reference ?? row.type ?? 'Ledger transaction')
   const created = row.created_at ?? row.createdAt ?? row.date
   const timestamp = created ? (Number(created) < 1e12 ? Number(created) * 1000 : created) : null
   const kind = String(row.type ?? row.kind ?? row.description ?? '').toLowerCase()
-  const shareablePayout = /withdraw|cash.?out|payout|disburs/.test(kind)
+  const shareableProof = /deposit|funding|top.?up|withdraw|cash.?out|payout|disburs/.test(kind)
   return (
     <article className="flex items-center justify-between gap-4 py-4">
       <div className="flex min-w-0 items-center gap-3">
@@ -624,7 +633,7 @@ function Transaction({ row }: { row: Row }) {
       </div>
       <div className="flex shrink-0 flex-col items-end gap-1">
         <p className="whitespace-nowrap text-sm font-semibold text-[#0b4537] lg:text-white">{toMoney(Math.abs(amount), '₦0')}</p>
-        {shareablePayout && <WithdrawalProof transaction={row} />}
+        {shareableProof && <PaymentProof transaction={row} memberName={memberName} />}
       </div>
     </article>
   )
