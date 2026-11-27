@@ -205,9 +205,10 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
     }
     setSubmitting(true)
     try {
+      const minorUnits = Math.round(amountNum * 100)
       const result: any = mode === 'deposit'
-        ? await initializeDeposit({ amount: amountNum, currency: 'NGN' })
-        : await requestWithdrawal({ amount: amountNum, currency: 'NGN' })
+        ? await initializeDeposit({ amount: minorUnits, currency: 'NGN' })
+        : await requestWithdrawal({ amount: minorUnits, currency: 'NGN' })
       const redirect = result?.checkout_url ?? result?.payment_url ?? result?.authorization_url ?? result?.data?.checkout_url ?? result?.data?.payment_url
       if (mode === 'deposit' && typeof redirect === 'string' && /^https:\/\//i.test(redirect)) {
         window.location.assign(redirect)
