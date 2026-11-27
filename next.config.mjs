@@ -14,8 +14,12 @@ const nextConfig = {
       process.env.NEXT_PUBLIC_XANO_PAYMENT_URL ?? process.env.XANO_PAYMENT_URL,
   },
   typescript: { ignoreBuildErrors: false },
+  agentRules: false,
   images: { unoptimized: true },
   experimental: { agentUpgrade: 'security' },
+  async redirects() {
+    return [{ source: '/create-account', destination: '/register', permanent: true }]
+  },
 }
 
 export default nextConfig
