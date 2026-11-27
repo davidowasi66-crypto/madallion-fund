@@ -282,7 +282,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
       <div className="lg:pl-72">
         {section === 'wallet' ? (
           <>
-            <header className="rounded-b-[2rem] bg-[radial-gradient(ellipse_at_top_right,_rgba(160,98,39,.55),_transparent_52%),linear-gradient(145deg,#21160f_0%,#100c08_70%,#271607_100%)] px-5 pb-6 pt-5 text-white shadow-[0_22px_44px_rgba(30,20,10,.24)] sm:mx-4 sm:mt-4 sm:rounded-[2rem] sm:px-8">
+            <header className="rounded-b-[2rem] bg-[radial-gradient(ellipse_at_top_right,_rgba(185,244,127,.16),_transparent_52%),linear-gradient(145deg,#0b4537_0%,#071a18_70%,#0a2b23_100%)] px-5 pb-6 pt-5 text-white shadow-[0_22px_44px_rgba(4,24,20,.24)] sm:mx-4 sm:mt-4 sm:rounded-[2rem] sm:px-8">
               <div className="mx-auto max-w-lg">
                 <div className="flex items-center justify-between gap-3">
                   <button className="lg:hidden rounded-full bg-white/10 p-2" onClick={() => setMenuOpen(true)} aria-label="Open menu">
@@ -319,7 +319,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                     type="button"
                     onClick={() => setMode('deposit')}
                     className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
-                      mode === 'deposit' ? 'bg-[#ff8b28] text-white' : 'text-[#e2c8a9]'
+                      mode === 'deposit' ? 'bg-[#b9f47f] text-[#071a18]' : 'text-[#a8c7b8]'
                     }`}
                   >
                     Deposit
@@ -328,7 +328,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                     type="button"
                     onClick={() => setMode('withdraw')}
                     className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
-                      mode === 'withdraw' ? 'bg-[#ff8b28] text-white' : 'text-[#e2c8a9]'
+                      mode === 'withdraw' ? 'bg-[#b9f47f] text-[#071a18]' : 'text-[#a8c7b8]'
                     }`}
                   >
                     Withdraw
@@ -338,7 +338,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                 <div className="mt-5 rounded-3xl border border-white/10 bg-black/25 p-5">
                   <p className="text-xs text-[#8eaea0]">Enter amount</p>
                   <div className="mt-2 flex items-baseline gap-2">
-                    <span className="text-2xl font-semibold text-[#ff9c38]">₦</span>
+                    <span className="text-2xl font-semibold text-[#b9f47f]">₦</span>
                     <input
                       type="number"
                       inputMode="decimal"
@@ -376,7 +376,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
               </div>
             </header>
 
-            <div className="mx-auto max-w-lg bg-[#f6f1e8] px-5 pb-8 sm:px-8">
+            <div className="mx-auto max-w-lg bg-[#f4f8f3] px-5 pb-8 sm:px-8">
               <div className="pt-4">
                 <ActivityTicker variant="memberHeader" />
               </div>
@@ -415,7 +415,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
               <button
                 type="button"
                 disabled={amountNum <= 0 || Boolean(amountError) || submitting || (mode === 'withdraw' && !payoutReady)}
-                className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#ffae4f] to-[#f56810] py-4 text-sm font-semibold text-white shadow-[0_10px_24px_rgba(245,104,16,.22)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45"
+                className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#b9f47f] to-[#65a85c] py-4 text-sm font-semibold text-[#071a18] shadow-[0_10px_24px_rgba(101,168,92,.22)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45"
                 onClick={submitWalletAction}
               >
                 {submitting ? 'Submitting…' : mode === 'deposit' ? 'Continue deposit' : 'Withdraw'}
