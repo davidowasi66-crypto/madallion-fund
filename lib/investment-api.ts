@@ -91,6 +91,12 @@ const list = (value: any, keys: string[] = []): any[] => {
   }
   if (value.items && Array.isArray(value.items.items)) return value.items.items
   if (value.inv_page && Array.isArray(value.inv_page.items)) return value.inv_page.items
+  if (typeof value.items === 'string') {
+    try {
+      const parsed = JSON.parse(value.items)
+      if (Array.isArray(parsed)) return parsed
+    } catch {}
+  }
   return []
 }
 
@@ -193,26 +199,33 @@ export const resumePlan = (id: number) => updatePlan(id, { is_paused: false, sta
 export const deletePlan = (id: number) =>
   SANDBOX_MOCK ? mockDeletePlan(id) : xanoAdminFunctionRequest(`/fn_admin_plan/${id}`, { method: 'DELETE' })
 
-/** Member investments — never throw on pagination bugs (inv_page.totalCount). */
+/** Member investments — include every lifecycle state so the UI can filter it. */
 export const getMyInvestments = async (): Promise<Investment[]> => {
-  try {
-    const payload = await xanoRequest('/api:ledger-api/investments', { method: 'GET' }, { auth: true })
-    return list(payload, [
-      'investments',
-      'items',
-      'data.investments',
-      'data.items',
-      'data.rows',
-      'rows',
-      'inv_page.items',
-    ]) as Investment[]
-  } catch (cause) {
-    const message = cause instanceof Error ? cause.message : String(cause)
-    if (/inv_page\.totalCount|Unable to locate var/i.test(message)) {
-      return []
+  const paths = [
+    '/api:ledger-api/investments?status=all&page=1&per_page=100',
+    '/api:ledger-api/investments?per_page=100',
+    '/api:ledger-api/investments',
+  ]
+  let lastError: unknown
+  for (const path of paths) {
+    try {
+      const payload = await xanoRequest(path, { method: 'GET' }, { auth: true })
+      return list(payload, [
+        'investments',
+        'items',
+        'data.investments',
+        'data.items',
+        'data.rows',
+        'rows',
+        'inv_page.items',
+      ]) as Investment[]
+    } catch (cause) {
+      lastError = cause
+      const message = cause instanceof Error ? cause.message : String(cause)
+      if (/(?:^|\D)(401|403|429)(?:\D|$)/.test(message)) break
     }
-    throw cause
   }
+  throw lastError instanceof Error ? lastError : new Error('Unable to load investments')
 }
 
 export const createInvestment = async (payload: {
@@ -241,9 +254,28 @@ export type PayoutDestinationInput = {
   account_name: string
   account_number: string
 }
-export const getPayoutDestination = () => xanoPaymentRequest<Record<string, any>>('/payout-destination', { method: 'GET' }, true)
-export const savePayoutDestination = (payload: PayoutDestinationInput) =>
-  xanoPaymentRequest<Record<string, any>>('/payout-destination', { method: 'PUT', body: JSON.stringify(payload) }, true)
+const payoutFallback = (cause: unknown) => {
+  const message = cause instanceof Error ? cause.message : String(cause ?? '')
+  return /(?:^|\D)(404|502)(?:\D|$)|not found|not configured/i.test(message)
+}
+
+export const getPayoutDestination = async () => {
+  try {
+    return await xanoPaymentRequest<Record<string, any>>('/payout-destination', { method: 'GET' }, true)
+  } catch (cause) {
+    if (!payoutFallback(cause)) throw cause
+    return xanoRequest<Record<string, any>>('/api:ledger-api/payout-destination', { method: 'GET' }, { auth: true })
+  }
+}
+
+export const savePayoutDestination = async (payload: PayoutDestinationInput) => {
+  try {
+    return await xanoPaymentRequest<Record<string, any>>('/payout-destination', { method: 'PUT', body: JSON.stringify(payload) }, true)
+  } catch (cause) {
+    if (!payoutFallback(cause)) throw cause
+    return xanoRequest<Record<string, any>>('/api:ledger-api/payout-destination', { method: 'PUT', body: JSON.stringify(payload) }, { auth: true })
+  }
+}
 export const getDepositStatus = (reference: string) => xanoPaymentRequest(`/status/${encodeURIComponent(reference)}`, {}, true)
 
 export const getReferralLeaderboard = async (): Promise<{ rows: Record<string, any>[]; available: boolean }> => {

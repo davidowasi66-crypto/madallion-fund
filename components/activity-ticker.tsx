@@ -263,7 +263,7 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
         return []
       }
     },
-    { ...antiThrottleSwrConfig, refreshInterval: 10_000, revalidateOnFocus: true },
+    { ...antiThrottleSwrConfig, refreshInterval: 120_000, revalidateOnFocus: false },
   )
 
   useEffect(() => {

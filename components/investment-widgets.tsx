@@ -4,9 +4,11 @@ import Link from 'next/link'
 import useSWR from 'swr'
 import { useEffect, useMemo, useState } from 'react'
 import { getXanoSession } from '@/lib/xano-auth'
-import { planDepositHref } from '@/lib/plan-links'
+import { clearPendingPlan, getPendingPlan, planDepositHref, type PendingPlan } from '@/lib/plan-links'
+import { memberSafeError } from '@/lib/member-routes'
 import { antiThrottleSwrConfig } from '@/lib/swr'
 import {
+  createInvestment,
   getMyCashflow,
   getMyInvestments,
   getMyWallet,
@@ -64,8 +66,12 @@ function Counter({ label, value, tone = 'default' }: { label: string; value: str
 }
 
 /** Dashboard maturity tracker — shows progress bars when the member has investments. */
-export function MemberMaturityPreview() {
+export function MemberMaturityPreview({ walletBalance = 0 }: { walletBalance?: number }) {
   const [session, setSession] = useState<{ authenticated: boolean; cacheKey: string } | null>(null)
+  const [pendingPlan, setPendingPlan] = useState<PendingPlan | null>(null)
+  const [activating, setActivating] = useState(false)
+  const [activationError, setActivationError] = useState('')
+  const [activationMessage, setActivationMessage] = useState('')
   useEffect(() => {
     const current = getXanoSession()
     setSession(
@@ -73,6 +79,7 @@ export function MemberMaturityPreview() {
         ? { authenticated: true, cacheKey: `member-investments-${current.user_id || 'me'}` }
         : { authenticated: false, cacheKey: '' },
     )
+    setPendingPlan(current?.authenticated ? getPendingPlan() : null)
   }, [])
   const { data: investments, error, isLoading, mutate, isValidating } = useSWR<Investment[]>(
     session?.authenticated ? session.cacheKey : null,
@@ -91,6 +98,32 @@ export function MemberMaturityPreview() {
     return remaining > 0 && remaining <= 14 * 86_400_000
   }).length
   const rateLimited = /(?:^|\D)429(?:\D|$)/.test(error instanceof Error ? error.message : '')
+  const canActivate = pendingPlan != null && walletBalance >= pendingPlan.principal
+
+  async function activatePlan() {
+    if (!pendingPlan || activating) return
+    setActivating(true)
+    setActivationError('')
+    setActivationMessage('')
+    try {
+      const result = await createInvestment({
+        plan_id: pendingPlan.plan_id,
+        principal: Math.round(pendingPlan.principal * 100),
+        currency: pendingPlan.currency,
+        rollover_enabled: true,
+        rollover_mode: 'both',
+      })
+      if (!result) throw new Error('The investment route is not available yet.')
+      clearPendingPlan()
+      setPendingPlan(null)
+      await mutate()
+      setActivationMessage(`${pendingPlan.plan_name} is active. Maturity progress is now tracking.`)
+    } catch (cause) {
+      setActivationError(memberSafeError(cause, 'Unable to activate this plan. Please try again.'))
+    } finally {
+      setActivating(false)
+    }
+  }
 
   return (
     <section
@@ -145,6 +178,34 @@ export function MemberMaturityPreview() {
           {active.slice(0, 3).map((investment, index) => (
             <MaturityProgressBar key={investment.id ?? index} investment={investment} variant="light" />
           ))}
+        </div>
+      ) : pendingPlan ? (
+        <div className="mt-5 rounded-2xl border border-[#d7e8c9] bg-[#f1f9ea] px-4 py-5">
+          <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#2f7a4a]">Plan selected</p>
+          <h3 className="mt-1 text-base font-semibold text-[#0b4537]">{pendingPlan.plan_name}</h3>
+          <p className="mt-2 text-sm leading-6 text-[#315b3d]">
+            {canActivate
+              ? `Your wallet has the ${money(pendingPlan.principal)} needed. Activate the plan to start the maturity clock.`
+              : `We are waiting for your ${money(pendingPlan.principal)} deposit to clear. Once your wallet balance covers it, activate the plan here.`}
+          </p>
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => void activatePlan()}
+              disabled={!canActivate || activating}
+              className="rounded-xl bg-[#0b4537] px-4 py-2.5 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {activating ? 'Activating…' : 'Activate plan'}
+            </button>
+            <Link href="/dashboard/wallet?mode=deposit" className="text-sm font-semibold text-[#2f7a4a] underline underline-offset-4">
+              Add funds
+            </Link>
+            <Link href="/plans" className="text-sm font-semibold text-[#2f7a4a] underline underline-offset-4">
+              Change plan
+            </Link>
+          </div>
+          {activationError && <p role="alert" className="mt-3 text-sm text-rose-700">{activationError}</p>}
+          {activationMessage && <p role="status" className="mt-3 text-sm text-[#2f7a4a]">{activationMessage}</p>}
         </div>
       ) : (
         <div className="mt-5 rounded-2xl border border-dashed border-[#dfe8e2] bg-[#f4f8f3] px-4 py-6 text-center">

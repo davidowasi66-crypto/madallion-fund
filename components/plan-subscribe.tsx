@@ -3,15 +3,17 @@
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
+import { useSWRConfig } from 'swr'
 import { ArrowRight } from 'lucide-react'
 import { createInvestment, planDailyRate, type Plan } from '@/lib/investment-api'
-import { planDepositHref, registerForPlanHref } from '@/lib/plan-links'
+import { clearPendingPlan, planDepositHref, registerForPlanHref, rememberPendingPlan } from '@/lib/plan-links'
 import { getXanoSession } from '@/lib/xano-auth'
 
 const money = (value: number) => `₦${value.toLocaleString('en-NG')}`
 
 export function PlanSubscribe({ plan, variant = 'light' }: { plan: Plan; variant?: 'light' | 'dark' }) {
   const router = useRouter()
+  const { mutate } = useSWRConfig()
   const [authenticated, setAuthenticated] = useState<boolean | null>(null)
   const [open, setOpen] = useState(false)
   const [amount, setAmount] = useState('')
@@ -76,6 +78,7 @@ export function PlanSubscribe({ plan, variant = 'light' }: { plan: Plan; variant
       return
     }
     setError('')
+    rememberPendingPlan(plan, Number(amount))
     setOpen(false)
     router.push(planDepositHref(plan, Number(amount)))
   }
@@ -101,6 +104,8 @@ export function PlanSubscribe({ plan, variant = 'light' }: { plan: Plan; variant
         setError('The investment route is not available yet.')
         return
       }
+      clearPendingPlan()
+      await mutate((key) => typeof key === 'string' && key.startsWith('member-investments-'))
       setMessage('Investment created. It will appear in your portfolio.')
       setAmount('')
     } catch (cause) {

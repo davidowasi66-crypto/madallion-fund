@@ -26,7 +26,8 @@ async function loadDestination() {
   try {
     return unwrapDestination(await getPayoutDestination())
   } catch (error) {
-    if (error instanceof Error && /^404\b/.test(error.message)) return null
+    const message = error instanceof Error ? error.message : String(error ?? '')
+    if (/^404\b/.test(message) || /Unable to locate var: .*payout_destination/i.test(message)) return null
     throw error
   }
 }
@@ -54,13 +55,13 @@ export function PayoutDestinationCard({ onReady }: { onReady: (ready: boolean) =
     setSaveError('')
     setSavedMessage('')
     const digits = accountNumber.replace(/\D/g, '')
-    if (!bankName.trim() || !accountName.trim() || !/^\d{10}$/.test(digits)) {
-      setSaveError('Enter the bank name, account holder name, and a valid 10-digit account number.')
+    if (!bankName.trim() || !bankCode.trim() || !accountName.trim() || !/^\d{10}$/.test(digits)) {
+      setSaveError('Enter the bank name, bank code, account holder name, and a valid 10-digit account number.')
       return
     }
     const payload: PayoutDestinationInput = {
       bank_name: bankName.trim(),
-      ...(bankCode.trim() ? { bank_code: bankCode.trim() } : {}),
+      bank_code: bankCode.trim(),
       account_name: accountName.trim(),
       account_number: digits,
     }
@@ -122,8 +123,8 @@ export function PayoutDestinationCard({ onReady }: { onReady: (ready: boolean) =
             <input id="payout-bank-name" required autoComplete="organization" value={bankName} onChange={(event) => setBankName(event.target.value)} className="rounded-xl border border-[#dfe8e2] px-3 py-2.5 text-sm text-[#172d25] outline-none focus:border-[#65a85c] focus:ring-2 focus:ring-[#65a85c]/20" />
           </label>
           <label className="flex flex-col gap-1 text-xs font-medium text-[#40544d]" htmlFor="payout-bank-code">
-            Bank code <span className="font-normal text-[#708079]">(optional)</span>
-            <input id="payout-bank-code" autoComplete="off" value={bankCode} onChange={(event) => setBankCode(event.target.value)} className="rounded-xl border border-[#dfe8e2] px-3 py-2.5 text-sm text-[#172d25] outline-none focus:border-[#65a85c] focus:ring-2 focus:ring-[#65a85c]/20" />
+            Bank code
+            <input id="payout-bank-code" required autoComplete="off" value={bankCode} onChange={(event) => setBankCode(event.target.value)} className="rounded-xl border border-[#dfe8e2] px-3 py-2.5 text-sm text-[#172d25] outline-none focus:border-[#65a85c] focus:ring-2 focus:ring-[#65a85c]/20" />
           </label>
           <label className="flex flex-col gap-1 text-xs font-medium text-[#40544d]" htmlFor="payout-account-name">
             Account name

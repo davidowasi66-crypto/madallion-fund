@@ -390,7 +390,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="mt-2">
-            <MemberMaturityPreview />
+            <MemberMaturityPreview walletBalance={balance} />
           </div>
 
           <section className="mt-6 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm">
