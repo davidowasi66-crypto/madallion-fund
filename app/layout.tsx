@@ -6,8 +6,15 @@ import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Madallion fund — Thoughtful investing for Nigeria',
-  description: 'Build wealth with thoughtfully designed investment plans, transparent returns, and a team that keeps you informed at every step.',
+  title: 'Madallion Fund — NGN Investment Plans with Clear Terms',
+  description:
+    'Compare daily rates, terms, minimums, and maturity dates before you invest. Track deposits, accruals, and payouts in a ledger-backed account.',
+  openGraph: {
+    title: 'Madallion Fund — NGN Investment Plans with Clear Terms',
+    description:
+      'Compare plan terms before you commit and track every deposit, accrual, and payout in one account.',
+    type: 'website',
+  },
   generator: 'v0.app',
   icons: {
     icon: [

@@ -23,6 +23,7 @@ export const DEFAULT_PLANS: Plan[] = [
     max_amount: 4_900_000,
     principal_returned: true,
     status: 'active',
+    featured: true,
   },
   {
     id: -3,

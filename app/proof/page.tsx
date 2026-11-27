@@ -1,5 +1,6 @@
 import Link from 'next/link'
 import { ActivityTicker } from '@/components/activity-ticker'
+import { PaymentProofGallery } from '@/components/payment-proof-gallery'
 
 export default function ProofPage() {
   return (
@@ -16,6 +17,7 @@ export default function ProofPage() {
         <section className="mt-10 overflow-hidden rounded-[2rem] border border-[#dfe8e2] bg-white p-4 shadow-sm sm:p-6" aria-label="Recent ledger activity">
           <ActivityTicker variant="landing" />
         </section>
+        <PaymentProofGallery />
         <Link href="/register" className="mt-8 inline-flex rounded-xl bg-[#0b4537] px-5 py-3 text-sm font-semibold text-white">
           Create your account
         </Link>

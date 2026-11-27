@@ -26,7 +26,9 @@ import { InvestmentCertificate } from '@/components/investment-certificate'
 import { PayoutDestinationCard } from '@/components/payout-destination-card'
 import { FeeBreakdown } from '@/components/fee-breakdown'
 import { MaturityActions } from '@/components/maturity-actions'
+import { MaturityNudges } from '@/components/maturity-nudges'
 import { DepositProof } from '@/components/deposit-proof'
+import { WithdrawalProof } from '@/components/withdrawal-proof'
 
 type Section = 'investments' | 'wallet' | 'activity'
 type Row = Record<string, any>
@@ -66,6 +68,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
   const [submitting, setSubmitting] = useState(false)
   const [actionMessage, setActionMessage] = useState('')
   const [payoutReady, setPayoutReady] = useState(false)
+  const [planContext, setPlanContext] = useState('')
   const handlePayoutReady = useCallback((ready: boolean) => setPayoutReady(ready), [])
   const [accountDetail, setAccountDetail] = useState<{ account: Row; entries: Row[] } | null>(null)
   const [accountLoading, setAccountLoading] = useState(false)
@@ -91,11 +94,22 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
   }
 
   useEffect(() => {
+    const params = new URLSearchParams(window.location.search)
+    const requestedMode = params.get('mode')
+    if (requestedMode === 'deposit' || requestedMode === 'withdraw') setMode(requestedMode)
+    const requestedAmount = Number((params.get('amount') ?? '').replace(/[^0-9.]/g, ''))
+    if (Number.isFinite(requestedAmount) && requestedAmount > 0) setAmount(String(requestedAmount))
+    const plan = params.get('plan')?.trim()
+    if (plan) setPlanContext(plan)
+  }, [])
+
+  useEffect(() => {
     let mounted = true
     async function load() {
       if (!getXanoSession()?.authenticated) {
         clearXanoSession()
-        router.replace(`/login?next=/dashboard/${section}`)
+        const next = `/dashboard/${section}${window.location.search}`
+        router.replace(`/login?next=${encodeURIComponent(next)}`)
         return
       }
       try {
@@ -117,7 +131,8 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
         const message = cause instanceof Error ? cause.message : 'Unable to load this workspace page.'
         if (authFailure(message)) {
           clearXanoSession()
-          router.replace(`/login?next=/dashboard/${section}`)
+          const next = `/dashboard/${section}${window.location.search}`
+          router.replace(`/login?next=${encodeURIComponent(next)}`)
           return
         }
         setError(memberSafeError(cause, 'Unable to load this workspace page.'))
@@ -277,6 +292,11 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                         ? 'Move money into your Madallion ledger'
                         : 'Request a payout to your linked bank'}
                     </p>
+                    {planContext && mode === 'deposit' && (
+                      <p className="mt-2 rounded-xl bg-white/10 px-3 py-2 text-[11px] leading-5 text-[#dcebe4]">
+                        Funding plan #{planContext}. After the deposit clears, activate it from the plan table.
+                      </p>
+                    )}
                   </div>
                   <Link
                     href="/dashboard/activity"
@@ -524,6 +544,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
               {!loading && section === 'investments' && (
                 <div className="mt-6 space-y-6">
                   <PortfolioSummary investments={investments} />
+                  <MaturityNudges investments={investments} />
                   {investments.length === 0 ? (
                     <div className="rounded-3xl border border-dashed border-[#dfe8e2] bg-white p-7 lg:border-white/10 lg:bg-transparent">
                       <p className="font-medium text-[#0b4537] lg:text-white">No investments yet</p>
@@ -541,7 +562,11 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                   ) : (
                     <div className="grid gap-4">
                       {investments.map((investment, index) => (
-                        <div key={investment.id ?? index} className="space-y-3">
+                        <div
+                          key={investment.id ?? index}
+                          id={investment.id != null ? `investment-${investment.id}` : undefined}
+                          className="scroll-mt-24 space-y-3"
+                        >
                           <MaturityProgressBar investment={investment} />
                           <MaturityActions investment={investment} />
                           <AutoCompoundToggle investment={investment} />
@@ -577,6 +602,8 @@ function Transaction({ row }: { row: Row }) {
   const label = String(row.description ?? row.reference ?? row.type ?? 'Ledger transaction')
   const created = row.created_at ?? row.createdAt ?? row.date
   const timestamp = created ? (Number(created) < 1e12 ? Number(created) * 1000 : created) : null
+  const kind = String(row.type ?? row.kind ?? row.description ?? '').toLowerCase()
+  const shareablePayout = /withdraw|cash.?out|payout|disburs/.test(kind)
   return (
     <article className="flex items-center justify-between gap-4 py-4">
       <div className="flex min-w-0 items-center gap-3">
@@ -596,7 +623,10 @@ function Transaction({ row }: { row: Row }) {
           </p>
         </div>
       </div>
-      <p className="whitespace-nowrap text-sm font-semibold text-[#0b4537] lg:text-white">{toMoney(Math.abs(amount), '₦0')}</p>
+      <div className="flex shrink-0 flex-col items-end gap-1">
+        <p className="whitespace-nowrap text-sm font-semibold text-[#0b4537] lg:text-white">{toMoney(Math.abs(amount), '₦0')}</p>
+        {shareablePayout && <WithdrawalProof transaction={row} />}
+      </div>
     </article>
   )
 }

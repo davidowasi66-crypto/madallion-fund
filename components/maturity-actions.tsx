@@ -1,7 +1,8 @@
 'use client'
 
+import Link from 'next/link'
 import { useState } from 'react'
-import { CalendarClock, RotateCw, Wallet } from 'lucide-react'
+import { Bell, CalendarClock, RotateCw, Wallet } from 'lucide-react'
 import type { Investment } from '@/lib/investment-api'
 import { resolveMaturity, setAutoRollover, type MaturityResolutionAction } from '@/lib/investment-controls-api'
 import { memberSafeError } from '@/lib/member-routes'
@@ -165,6 +166,9 @@ export function MaturityActions({ investment }: { investment: Investment }) {
 
       {message && <p role="status" className="mt-3 text-xs text-[#2f7a4a]">{message}</p>}
       {error && <p role="alert" className="mt-3 text-xs text-red-700">{error}</p>}
+      <Link href="/dashboard/notifications" className="mt-3 inline-flex items-center gap-1.5 text-[11px] font-semibold text-[#2f7a4a] underline">
+        <Bell size={11} aria-hidden="true" /> Maturity reminders
+      </Link>
     </section>
   )
 }
