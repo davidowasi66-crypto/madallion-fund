@@ -1,6 +1,7 @@
 import { Analytics } from '@vercel/analytics/next'
 import { ReferralCapture } from '@/components/referral-capture'
 import { SessionTokenCleanup } from '@/components/session-token-cleanup'
+import { TelegramCommunity } from '@/components/telegram-community'
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
 
@@ -45,6 +46,7 @@ export default function RootLayout({
         <ReferralCapture />
         <SessionTokenCleanup />
         {children}
+        <TelegramCommunity />
         {process.env.NODE_ENV === 'production' && <Analytics />}
       </body>
     </html>
