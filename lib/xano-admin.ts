@@ -164,43 +164,117 @@ export type AdminDashboardResponse = z.infer<typeof AdminDashboardResponseSchema
 // 3. /api:yYNRHo4K/fn_admin_pending
 // ============================================================================
 
-export const AdminPendingUserSchema = z.object({
-  id: z.number(),
-  name: z.string(),
-  email: z.string().nullable().optional(),
-  created_at: z.number().nullable().optional(),
-})
+const decodeJsonValue = (value: unknown): unknown => {
+  let current = value
+  for (let depth = 0; depth < 2 && typeof current === "string"; depth++) {
+    const trimmed = current.trim()
+    if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) break
+    try {
+      current = JSON.parse(trimmed)
+    } catch {
+      break
+    }
+  }
+  return current
+}
+
+const objectValue = (value: unknown): Record<string, unknown> | undefined => {
+  const decoded = decodeJsonValue(value)
+  return decoded && typeof decoded === "object" && !Array.isArray(decoded)
+    ? decoded as Record<string, unknown>
+    : undefined
+}
+
+const arrayValue = (value: unknown): unknown[] => {
+  const rows = (items: unknown[]) => items
+    .map(decodeJsonValue)
+    .filter((item): item is Record<string, unknown> => Boolean(item) && typeof item === "object" && !Array.isArray(item))
+  const decoded = decodeJsonValue(value)
+  if (Array.isArray(decoded)) return rows(decoded)
+  const object = objectValue(decoded)
+  if (!object) return []
+  for (const key of ["items", "data", "rows", "records"]) {
+    const nested = decodeJsonValue(object[key])
+    if (Array.isArray(nested)) return rows(nested)
+  }
+  return []
+}
+
+const booleanValue = (value: unknown): boolean => {
+  if (typeof value === "boolean") return value
+  if (typeof value === "number") return value !== 0
+  return ["true", "1", "yes"].includes(String(value ?? "").trim().toLowerCase())
+}
+
+const optionalNumber = z.preprocess(
+  (value) => value === null || value === "" ? undefined : value,
+  z.coerce.number().optional(),
+)
+
+const timestampValue = (value: unknown): number | undefined => {
+  if (value === null || value === undefined || value === "") return undefined
+  const numeric = Number(value)
+  if (Number.isFinite(numeric) && numeric > 0) return numeric
+  const parsed = Date.parse(String(value))
+  return Number.isNaN(parsed) ? undefined : parsed
+}
+
+const optionalTimestamp = z.preprocess(timestampValue, z.number().optional())
+
+export const AdminPendingUserSchema = z.preprocess(objectValue, z.object({
+  id: z.coerce.number().catch(0),
+  name: z.string().nullish().transform((value) => value ?? "Unknown"),
+  email: z.string().nullish(),
+  created_at: optionalTimestamp,
+}).passthrough().nullish())
 
 export const AdminPendingItemSchema = z.object({
-  id: z.number(),
-  reference: z.string(),
-  description: z.string(),
-  amount: z.number(),
-  currency: z.string(),
-  status: z.string(),
-  created_at: z.number(),
-  age_seconds: z.number(),
-  is_overdue: z.boolean(),
-  user: AdminPendingUserSchema.nullable(),
-  method: z.string(),
-  gateway_ref: z.string(),
-  tx_hash: z.string(),
-  risk_flags: z.array(z.any()),
+  id: z.coerce.number().catch(0),
+  reference: z.string().nullish().transform((value) => value ?? ""),
+  description: z.string().nullish().transform((value) => value ?? ""),
+  amount: z.coerce.number().catch(0),
+  currency: z.string().nullish().transform((value) => value ?? "NGN"),
+  status: z.string().nullish().transform((value) => value ?? "pending"),
+  created_at: z.preprocess(timestampValue, z.number().catch(0)),
+  age_seconds: z.coerce.number().catch(0),
+  is_overdue: z.preprocess(booleanValue, z.boolean().catch(false)),
+  user: AdminPendingUserSchema,
+  method: z.string().nullish(),
+  gateway_ref: z.string().nullish(),
+  tx_hash: z.string().nullish(),
+  risk_flags: z.preprocess(decodeJsonValue, z.array(z.any()).catch([])),
   channel: z.string().nullish(),
   partner_name: z.string().nullish(),
   partner_reference: z.string().nullish(),
   proof_url: z.string().nullish(),
-})
+}).passthrough()
 
-export const AdminPendingResponseSchema = z.object({
-  kind: z.enum(["deposits", "withdrawals"]),
+export const AdminPendingResponseSchema = z.preprocess((response) => {
+  const decoded = decodeJsonValue(response)
+  if (Array.isArray(decoded)) return { items: decoded }
+  const payload = objectValue(decoded) ?? {}
+  const source = objectValue(payload.data) ?? payload
+  const items = arrayValue(source.items ?? source.data ?? payload.items ?? payload.data ?? decoded)
+  return {
+    ...payload,
+    ...source,
+    kind: source.kind ?? source.p_kind ?? payload.kind ?? payload.p_kind,
+    items,
+    curPage: source.curPage ?? source.cur_page ?? source.page ?? payload.page,
+    nextPage: source.nextPage ?? source.next_page ?? payload.next_page,
+    prevPage: source.prevPage ?? source.prev_page ?? payload.prev_page,
+    itemsReceived: source.itemsReceived ?? source.items_received ?? source.total_count ?? payload.total_count ?? items.length,
+    generated_at: source.generated_at ?? source.generatedAt ?? payload.generated_at ?? payload.generatedAt,
+  }
+}, z.object({
+  kind: z.string().nullish(),
   items: z.array(AdminPendingItemSchema),
-  curPage: z.number().nullable().optional(),
-  nextPage: z.number().nullable().optional(),
-  prevPage: z.number().nullable().optional(),
-  itemsReceived: z.number(),
-  generated_at: z.number(),
-})
+  curPage: optionalNumber,
+  nextPage: optionalNumber,
+  prevPage: optionalNumber,
+  itemsReceived: z.coerce.number().catch(0),
+  generated_at: optionalNumber,
+}).passthrough())
 
 export type AdminPendingResponse = z.infer<typeof AdminPendingResponseSchema>
 
@@ -226,31 +300,19 @@ export const AdminUserListItemSchema = z.object({
   deposits_count: z.coerce.number().catch(0),
 }).passthrough()
 
-const parseJsonContainer = (value: unknown): unknown => {
-  if (typeof value !== "string") return value
-  const trimmed = value.trim()
-  if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) return value
-
-  try {
-    return JSON.parse(trimmed)
-  } catch {
-    return value
-  }
-}
-
 export const AdminUserListResponseSchema = z.preprocess((response) => {
-  const decodedResponse = parseJsonContainer(response)
+  const decodedResponse = decodeJsonValue(response)
   if (Array.isArray(decodedResponse)) return { items: decodedResponse }
   if (!decodedResponse || typeof decodedResponse !== "object") return decodedResponse
 
   const payload = decodedResponse as Record<string, unknown>
-  const decodedData = parseJsonContainer(payload.data)
+  const decodedData = decodeJsonValue(payload.data)
   const nested = decodedData && typeof decodedData === "object" && !Array.isArray(decodedData)
     ? decodedData as Record<string, unknown>
     : undefined
   const source = nested ?? payload
   const itemCandidates = [source.items, source.users, source.records, source.data, decodedData]
-    .map(parseJsonContainer)
+    .map(decodeJsonValue)
   const items = itemCandidates.find(Array.isArray)
 
   return {
@@ -278,41 +340,57 @@ export type AdminUserListResponse = z.infer<typeof AdminUserListResponseSchema>
 // 5. /api:yYNRHo4K/fn_admin_investments
 // ============================================================================
 
-export const AdminInvestmentItemSchema = z.object({
-  id: z.number(),
-  user: z
-    .object({
-      id: z.number(),
-      name: z.string(),
-      email: z.string().nullable().optional(),
-    })
-    .nullable(),
-  plan: z
-    .object({
-      id: z.number(),
-      name: z.string(),
-      daily_rate_bps: z.number(),
-      duration_days: z.number(),
-    })
-    .nullable(),
-  principal: z.number(),
-  daily_rate_bps: z.number(),
-  currency: z.string(),
-  status: z.enum(["active", "completed", "cancelled"]).nullable().optional(),
-  accrued_total: z.number().nullable().optional(),
-  created_at: z.number().nullable().optional(),
-  ends_at: z.number(),
-  last_accrual_at: z.number().nullable().optional(),
-})
+export const AdminInvestmentUserSchema = z.preprocess(objectValue, z.object({
+  id: z.coerce.number().catch(0),
+  name: z.string().nullish().transform((value) => value ?? "Unknown"),
+  email: z.string().nullish(),
+}).passthrough().nullish())
 
-export const AdminInvestmentsResponseSchema = z.object({
+export const AdminInvestmentPlanSchema = z.preprocess(objectValue, z.object({
+  id: z.coerce.number().catch(0),
+  name: z.string().nullish().transform((value) => value ?? "Unassigned plan"),
+  daily_rate_bps: z.coerce.number().catch(0),
+  duration_days: z.coerce.number().catch(0),
+}).passthrough().nullish())
+
+export const AdminInvestmentItemSchema = z.object({
+  id: z.coerce.number().catch(0),
+  user: AdminInvestmentUserSchema,
+  plan: AdminInvestmentPlanSchema,
+  principal: z.coerce.number().catch(0),
+  daily_rate_bps: optionalNumber,
+  currency: z.string().nullish().transform((value) => value ?? "NGN"),
+  status: z.string().nullish(),
+  accrued_total: optionalNumber,
+  created_at: optionalTimestamp,
+  ends_at: optionalTimestamp,
+  last_accrual_at: optionalTimestamp,
+}).passthrough()
+
+export const AdminInvestmentsResponseSchema = z.preprocess((response) => {
+  const decoded = decodeJsonValue(response)
+  if (Array.isArray(decoded)) return { items: decoded }
+  const payload = objectValue(decoded) ?? {}
+  const source = objectValue(payload.data) ?? payload
+  const items = arrayValue(source.items ?? source.data ?? payload.items ?? payload.data ?? decoded)
+  return {
+    ...payload,
+    ...source,
+    items,
+    curPage: source.curPage ?? source.cur_page ?? source.page ?? payload.page,
+    nextPage: source.nextPage ?? source.next_page ?? payload.next_page,
+    prevPage: source.prevPage ?? source.prev_page ?? payload.prev_page,
+    itemsReceived: source.itemsReceived ?? source.items_received ?? source.total_count ?? payload.total_count ?? items.length,
+    generated_at: source.generated_at ?? source.generatedAt ?? payload.generated_at ?? payload.generatedAt,
+  }
+}, z.object({
   items: z.array(AdminInvestmentItemSchema),
-  curPage: z.number().nullable().optional(),
-  nextPage: z.number().nullable().optional(),
-  prevPage: z.number().nullable().optional(),
-  itemsReceived: z.number(),
-  generated_at: z.number(),
-})
+  curPage: optionalNumber,
+  nextPage: optionalNumber,
+  prevPage: optionalNumber,
+  itemsReceived: z.coerce.number().catch(0),
+  generated_at: optionalNumber,
+}).passthrough())
 
 export type AdminInvestmentsResponse = z.infer<typeof AdminInvestmentsResponseSchema>
 
