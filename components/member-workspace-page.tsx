@@ -377,6 +377,10 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
             </header>
 
             <div className="mx-auto max-w-lg bg-[#f6f1e8] px-5 pb-8 sm:px-8">
+              <div className="space-y-3 pt-4">
+                <ActivityTicker variant="memberHeader" />
+                <ActivityTicker variant="member" />
+              </div>
 
               {mode === 'withdraw' && (
                 <>
