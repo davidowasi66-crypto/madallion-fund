@@ -149,7 +149,7 @@ export default function Home() {
   const closeMenu = () => setMenuOpen(false)
 
   return (
-    <main className="min-h-screen overflow-hidden bg-[#fbfcfa] pb-24 text-[#101d1a] lg:pb-0">
+    <main className="min-h-screen overflow-x-clip bg-[#fbfcfa] pb-24 text-[#101d1a] lg:pb-0">
       <div className="bg-[#0b4537] text-white">
         <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 px-5 py-2 text-center text-[10px] font-semibold tracking-[.08em] text-white/80 sm:text-[11px] lg:px-8">
           <ShieldCheck size={13} className="shrink-0 text-[#b9f47f]" aria-hidden="true" />

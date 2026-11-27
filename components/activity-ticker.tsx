@@ -1,8 +1,9 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import useSWR from 'swr'
-import { xanoRequest } from '@/lib/xano-auth'
+import { getXanoSession, xanoRequest } from '@/lib/xano-auth'
 import { antiThrottleSwrConfig } from '@/lib/swr'
 
 type ActivityKind = 'Deposit' | 'Withdrawal' | 'Payout'
@@ -159,13 +160,41 @@ const SAMPLE_KINDS: ActivityKind[] = [
   'Withdrawal',
 ]
 
+// Mix recent and older activity so the first screen already shows day-scale ages.
+const SAMPLE_AGES = [
+  18,
+  2 * 86_400,
+  95,
+  4 * 86_400,
+  240,
+  6 * 86_400,
+  600,
+  8 * 86_400,
+  1_500,
+  11 * 86_400,
+  3_600,
+  14 * 86_400,
+  2 * 3_600,
+  18 * 86_400,
+  4 * 3_600,
+  23 * 86_400,
+  7 * 3_600,
+  29 * 86_400,
+  11 * 3_600,
+  37 * 86_400,
+  16 * 3_600,
+  22 * 3_600,
+  86_400 + 3_600,
+  3 * 86_400,
+]
+
 function sampleActivity(now: number): ActivityItem[] {
   return Array.from({ length: 24 }, (_, index) => ({
     id: `sample-${index}`,
     displayName: maskName(SAMPLE_NAMES[index % SAMPLE_NAMES.length] ?? 'Member'),
     type: SAMPLE_KINDS[index % SAMPLE_KINDS.length] ?? 'Payout',
     amount: SAMPLE_AMOUNTS[(index * 3 + 1) % SAMPLE_AMOUNTS.length] ?? 50_000,
-    createdAt: now - (index * 37 + 24) * 1000,
+    createdAt: now - (SAMPLE_AGES[index] ?? 86_400) * 1000,
   }))
 }
 
@@ -206,6 +235,8 @@ function ActivityCard({ item, now, sample }: { item: ActivityItem; now: number; 
 export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
   const isMember = variant === 'member'
   const isHeader = variant === 'header'
+  const pathname = usePathname()
+  const [authenticated, setAuthenticated] = useState(false)
   const [mounted, setMounted] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const [sampleAnchor] = useState(() => Date.now())
@@ -213,6 +244,7 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
 
   useEffect(() => {
     setMounted(true)
+    setAuthenticated(Boolean(getXanoSession()?.authenticated))
   }, [])
 
   const { data: liveItems = [], isLoading } = useSWR<ActivityItem[]>(
@@ -246,6 +278,9 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
   const half = useMemo(() => repeatToFill(items), [items])
   const rows = isMember ? items.slice(0, 6) : []
   const badge = usingLive ? 'Live' : showSample ? 'Sample' : 'Awaiting feed'
+  const memberArea = /^\/(dashboard|admin|affiliate)/.test(pathname ?? '')
+
+  if (isHeader && authenticated && memberArea) return null
 
   if (isHeader) {
     return (
