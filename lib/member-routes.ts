@@ -102,7 +102,10 @@ export async function getReferralCredits(): Promise<ReferralCredits | null> {
     }
   } catch (cause) {
     const message = cause instanceof Error ? cause.message : String(cause)
-    if (/(?:^|\D)404(?:\D|$)|not found/i.test(message)) return null
+    // A missing credit record is not an error for a new member; show zero rather than "unavailable".
+    if (/(?:^|\D)404(?:\D|$)|not found/i.test(message)) {
+      return { available: 0, pending_hold: 0, lifetime: 0, cap: 0, currency: 'NGN', qualified: 0, referrals: 0 }
+    }
     throw cause
   }
 }

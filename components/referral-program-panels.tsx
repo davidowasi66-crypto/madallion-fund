@@ -75,7 +75,7 @@ export function ReferralCreditsHistory() {
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 id="referral-history-title" className="text-lg font-semibold text-[#0b4537]">Credit summary</h2>
-          <p className="mt-1 text-xs text-[#708079]">Commission available now, on hold, and earned over the life of your account.</p>
+          <p className="mt-1 text-xs leading-5 text-[#708079]">Commission available now, on hold, and earned over the life of your account. Credit is earned when an invited member opens an account and makes a deposit or subscribes to a plan.</p>
         </div>
         <Wallet size={18} className="shrink-0 text-[#65a85c]" aria-hidden="true" />
       </div>
@@ -117,7 +117,9 @@ export function ReferralCreditsHistory() {
                 <p className="mt-1 text-sm font-semibold text-[#0b4537]">
                   {data.pending_hold > 0 ? 'Some credit is still on hold' : 'No credit on hold'}
                 </p>
-                <p className="mt-1 text-[11px] text-[#829088]">Commission becomes available after each referral qualifies.</p>
+                <p className="mt-1 text-[11px] text-[#829088]">
+                  Commission becomes available after the invited member opens an account and makes a deposit or subscribes to a plan.
+                </p>
               </div>
             </div>
 

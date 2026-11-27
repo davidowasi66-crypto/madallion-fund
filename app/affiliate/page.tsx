@@ -150,12 +150,12 @@ export default function AffiliatePage() {
             </Link>
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#b9f47f]/90">Referrals</p>
             <span className="rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-[#dcebe4]">
-              {myStats.available ? money(myStats.earned) : '—'}
+              {myStats.available ? money(myStats.earned) : credits ? money(credits.lifetime, credits.currency) : '—'}
             </span>
           </div>
           <h1 className="mt-6 text-3xl font-semibold tracking-tight">Invite & earn</h1>
           <p className="mt-2 max-w-sm text-sm leading-6 text-[#a8c7b8]">
-            Grow your network and earn referral commission when people you invite qualify under programme rules.
+            Earn commission when someone you invite opens an account and makes a deposit or subscribes to any plan.
           </p>
         </div>
       </div>
@@ -191,6 +191,28 @@ export default function AffiliatePage() {
           )}
         </section>
 
+        <section className="mt-4 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm" aria-labelledby="referral-terms-title">
+          <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#65a85c]">Commission terms</p>
+          <h2 id="referral-terms-title" className="mt-1 text-lg font-semibold text-[#0b4537]">How you earn</h2>
+          <ol className="mt-4 space-y-3">
+            {[
+              'Someone opens an account using your invite link or code.',
+              'They make a deposit or subscribe to any plan.',
+              'Once that qualifies, your commission is added to your referral credit.',
+            ].map((step, index) => (
+              <li key={step} className="flex gap-3">
+                <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[#eef7eb] text-[11px] font-bold text-[#0b4537]">
+                  {index + 1}
+                </span>
+                <p className="pt-0.5 text-xs leading-5 text-[#60716b]">{step}</p>
+              </li>
+            ))}
+          </ol>
+          <p className="mt-4 rounded-xl bg-[#f4f8f3] px-3 py-2 text-[11px] leading-5 text-[#60716b]">
+            A signup alone does not earn commission. Admin controls the rates, hold period, and what counts as a qualifying deposit or plan subscription.
+          </p>
+        </section>
+
         {hasSession && (
           <div className="mt-4">
             <ActivityTicker variant="memberHeader" />
@@ -201,19 +223,19 @@ export default function AffiliatePage() {
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div className="rounded-2xl bg-[#0b4537] p-4 text-white">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8fbfa8]">Leaderboard earnings</p>
-            <p className="mt-2 text-xl font-semibold">{myStats.available ? money(myStats.earned) : '—'}</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8fbfa8]">Commission earned</p>
+            <p className="mt-2 text-xl font-semibold">{myStats.available ? money(myStats.earned) : credits ? money(credits.lifetime, credits.currency) : '—'}</p>
           </div>
           <div className="rounded-2xl border border-[#dfe8e2] bg-white p-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#65a85c]">Referrals</p>
-            <p className="mt-2 text-xl font-semibold text-[#0b4537]">{myStats.available ? myStats.referrals : '—'}</p>
+            <p className="mt-2 text-xl font-semibold text-[#0b4537]">{myStats.available ? myStats.referrals : credits?.referrals != null ? credits.referrals : '—'}</p>
           </div>
           <div className="rounded-2xl border border-[#dfe8e2] bg-white p-4">
             <div className="flex items-center gap-2 text-[#65a85c]">
               <Users size={14} />
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em]">Active</p>
             </div>
-            <p className="mt-2 text-xl font-semibold text-[#0b4537]">{myStats.available ? myStats.referrals : '—'}</p>
+            <p className="mt-2 text-xl font-semibold text-[#0b4537]">{myStats.available ? myStats.referrals : credits?.referrals != null ? credits.referrals : '—'}</p>
           </div>
           <div className="rounded-2xl border border-[#dfe8e2] bg-white p-4">
             <div className="flex items-center gap-2 text-[#65a85c]">
@@ -248,7 +270,9 @@ export default function AffiliatePage() {
               : creditsLoading
                 ? 'Loading your latest ledger credits.'
                 : credits
-                  ? 'Balances come from the referral ledger and update as qualified invites are recorded.'
+                  ? credits.lifetime > 0 || credits.available > 0 || credits.pending_hold > 0
+                    ? 'Balances come from the referral ledger and update as qualified invites are recorded.'
+                    : 'No commission yet. Credit appears after an invited member opens an account and makes a deposit or subscribes to any plan.'
                   : 'Credit details are temporarily unavailable. Your invite link remains ready to share.'}
           </p>
         </section>
@@ -289,8 +313,8 @@ export default function AffiliatePage() {
             ))}
           </ul>
           <p className="mt-3 rounded-xl bg-[#f4f8f3] px-3 py-2 text-[11px] leading-4 text-[#60716b]">
-            You earn when someone you invited qualifies under programme rules. Rates and eligibility are controlled
-            from admin — not fixed in this screen.
+            You earn when someone you invited opens an account and makes a deposit or subscribes to any plan. Rates,
+            hold periods, and eligibility are controlled from admin — not fixed in this screen.
           </p>
         </section>
 
