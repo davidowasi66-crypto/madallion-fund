@@ -215,6 +215,7 @@ export default function DashboardPage() {
     return (
       <main className="min-h-screen bg-[#071a18] px-5 py-5 text-[#dcebe4]">
         <div className="mx-auto w-full max-w-7xl">
+          <ActivityTicker variant="memberHeader" />
           <ActivityTicker variant="member" />
           <p className="mt-6 text-center text-sm text-[#9ab8ab]">Loading your account…</p>
         </div>
@@ -360,7 +361,8 @@ export default function DashboardPage() {
         </header>
 
         <div className="mx-auto max-w-3xl px-5 sm:px-8">
-          <div className="pt-4">
+          <div className="space-y-3 pt-4">
+            <ActivityTicker variant="memberHeader" />
             <ActivityTicker variant="member" />
           </div>
           {error && (

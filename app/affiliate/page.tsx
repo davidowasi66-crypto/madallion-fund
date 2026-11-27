@@ -8,6 +8,7 @@ import { getXanoSession, xanoMe } from '@/lib/xano-auth'
 import { getReferralCredits, getReferralMe } from '@/lib/member-routes'
 import { getReferralLeaderboard } from '@/lib/investment-api'
 import { MemberTabBar } from '@/components/member-tab-bar'
+import { ActivityTicker } from '@/components/activity-ticker'
 import { ReferralCreditsHistory, ReferralTierProgress } from '@/components/referral-program-panels'
 import { ReferralShareActions } from '@/components/referral-share-actions'
 
@@ -189,6 +190,13 @@ export default function AffiliatePage() {
             </Link>
           )}
         </section>
+
+        {hasSession && (
+          <div className="mt-4 space-y-3">
+            <ActivityTicker variant="memberHeader" />
+            <ActivityTicker variant="member" />
+          </div>
+        )}
 
         {hasSession && <ReferralShareActions inviteUrl={inviteUrl} code={inviteCode} />}
 

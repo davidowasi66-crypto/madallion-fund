@@ -8,6 +8,7 @@ import { PlanCalculator } from '@/components/investment-widgets'
 import { getPlans, PLANS_KEY } from '@/lib/investment-api'
 import { getXanoSession } from '@/lib/xano-auth'
 import { MemberTabBar } from '@/components/member-tab-bar'
+import { ActivityTicker } from '@/components/activity-ticker'
 
 export default function PlansPage() {
   const [hasSession, setHasSession] = useState(false)
@@ -27,6 +28,9 @@ export default function PlansPage() {
         <Link href="/" className="font-bold text-[#0b4537]">
           Madallion fund
         </Link>
+        <div className="mt-4">
+          <ActivityTicker variant="header" />
+        </div>
         <div className="mt-12 max-w-2xl sm:mt-20">
           <p className="text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">Live plan table</p>
           <h1 className="mt-3 text-5xl font-semibold tracking-[-.06em] text-[#0b4537]">
@@ -35,6 +39,9 @@ export default function PlansPage() {
           <p className="mt-5 text-lg leading-8 text-[#60716b]">
             Plan terms and availability are loaded from the investment system, so every page stays in sync. Any usage limits attach to an investment plan; they are not separate membership subscriptions.
           </p>
+        </div>
+        <div className="mt-8">
+          <ActivityTicker variant="landing" />
         </div>
         {isLoading ? (
           <p className="mt-12 text-sm text-[#60716b]">Loading available plans…</p>

@@ -103,6 +103,10 @@ img, svg, video { max-width: 100%; }
 .activity-marquee:focus-within {
   animation-play-state: paused;
 }
+.activity-marquee-mask {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
+  mask-image: linear-gradient(to right, transparent, #000 4%, #000 96%, transparent);
+}
 @media (prefers-reduced-motion: reduce) {
   .activity-marquee { animation: none; }
 }

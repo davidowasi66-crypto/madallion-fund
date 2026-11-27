@@ -1,9 +1,8 @@
 'use client'
 
 import { useEffect, useMemo, useState } from 'react'
-import { usePathname } from 'next/navigation'
 import useSWR from 'swr'
-import { getXanoSession, xanoRequest } from '@/lib/xano-auth'
+import { xanoRequest } from '@/lib/xano-auth'
 import { antiThrottleSwrConfig } from '@/lib/swr'
 
 type ActivityKind = 'Deposit' | 'Withdrawal' | 'Payout'
@@ -15,7 +14,7 @@ type ActivityItem = {
   createdAt: number
 }
 type RawActivity = Record<string, any>
-type ActivityTickerProps = { variant?: 'landing' | 'member' | 'header' }
+type ActivityTickerProps = { variant?: 'landing' | 'member' | 'header' | 'memberHeader' }
 
 const MAX_LIVE = 12
 const MIN_MARQUEE_ITEMS = 12
@@ -213,6 +212,33 @@ function typeTone(type: ActivityKind) {
   return 'text-[#2f7a4a] bg-[#eef7eb]'
 }
 
+function memberTypeTone(type: ActivityKind) {
+  if (type === 'Withdrawal') return 'text-[#ffd38a] bg-[#3a2c1c]'
+  if (type === 'Deposit') return 'text-[#9ed7f2] bg-[#12303a]'
+  return 'text-[#b9f47f] bg-[#183e31]'
+}
+
+function MemberActivityCard({ item, now }: { item: ActivityItem; now: number }) {
+  return (
+    <article className="w-[272px] shrink-0 rounded-xl border border-white/10 bg-[#0e2b26] px-3 py-2.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.12em] ${memberTypeTone(item.type)}`}>
+          <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+          {item.type}
+        </span>
+        <time dateTime={new Date(item.createdAt).toISOString()} className="text-[10px] font-medium text-[#91b0a2]">
+          {relativeTime(item.createdAt, now)}
+        </time>
+      </div>
+      <p className="mt-1.5 truncate text-sm text-[#edf7f1]">
+        <span className="font-semibold">{item.displayName}</span>
+        <span className="text-[#91b0a2]"> {verb(item.type)} </span>
+        <span className="font-semibold tabular-nums text-[#b9f47f]">{naira(item.amount)}</span>
+      </p>
+    </article>
+  )
+}
+
 function ActivityCard({ item, now, sample }: { item: ActivityItem; now: number; sample: boolean }) {
   return (
     <article className="w-[224px] shrink-0 rounded-2xl border border-[#e7eee8] bg-[#f7faf6] p-3.5">
@@ -236,9 +262,8 @@ function ActivityCard({ item, now, sample }: { item: ActivityItem; now: number; 
 
 export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
   const isMember = variant === 'member'
-  const isHeader = variant === 'header'
-  const pathname = usePathname()
-  const [authenticated, setAuthenticated] = useState(false)
+  const isHeader = variant === 'header' || variant === 'memberHeader'
+  const isMemberHeader = variant === 'memberHeader'
   const [mounted, setMounted] = useState(false)
   const [now, setNow] = useState(() => Date.now())
   const [sampleAnchor] = useState(() => Date.now())
@@ -246,10 +271,9 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
 
   useEffect(() => {
     setMounted(true)
-    setAuthenticated(Boolean(getXanoSession()?.authenticated))
   }, [])
 
-  const { data: liveItems = [], isLoading } = useSWR<ActivityItem[]>(
+  const { data: liveItems = [] } = useSWR<ActivityItem[]>(
     'public-naira-activity-feed',
     async () => {
       try {
@@ -272,40 +296,39 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
   }, [])
 
   const usingLive = liveItems.length > 0
-  const showSample = !usingLive && !isMember
+  const showSample = !usingLive
   const items = useMemo(() => {
     if (isHeader) return usingLive ? [...liveItems.slice(0, 8), ...sampleItems.slice(0, 8)] : sampleItems
     return usingLive ? liveItems.slice(0, MAX_LIVE) : showSample ? sampleItems : []
   }, [isHeader, liveItems, sampleItems, showSample, usingLive])
   const half = useMemo(() => repeatToFill(items), [items])
-  const rows = isMember ? items.slice(0, 6) : []
   const badge = usingLive ? 'Live' : showSample ? 'Sample' : 'Awaiting feed'
-  const memberArea = /^\/(dashboard|admin|affiliate)/.test(pathname ?? '')
-
-  if (isHeader && authenticated && memberArea) return null
 
   if (isHeader) {
     return (
-      <div className="border-t border-[#dfe8e2]/80 bg-[#fbfcfa] py-2" aria-label="Recent member activity">
-        <div className="relative overflow-hidden">
+      <div
+        className={isMemberHeader ? 'border-y border-white/10 bg-[#0a211e] py-2' : 'border-t border-[#dfe8e2]/80 bg-[#fbfcfa] py-2'}
+        aria-label="Recent member activity"
+      >
+        <div className="relative overflow-hidden activity-marquee-mask">
           {mounted ? (
             <div className="activity-marquee flex w-max" style={{ animationDuration: `${Math.max(32, half.length * 3.2)}s` }}>
               {[0, 1].map((copy) => (
                 <div key={copy} className="flex shrink-0 items-center gap-6 pr-6" aria-hidden={copy === 1 ? true : undefined}>
                   {half.map((item, index) => (
-                    <span key={`${item.id}-header-${copy}-${index}`} className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] text-[#60716b]">
-                      <span className="size-1.5 rounded-full bg-[#65a85c]" aria-hidden="true" />
-                      <span className="font-semibold text-[#0b4537]">{item.displayName}</span>
-                      <span>{verb(item.type)}</span>
-                      <span className="font-semibold text-[#0b4537]">{naira(item.amount)}</span>
-                      <span className="text-[#9aa8a1]">· {relativeTime(item.createdAt, now)}</span>
+                    <span key={`${item.id}-header-${copy}-${index}`} className={`inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] ${isMemberHeader ? 'text-[#91b0a2]' : 'text-[#60716b]'}`}>
+                      <span className={`size-1.5 rounded-full ${isMemberHeader ? 'bg-[#b9f47f]' : 'bg-[#65a85c]'}`} aria-hidden="true" />
+                      <span className={`font-semibold ${isMemberHeader ? 'text-[#edf7f1]' : 'text-[#0b4537]'}`}>{item.displayName}</span>
+                      <span className={isMemberHeader ? 'text-[#91b0a2]' : undefined}>{verb(item.type)}</span>
+                      <span className={`font-semibold ${isMemberHeader ? 'text-[#b9f47f]' : 'text-[#0b4537]'}`}>{naira(item.amount)}</span>
+                      <span className={isMemberHeader ? 'text-[#789589]' : 'text-[#9aa8a1]'}>· {relativeTime(item.createdAt, now)}</span>
                     </span>
                   ))}
                 </div>
               ))}
             </div>
           ) : (
-            <div className="h-4 w-full animate-pulse rounded bg-[#eef4ec]" />
+            <div className={`h-4 w-full animate-pulse rounded ${isMemberHeader ? 'bg-[#12342d]' : 'bg-[#eef4ec]'}`} />
           )}
         </div>
       </div>
@@ -342,7 +365,9 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
                 ? 'inline-flex items-center gap-1.5 rounded-full border border-[#315448] bg-[#0d2c26] px-2.5 py-1 text-[10px] font-semibold text-[#b9f47f]'
                 : 'inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-800'
               : showSample
-                ? 'inline-flex items-center gap-1.5 rounded-full bg-[#fff4df] px-2.5 py-1 text-[10px] font-semibold text-[#8a5a00]'
+                ? isMember
+                  ? 'inline-flex items-center gap-1.5 rounded-full border border-[#5a4a2a] bg-[#2a2418] px-2.5 py-1 text-[10px] font-semibold text-[#ffd38a]'
+                  : 'inline-flex items-center gap-1.5 rounded-full bg-[#fff4df] px-2.5 py-1 text-[10px] font-semibold text-[#8a5a00]'
                 : isMember
                   ? 'inline-flex items-center gap-1.5 rounded-full border border-[#315448] bg-[#0d2c26] px-2.5 py-1 text-[10px] font-semibold text-[#91b0a2]'
                   : 'inline-flex items-center gap-1.5 rounded-full bg-[#f1f5f1] px-2.5 py-1 text-[10px] font-semibold text-[#708079]'
@@ -354,33 +379,27 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
       </div>
 
       {isMember ? (
-        <ul className="flex flex-col gap-1.5" aria-live="polite" aria-relevant="additions">
-          {rows.map((item) => (
-            <li
-              key={item.id}
-              className="flex min-h-11 items-center justify-between gap-3 rounded-xl bg-[#0e2b26] px-3 py-2 sm:px-3.5"
-            >
-              <p className="min-w-0 truncate text-sm text-[#edf7f1]">
-                <span className="font-semibold">{item.displayName}</span>
-                <span className="text-[#91b0a2]"> {verb(item.type)} </span>
-                <span className="font-semibold tabular-nums text-[#b9f47f]">{naira(item.amount)}</span>
-              </p>
-              <time dateTime={new Date(item.createdAt).toISOString()} className="shrink-0 text-[11px] font-medium text-[#91b0a2]">
-                {relativeTime(item.createdAt, now)}
-              </time>
-            </li>
-          ))}
-          {!rows.length && (isLoading || !mounted) && (
-            <li className="px-4 py-6 text-center text-sm text-[#91b0a2]">Loading activity…</li>
+        <div className="relative mt-3 overflow-hidden activity-marquee-mask" aria-live="polite" aria-relevant="additions">
+          {mounted ? (
+            <div className="activity-marquee flex w-max gap-2" style={{ animationDuration: `${Math.max(30, half.length * 3.4)}s` }}>
+              {[0, 1].map((copy) => (
+                <div key={copy} className="flex shrink-0 gap-2 pr-2" aria-hidden={copy === 1 ? true : undefined}>
+                  {half.map((item, index) => (
+                    <MemberActivityCard key={`${item.id}-member-${copy}-${index}`} item={item} now={now} />
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="flex gap-2">
+              {[0, 1, 2].map((index) => (
+                <div key={index} className="h-[62px] w-[272px] shrink-0 animate-pulse rounded-xl bg-[#12342d]" />
+              ))}
+            </div>
           )}
-          {!rows.length && mounted && !isLoading && (
-            <li className="px-4 py-6 text-center text-sm text-[#91b0a2]">
-              Public ledger activity will appear here when it is available. Only real, masked activity is shown.
-            </li>
-          )}
-        </ul>
+        </div>
       ) : (
-        <div className="relative mt-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="relative mt-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden activity-marquee-mask">
           {mounted ? (
             <div
               className="activity-marquee flex w-max"

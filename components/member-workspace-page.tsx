@@ -538,7 +538,8 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                 </Link>
               </div>
             </header>
-            <div className="mx-auto max-w-7xl px-5 pt-5 sm:px-8">
+            <div className="mx-auto max-w-7xl space-y-3 px-5 pt-5 sm:px-8">
+              <ActivityTicker variant="memberHeader" />
               <ActivityTicker variant="member" />
             </div>
             <section className="mx-auto max-w-7xl p-5 sm:p-8">
