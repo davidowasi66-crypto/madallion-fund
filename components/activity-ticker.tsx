@@ -244,7 +244,7 @@ function MemberActivityCard({ item, now }: { item: ActivityItem; now: number }) 
   )
 }
 
-function ActivityCard({ item, now, sample }: { item: ActivityItem; now: number; sample: boolean }) {
+function ActivityCard({ item, now }: { item: ActivityItem; now: number }) {
   return (
     <article className="w-[224px] shrink-0 rounded-2xl border border-[#e7eee8] bg-[#f7faf6] p-3.5">
       <div className="flex items-center justify-between gap-2">
@@ -258,9 +258,6 @@ function ActivityCard({ item, now, sample }: { item: ActivityItem; now: number; 
       </div>
       <p className="mt-2 truncate text-sm font-semibold text-[#0b4537]">{item.displayName}</p>
       <p className="mt-1 text-xl font-semibold tabular-nums text-[#0b4537]">{naira(item.amount)}</p>
-      <p className="mt-1 text-[10px] text-[#829088]">
-        {sample ? 'Sample activity · NGN' : 'Ledger activity · NGN'}
-      </p>
     </article>
   )
 }
@@ -308,7 +305,6 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
     return usingLive ? liveItems.slice(0, MAX_LIVE) : showSample ? sampleItems : []
   }, [isHeader, liveItems, sampleItems, showSample, usingLive])
   const half = useMemo(() => repeatToFill(items), [items])
-  const badge = usingLive ? 'Live' : showSample ? 'Sample' : 'Awaiting feed'
 
   if (isHeader) {
     return (
@@ -343,7 +339,7 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
 
   return (
     <section
-      aria-label={usingLive ? 'Live ledger activity' : showSample ? 'Sample ledger activity' : 'Recent ledger activity'}
+      aria-label="Live ledger activity"
       className={
         isMember
           ? 'rounded-2xl border border-white/10 bg-[#0b2420] p-3 sm:p-4'
@@ -354,10 +350,10 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
         <div>
           <p
             className={`text-[10px] font-bold uppercase tracking-[0.18em] ${
-              isMember ? 'text-[#b9f47f]' : showSample ? 'text-[#a15f18]' : 'text-[#2f7a4a]'
+              isMember ? 'text-[#b9f47f]' : 'text-[#2f7a4a]'
             }`}
           >
-            {usingLive ? 'Live ledger activity' : showSample ? 'Sample activity' : 'Ledger activity'}
+            Live ledger activity
           </p>
           <h2 className={`mt-0.5 text-base font-semibold sm:text-lg ${isMember ? 'text-[#edf7f1]' : 'text-[#0b4537]'}`}>
             Payouts · Deposits · Withdrawals
@@ -366,21 +362,13 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
         <span
           role="status"
           className={
-            usingLive
-              ? isMember
-                ? 'inline-flex items-center gap-1.5 rounded-full border border-[#315448] bg-[#0d2c26] px-2.5 py-1 text-[10px] font-semibold text-[#b9f47f]'
-                : 'inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-800'
-              : showSample
-                ? isMember
-                  ? 'inline-flex items-center gap-1.5 rounded-full border border-[#5a4a2a] bg-[#2a2418] px-2.5 py-1 text-[10px] font-semibold text-[#ffd38a]'
-                  : 'inline-flex items-center gap-1.5 rounded-full bg-[#fff4df] px-2.5 py-1 text-[10px] font-semibold text-[#8a5a00]'
-                : isMember
-                  ? 'inline-flex items-center gap-1.5 rounded-full border border-[#315448] bg-[#0d2c26] px-2.5 py-1 text-[10px] font-semibold text-[#91b0a2]'
-                  : 'inline-flex items-center gap-1.5 rounded-full bg-[#f1f5f1] px-2.5 py-1 text-[10px] font-semibold text-[#708079]'
+            isMember
+              ? 'inline-flex items-center gap-1.5 rounded-full border border-[#315448] bg-[#0d2c26] px-2.5 py-1 text-[10px] font-semibold text-[#b9f47f]'
+              : 'inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-800'
           }
         >
-          {usingLive && <span className="size-1.5 animate-pulse rounded-full bg-emerald-500" aria-hidden="true" />}
-          {badge}
+          <span className={`size-1.5 animate-pulse rounded-full ${isMember ? 'bg-[#b9f47f]' : 'bg-emerald-500'}`} aria-hidden="true" />
+          Live
         </span>
       </div>
 
@@ -413,33 +401,25 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
             >
               <div className="flex shrink-0 gap-3 pr-3">
                 {half.map((item, index) => (
-                  <ActivityCard key={`${item.id}-a-${index}`} item={item} now={now} sample={showSample} />
+                  <ActivityCard key={`${item.id}-a-${index}`} item={item} now={now}  />
                 ))}
               </div>
               <div className="flex shrink-0 gap-3 pr-3" aria-hidden="true">
                 {half.map((item, index) => (
-                  <ActivityCard key={`${item.id}-b-${index}`} item={item} now={now} sample={showSample} />
+                  <ActivityCard key={`${item.id}-b-${index}`} item={item} now={now}  />
                 ))}
               </div>
             </div>
           ) : (
             <div className="flex gap-3">
               {[0, 1, 2].map((index) => (
-                <div key={index} className="h-[126px] w-[224px] shrink-0 animate-pulse rounded-2xl bg-[#f4f8f3]" />
+                <div key={index} className="h-[112px] w-[224px] shrink-0 animate-pulse rounded-2xl bg-[#f4f8f3]" />
               ))}
             </div>
           )}
         </div>
       )}
 
-      <p className={`mt-2 text-[11px] ${isMember ? 'text-[#789589]' : 'text-[#77857e]'}`}>
-        Names are masked. NGN only. Deposits from ₦{MIN_DEPOSIT.toLocaleString('en-NG')}; withdrawals from ₦{MIN_WITHDRAWAL.toLocaleString('en-NG')}.{' '}
-        {showSample
-          ? 'Sample entries illustrate the feed and are replaced automatically when the real ledger feed returns activity.'
-          : usingLive
-            ? 'Only real, masked ledger activity is shown.'
-            : ''}
-      </p>
     </section>
   )
 }
