@@ -272,8 +272,6 @@ export default function DashboardPage() {
             ['/dashboard/wallet', 'Wallet'],
             ['/dashboard/activity', 'Activity'],
             ['/dashboard/notifications', 'Notifications'],
-            ['/dashboard/verification', 'Verification'],
-            ['/dashboard/security', 'Security'],
             ['/affiliate', 'Referrals'],
             ['/plans', 'Plans'],
           ].map(([href, label]) => (

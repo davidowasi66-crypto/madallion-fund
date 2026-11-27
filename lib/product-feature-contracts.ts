@@ -197,15 +197,7 @@ export const PRODUCT_FEATURE_API_CONTRACT = {
     field: 'referral_code',
   },
   referralCreditHistory: { method: 'GET', path: '/api:ledger-api/referral/credits' },
-  kycStatus: { method: 'GET', path: '/api:ledger-api/kyc/status' },
-  kycSubmission: { method: 'POST', path: '/api:ledger-api/kyc/submissions' },
   depositProof: { method: 'GET|POST', path: '/api:ledger-api/deposit/proof' },
-  securityState: { method: 'GET', path: '/api:ledger-api/security/state' },
-  securitySessions: { method: 'GET', path: '/api:ledger-api/security/sessions' },
-  twoFactorEnrollment: { method: 'POST', path: '/api:ledger-api/security/2fa/setup' },
-  twoFactorConfirm: { method: 'POST', path: '/api:ledger-api/security/2fa/verify' },
-  twoFactorDisable: { method: 'POST', path: '/api:ledger-api/security/2fa/disable' },
-  securitySessionRevoke: { method: 'DELETE', path: '/api:ledger-api/security/sessions/{session_id}' },
   approvalDecision: { method: 'POST', path: '/api:yYNRHo4K/fn_approval_decision' },
 } as const
 
@@ -222,8 +214,6 @@ export const PRODUCT_FEATURE_BACKEND_STATUS = {
   feePosting: 'live',
   planLimits: 'read-only-when-present-in-plan-response',
   referralCreditHistory: 'live',
-  kyc: 'live',
   depositProof: 'live',
-  securityControls: 'live',
   approvalDecisions: 'live',
 } as const

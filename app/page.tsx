@@ -61,15 +61,15 @@ const trustItems = [
   {
     icon: LockKeyhole,
     title: 'Account protection',
-    copy: '2FA, session controls, and a verified payout destination help protect access.',
+    copy: 'A saved payout destination and clear ledger activity keep withdrawals predictable.',
   },
 ]
 
 const steps = [
   {
     number: '01',
-    title: 'Create and verify',
-    copy: 'Set up your account, complete identity checks, and add a payout destination.',
+    title: 'Create and fund',
+    copy: 'Set up your account, choose a plan, and add a payout destination.',
   },
   {
     number: '02',
@@ -111,7 +111,7 @@ const faqs: Array<[string, string]> = [
   ],
   [
     'What do I need to start?',
-    'You need to be an eligible resident, complete identity verification, and have a valid bank account for payouts. The minimum for each plan is shown on its plan card.',
+    'You need to be an eligible resident and have a valid bank account for payouts. The minimum for each plan is shown on its plan card.',
   ],
 ]
 
@@ -480,7 +480,7 @@ export default function Home() {
                 'Plan terms shown before you confirm',
                 'Ledger entries for deposits, accruals, and payouts',
                 'Maturity and rollover status in your dashboard',
-                '2FA and session controls for account access',
+                'A saved bank destination for withdrawals',
               ].map((item) => (
                 <p key={item} className="flex items-start gap-2.5">
                   <Check size={16} className="mt-0.5 shrink-0 text-[#2f7a4a]" aria-hidden="true" />
@@ -498,7 +498,7 @@ export default function Home() {
               { icon: Landmark, title: 'Payout destination', copy: 'Add and verify the bank account where withdrawals should land.' },
               { icon: Wallet, title: 'Wallet visibility', copy: 'See available balance, deposits, and withdrawals from your account.' },
               { icon: CircleDollarSign, title: 'Maturity clarity', copy: 'Know the term, payout cadence, and principal treatment before you invest.' },
-              { icon: ShieldCheck, title: 'Account controls', copy: 'Use 2FA and session management to keep access in your hands.' },
+              { icon: ShieldCheck, title: 'Payout controls', copy: 'Manage the bank account where withdrawals land.' },
             ].map(({ icon: Icon, title, copy }) => (
               <article
                 key={title}

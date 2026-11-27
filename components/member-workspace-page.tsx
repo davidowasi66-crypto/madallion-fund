@@ -39,8 +39,6 @@ const navigation = [
   { href: '/dashboard/wallet', label: 'Wallet' },
   { href: '/dashboard/activity', label: 'Activity' },
   { href: '/dashboard/notifications', label: 'Notifications' },
-  { href: '/dashboard/verification', label: 'Verification' },
-  { href: '/dashboard/security', label: 'Security' },
   { href: '/affiliate', label: 'Referrals' }
 ]
 

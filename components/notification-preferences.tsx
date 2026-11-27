@@ -40,7 +40,7 @@ const GROUPS: Array<{ title: string; icon: typeof Bell; rows: PreferenceRow[] }>
     title: 'Safety and offers',
     icon: ShieldCheck,
     rows: [
-      { key: 'security_alerts', label: 'Security alerts', hint: 'Sign-ins, password changes, and 2FA events.' },
+      { key: 'security_alerts', label: 'Security alerts', hint: 'Sign-ins and password changes.' },
       { key: 'marketing_emails', label: 'Product news', hint: 'New plans, features, and occasional offers.' },
     ],
   },
