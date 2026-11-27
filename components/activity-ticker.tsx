@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import useSWR from 'swr'
 import { xanoRequest } from '@/lib/xano-auth'
 import { antiThrottleSwrConfig } from '@/lib/swr'
@@ -14,7 +14,10 @@ type ActivityItem = {
   createdAt: number
 }
 type RawActivity = Record<string, any>
-type ActivityTickerProps = { variant?: 'landing' | 'member' }
+type ActivityTickerProps = { variant?: 'landing' | 'member' | 'header' }
+
+const MAX_LIVE = 12
+const MIN_MARQUEE_ITEMS = 12
 
 /** Chidi Okeke → Ch***e — short public alias, never a full name. */
 function maskName(raw: string): string {
@@ -101,8 +104,13 @@ function relativeTime(ts: number, now: number) {
   return day === 1 ? '1 day ago' : `${day} days ago`
 }
 
-/** Wide West / East African name pool — never labelled in UI. */
-const FEED_NAMES = [
+function verb(type: ActivityKind) {
+  if (type === 'Withdrawal') return 'withdrew'
+  if (type === 'Deposit') return 'deposited'
+  return 'received'
+}
+
+const SAMPLE_NAMES = [
   'Chidi Okeke',
   'Amina Bello',
   'Tunde Adeyemi',
@@ -133,64 +141,75 @@ const FEED_NAMES = [
   'Nneka Chukwu',
   'Joseph Atta',
   'Rashida Owusu',
-  'Tobi Ajayi',
-  'Halima Hassan',
-  'Kelechi Nnamdi',
-  'Esther Akinola',
-  'Musa Danjuma',
-  'Adaeze Obi',
-  'Femi Ogunleye',
-  'Sade Okeke',
-  'Umar Farouk',
-  'Grace Mensah',
 ]
 
-const FEED_AMOUNTS = [
-  12_000, 18_500, 25_000, 32_500, 45_000, 50_000, 68_000, 75_000, 85_000, 96_000, 110_000, 125_000, 150_000, 185_000,
-  210_000, 250_000, 320_000, 420_000, 500_000, 750_000,
+const SAMPLE_AMOUNTS = [
+  12_000, 18_500, 25_000, 32_500, 45_000, 50_000, 68_000, 75_000, 85_000, 96_000, 110_000, 125_000, 150_000,
+  185_000, 210_000, 250_000, 320_000, 420_000, 500_000, 750_000, 1_250_000, 2_500_000, 5_000_000, 8_500_000,
 ]
 
-const FEED_KINDS: ActivityKind[] = ['Payout', 'Deposit', 'Withdrawal', 'Payout', 'Deposit', 'Payout', 'Deposit', 'Withdrawal']
+const SAMPLE_KINDS: ActivityKind[] = [
+  'Payout',
+  'Deposit',
+  'Payout',
+  'Withdrawal',
+  'Payout',
+  'Deposit',
+  'Payout',
+  'Withdrawal',
+]
 
-/** Deterministic but time-sliced rotation so the visible set changes often. */
-function rotatingFeed(now = Date.now()): ActivityItem[] {
-  // New slice about every 45s so names/amounts are not frozen forever
-  const windowIndex = Math.floor(now / 45_000)
-  const start = (windowIndex * 7) % FEED_NAMES.length
-  const items: ActivityItem[] = []
-  for (let i = 0; i < 12; i++) {
-    const ni = (start + i * 3) % FEED_NAMES.length
-    const ai = (start + i * 5 + windowIndex) % FEED_AMOUNTS.length
-    const ki = (start + i + windowIndex) % FEED_KINDS.length
-    // Slight amount jitter from window so numbers move
-    const jitter = ((windowIndex + i) % 5) * 500
-    items.push({
-      id: `feed-${windowIndex}-${ni}-${ki}-${ai}`,
-      displayName: maskName(FEED_NAMES[ni]),
-      type: FEED_KINDS[ki],
-      amount: FEED_AMOUNTS[ai] + jitter,
-      createdAt: now - (i * 38 + 8 + (windowIndex % 17)) * 1000,
-    })
-  }
-  return items
+function sampleActivity(now: number): ActivityItem[] {
+  return Array.from({ length: 24 }, (_, index) => ({
+    id: `sample-${index}`,
+    displayName: maskName(SAMPLE_NAMES[index % SAMPLE_NAMES.length] ?? 'Member'),
+    type: SAMPLE_KINDS[index % SAMPLE_KINDS.length] ?? 'Payout',
+    amount: SAMPLE_AMOUNTS[(index * 3 + 1) % SAMPLE_AMOUNTS.length] ?? 50_000,
+    createdAt: now - (index * 37 + 24) * 1000,
+  }))
 }
 
-function verb(type: ActivityKind) {
-  if (type === 'Withdrawal') return 'withdrew'
-  if (type === 'Deposit') return 'deposited'
-  return 'received'
+function repeatToFill(items: ActivityItem[]): ActivityItem[] {
+  if (!items.length) return []
+  const out: ActivityItem[] = []
+  while (out.length < MIN_MARQUEE_ITEMS) out.push(...items)
+  return out
 }
 
-const MAX_VISIBLE = 6
-const EMPTY_ROWS: ActivityItem[] = []
+function typeTone(type: ActivityKind) {
+  if (type === 'Withdrawal') return 'text-[#a15f18] bg-[#fff4df]'
+  if (type === 'Deposit') return 'text-[#28668a] bg-[#eaf6fb]'
+  return 'text-[#2f7a4a] bg-[#eef7eb]'
+}
+
+function ActivityCard({ item, now, sample }: { item: ActivityItem; now: number; sample: boolean }) {
+  return (
+    <article className="w-[224px] shrink-0 rounded-2xl border border-[#e7eee8] bg-[#f7faf6] p-3.5">
+      <div className="flex items-center justify-between gap-2">
+        <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-[.12em] ${typeTone(item.type)}`}>
+          <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+          {item.type}
+        </span>
+        <time dateTime={new Date(item.createdAt).toISOString()} className="text-[10px] font-medium text-[#829088]">
+          {relativeTime(item.createdAt, now)}
+        </time>
+      </div>
+      <p className="mt-2 truncate text-sm font-semibold text-[#0b4537]">{item.displayName}</p>
+      <p className="mt-1 text-lg font-semibold tabular-nums text-[#0b4537]">{naira(item.amount)}</p>
+      <p className="mt-1 text-[10px] text-[#829088]">
+        {sample ? 'Sample activity · NGN' : 'Ledger activity · NGN'}
+      </p>
+    </article>
+  )
+}
 
 export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
   const isMember = variant === 'member'
+  const isHeader = variant === 'header'
   const [mounted, setMounted] = useState(false)
   const [now, setNow] = useState(() => Date.now())
-  const seenIds = useRef<Set<string>>(new Set())
-  const [entering, setEntering] = useState<Set<string>>(new Set())
-  const [rotationTick, setRotationTick] = useState(0)
+  const [sampleAnchor] = useState(() => Date.now())
+  const sampleItems = useMemo(() => sampleActivity(sampleAnchor), [sampleAnchor])
 
   useEffect(() => {
     setMounted(true)
@@ -201,73 +220,64 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
     async () => {
       try {
         const response = await xanoRequest<any>('/api:ledger-api/activity/feed', { method: 'GET' })
-        const parsed = rowsFrom(response)
+        return rowsFrom(response)
           .filter((row) => row.is_sample !== true && row.isSample !== true && row.is_demo !== true)
           .map(parseActivity)
           .filter((item): item is ActivityItem => item !== null)
           .sort((a, b) => b.createdAt - a.createdAt)
-        if (parsed.length) return parsed
       } catch {
-        /* use rotating feed below */
+        return []
       }
-      return []
     },
     { ...antiThrottleSwrConfig, refreshInterval: 10_000, revalidateOnFocus: true },
   )
-
-  const usingLive = liveItems.length > 0
-
-  const rows = useMemo(() => {
-    // The rotating feed depends on the current time, so render it only after
-    // hydration to keep the server and first client render identical.
-    if (!mounted) return EMPTY_ROWS
-    if (usingLive) return liveItems.slice(0, MAX_VISIBLE)
-    return rotatingFeed(now).slice(0, MAX_VISIBLE)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mounted, liveItems, usingLive, rotationTick, now])
 
   useEffect(() => {
     const tick = setInterval(() => setNow(Date.now()), 12_000)
     return () => clearInterval(tick)
   }, [])
 
-  // Advance rotation so members see different names over time when not on live data
-  useEffect(() => {
-    if (usingLive) return
-    const rot = setInterval(() => {
-      setRotationTick((n) => n + 1)
-      setNow(Date.now())
-    }, 45_000)
-    return () => clearInterval(rot)
-  }, [usingLive])
+  const usingLive = liveItems.length > 0
+  const showSample = !usingLive && !isMember
+  const items = useMemo(() => {
+    if (isHeader) return usingLive ? [...liveItems.slice(0, 8), ...sampleItems.slice(0, 8)] : sampleItems
+    return usingLive ? liveItems.slice(0, MAX_LIVE) : showSample ? sampleItems : []
+  }, [isHeader, liveItems, sampleItems, showSample, usingLive])
+  const half = useMemo(() => repeatToFill(items), [items])
+  const rows = isMember ? items.slice(0, 6) : []
+  const badge = usingLive ? 'Live' : showSample ? 'Sample' : 'Awaiting feed'
 
-  useEffect(() => {
-    const fresh: string[] = []
-    for (const row of rows) {
-      if (!seenIds.current.has(row.id)) {
-        fresh.push(row.id)
-        seenIds.current.add(row.id)
-      }
-    }
-    if (!fresh.length) return
-    setEntering((prev) => {
-      const next = new Set(prev)
-      fresh.forEach((id) => next.add(id))
-      return next
-    })
-    const t = window.setTimeout(() => {
-      setEntering((prev) => {
-        const next = new Set(prev)
-        fresh.forEach((id) => next.delete(id))
-        return next
-      })
-    }, 420)
-    return () => window.clearTimeout(t)
-  }, [rows])
+  if (isHeader) {
+    return (
+      <div className="border-t border-[#dfe8e2]/80 bg-[#fbfcfa] py-2" aria-label="Recent member activity">
+        <div className="relative overflow-hidden">
+          {mounted ? (
+            <div className="activity-marquee flex w-max" style={{ animationDuration: `${Math.max(32, half.length * 3.2)}s` }}>
+              {[0, 1].map((copy) => (
+                <div key={copy} className="flex shrink-0 items-center gap-6 pr-6" aria-hidden={copy === 1 ? true : undefined}>
+                  {half.map((item, index) => (
+                    <span key={`${item.id}-header-${copy}-${index}`} className="inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] text-[#60716b]">
+                      <span className="size-1.5 rounded-full bg-[#65a85c]" aria-hidden="true" />
+                      <span className="font-semibold text-[#0b4537]">{item.displayName}</span>
+                      <span>{verb(item.type)}</span>
+                      <span className="font-semibold text-[#0b4537]">{naira(item.amount)}</span>
+                      <span className="text-[#9aa8a1]">· {relativeTime(item.createdAt, now)}</span>
+                    </span>
+                  ))}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="h-4 w-full animate-pulse rounded bg-[#eef4ec]" />
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <section
-      aria-label="Live payouts, deposits and withdrawals"
+      aria-label={usingLive ? 'Live ledger activity' : showSample ? 'Sample ledger activity' : 'Recent ledger activity'}
       className={
         isMember
           ? 'rounded-2xl border border-white/10 bg-[#0b2420] p-3 sm:p-4'
@@ -278,10 +288,10 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
         <div>
           <p
             className={`text-[10px] font-bold uppercase tracking-[0.18em] ${
-              isMember ? 'text-[#b9f47f]' : 'text-[#2f7a4a]'
+              isMember ? 'text-[#b9f47f]' : showSample ? 'text-[#a15f18]' : 'text-[#2f7a4a]'
             }`}
           >
-            Live feed
+            {usingLive ? 'Live ledger activity' : showSample ? 'Sample activity' : 'Ledger activity'}
           </p>
           <h2 className={`mt-0.5 text-base font-semibold sm:text-lg ${isMember ? 'text-[#edf7f1]' : 'text-[#0b4537]'}`}>
             Payouts · Deposits · Withdrawals
@@ -290,55 +300,83 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
         <span
           role="status"
           className={
-            isMember
-              ? 'inline-flex items-center gap-1.5 rounded-full border border-[#315448] bg-[#0d2c26] px-2.5 py-1 text-[10px] font-semibold text-[#b9f47f]'
-              : 'inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-800'
+            usingLive
+              ? isMember
+                ? 'inline-flex items-center gap-1.5 rounded-full border border-[#315448] bg-[#0d2c26] px-2.5 py-1 text-[10px] font-semibold text-[#b9f47f]'
+                : 'inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold text-emerald-800'
+              : showSample
+                ? 'inline-flex items-center gap-1.5 rounded-full bg-[#fff4df] px-2.5 py-1 text-[10px] font-semibold text-[#8a5a00]'
+                : isMember
+                  ? 'inline-flex items-center gap-1.5 rounded-full border border-[#315448] bg-[#0d2c26] px-2.5 py-1 text-[10px] font-semibold text-[#91b0a2]'
+                  : 'inline-flex items-center gap-1.5 rounded-full bg-[#f1f5f1] px-2.5 py-1 text-[10px] font-semibold text-[#708079]'
           }
         >
-          <span className="size-1.5 animate-pulse rounded-full bg-emerald-500" aria-hidden="true" />
-          Live
+          {usingLive && <span className="size-1.5 animate-pulse rounded-full bg-emerald-500" aria-hidden="true" />}
+          {badge}
         </span>
       </div>
 
-      <ul
-        className="flex flex-col gap-1.5"
-        aria-live="polite"
-        aria-relevant="additions"
-      >
-        {rows.map((item) => {
-          const isNew = entering.has(item.id)
-          const line = `${item.displayName} ${verb(item.type)} ${naira(item.amount)}`
-          return (
+      {isMember ? (
+        <ul className="flex flex-col gap-1.5" aria-live="polite" aria-relevant="additions">
+          {rows.map((item) => (
             <li
               key={item.id}
-              className={`flex min-h-11 items-center justify-between gap-3 rounded-xl px-3 py-2 sm:px-3.5 ${
-                isNew ? 'payout-ticker-enter' : ''
-              } ${isMember ? 'bg-[#0e2b26]' : 'bg-[#f4f8f3]'}`}
+              className="flex min-h-11 items-center justify-between gap-3 rounded-xl bg-[#0e2b26] px-3 py-2 sm:px-3.5"
             >
-              <p className={`min-w-0 truncate text-sm ${isMember ? 'text-[#edf7f1]' : 'text-[#173c30]'}`}>
+              <p className="min-w-0 truncate text-sm text-[#edf7f1]">
                 <span className="font-semibold">{item.displayName}</span>
-                <span className={isMember ? 'text-[#91b0a2]' : 'text-[#60716b]'}> {verb(item.type)} </span>
-                <span className="font-semibold tabular-nums" style={{ color: isMember ? '#b9f47f' : '#0b4537' }}>
-                  {naira(item.amount)}
-                </span>
-                <span className="sr-only">. {line}</span>
+                <span className="text-[#91b0a2]"> {verb(item.type)} </span>
+                <span className="font-semibold tabular-nums text-[#b9f47f]">{naira(item.amount)}</span>
               </p>
-              <time
-                dateTime={new Date(item.createdAt).toISOString()}
-                className={`shrink-0 text-[11px] font-medium ${isMember ? 'text-[#91b0a2]' : 'text-[#708079]'}`}
-              >
+              <time dateTime={new Date(item.createdAt).toISOString()} className="shrink-0 text-[11px] font-medium text-[#91b0a2]">
                 {relativeTime(item.createdAt, now)}
               </time>
             </li>
-          )
-        })}
-        {!rows.length && (isLoading || !mounted) && (
-          <li className={`px-4 py-6 text-center text-sm ${isMember ? 'text-[#91b0a2]' : 'text-[#708079]'}`}>Loading activity…</li>
-        )}
-      </ul>
+          ))}
+          {!rows.length && (isLoading || !mounted) && (
+            <li className="px-4 py-6 text-center text-sm text-[#91b0a2]">Loading activity…</li>
+          )}
+          {!rows.length && mounted && !isLoading && (
+            <li className="px-4 py-6 text-center text-sm text-[#91b0a2]">
+              Public ledger activity will appear here when it is available. Only real, masked activity is shown.
+            </li>
+          )}
+        </ul>
+      ) : (
+        <div className="relative mt-4 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {mounted ? (
+            <div
+              className="activity-marquee flex w-max"
+              style={{ animationDuration: `${Math.max(36, half.length * 4)}s` }}
+            >
+              <div className="flex shrink-0 gap-3 pr-3">
+                {half.map((item, index) => (
+                  <ActivityCard key={`${item.id}-a-${index}`} item={item} now={now} sample={showSample} />
+                ))}
+              </div>
+              <div className="flex shrink-0 gap-3 pr-3" aria-hidden="true">
+                {half.map((item, index) => (
+                  <ActivityCard key={`${item.id}-b-${index}`} item={item} now={now} sample={showSample} />
+                ))}
+              </div>
+            </div>
+          ) : (
+            <div className="flex gap-3">
+              {[0, 1, 2].map((index) => (
+                <div key={index} className="h-[126px] w-[224px] shrink-0 animate-pulse rounded-2xl bg-[#f4f8f3]" />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <p className={`mt-2 text-[11px] ${isMember ? 'text-[#789589]' : 'text-[#77857e]'}`}>
-        Names are masked. NGN only.
+        Names are masked. NGN only.{' '}
+        {showSample
+          ? 'Sample entries illustrate the feed and are replaced automatically when the real ledger feed returns activity.'
+          : usingLive
+            ? 'Only real, masked ledger activity is shown.'
+            : ''}
       </p>
     </section>
   )

@@ -4,6 +4,7 @@ import Link from 'next/link'
 import useSWR from 'swr'
 import { useEffect, useMemo, useState } from 'react'
 import { getXanoSession } from '@/lib/xano-auth'
+import { planDepositHref } from '@/lib/plan-links'
 import { antiThrottleSwrConfig } from '@/lib/swr'
 import {
   getMyCashflow,
@@ -83,6 +84,12 @@ export function MemberMaturityPreview() {
     const status = String(inv.status ?? 'active').toLowerCase()
     return status !== 'cancelled' && status !== 'closed' && status !== 'refunded'
   })
+  const dueSoon = active.filter((investment) => {
+    const maturity = investment.ends_at ?? investment.maturity_at ?? investment.matures_at ?? investment.maturity_date ?? investment.end_date
+    if (maturity == null) return false
+    const remaining = toMs(maturity, 0) - Date.now()
+    return remaining > 0 && remaining <= 14 * 86_400_000
+  }).length
   const rateLimited = /(?:^|\D)429(?:\D|$)/.test(error instanceof Error ? error.message : '')
 
   return (
@@ -101,6 +108,19 @@ export function MemberMaturityPreview() {
           View all
         </Link>
       </div>
+
+      {session?.authenticated && !isLoading && !error && dueSoon > 0 && (
+        <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-[#d7e8c9] bg-[#f1f9ea] px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs leading-5 text-[#315b3d]">
+            <span className="font-semibold">{dueSoon} {dueSoon === 1 ? 'investment matures' : 'investments mature'} within 14 days.</span>{' '}
+            Decide whether to reinvest or receive the payout.
+          </p>
+          <div className="flex shrink-0 gap-2">
+            <Link href="/plans" className="rounded-lg bg-[#0b4537] px-3 py-1.5 text-[11px] font-semibold text-white">Reinvest</Link>
+            <Link href="/dashboard/notifications" className="rounded-lg border border-[#c9dfb8] bg-white px-3 py-1.5 text-[11px] font-semibold text-[#315b3d]">Reminders</Link>
+          </div>
+        </div>
+      )}
 
       {session === null || isLoading ? (
         <div className="mt-5 rounded-2xl border border-[#e7eee8] bg-[#f7faf6] px-4 py-5 text-sm text-[#708079]" role="status">
@@ -364,6 +384,14 @@ export function PlanCalculator({
     return d.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })
   }, [opens])
   const openedLabel = opens.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })
+  const principalReturned = plan?.principal_returned !== false
+  const cadence = String(plan?.payout_cadence ?? '').toLowerCase()
+  const dailyPayout = cadence === 'daily'
+  const payoutScheduleKnown = cadence.length > 0
+  const totalAtMaturity = amountIsValid && plan ? (principalReturned ? amount + profit : profit) : 0
+  const totalLabel = principalReturned ? 'Illustrative total at maturity' : 'Illustrative income'
+  const firstCreditLabel = !payoutScheduleKnown ? 'Payout schedule' : dailyPayout ? 'First credit' : 'At maturity'
+  const firstCreditValue = !payoutScheduleKnown ? 'Per plan terms' : dailyPayout ? firstCredit : maturity
 
   function choosePlan(index: number) {
     const nextPlan = plans[index]
@@ -378,7 +406,7 @@ export function PlanCalculator({
       <div className="border-b border-[#e6eee8] bg-[#f7faf6] px-5 py-6 sm:px-8">
         <p className="text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">Plan calculator</p>
         <h2 id="plan-calculator-title" className="mt-2 text-2xl font-semibold tracking-tight text-[#0b4537] sm:text-3xl">Choose a plan, see what it pays</h2>
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#60716b]">Income is credited every day. Your deposit comes back on the last day. This is an estimate, not a promise.</p>
+        <p className="mt-2 max-w-2xl text-sm leading-6 text-[#60716b]">Income follows the plan&apos;s payout cadence, and principal treatment is shown before you commit. This is an estimate, not a promise.</p>
       </div>
       <div className="grid lg:grid-cols-[1.05fr_.95fr]">
         <div className="p-5 sm:p-7 lg:p-8">
@@ -455,18 +483,18 @@ export function PlanCalculator({
           <div>
             <p className="text-xs font-semibold uppercase tracking-[.15em] text-[#b9f47f]">What you receive</p>
             <p className="mt-3 text-sm text-white/75">{plan ? `${plan.name} · ${daily.toFixed(2)}% a day · ${days} days` : 'Pick a plan'}</p>
-            <p className="mt-2 text-xs text-white/60">You receive in total</p>
-            <p className="mt-1 break-words text-3xl font-semibold tracking-tight text-[#b9f47f] sm:text-4xl">{amountIsValid && plan ? money(amount + profit) : '—'}</p>
-            <p className="mt-1 text-xs text-[#b9f47f]/80">{plan && amountIsValid ? `+${termPercent.toFixed(1)}% return over the term` : 'Estimate appears when the amount fits the plan'}</p>
+            <p className="mt-2 text-xs text-white/60">{totalLabel}</p>
+            <p className="mt-1 break-words text-3xl font-semibold tracking-tight text-[#b9f47f] sm:text-4xl">{amountIsValid && plan ? money(totalAtMaturity) : '—'}</p>
+            <p className="mt-1 text-xs text-[#b9f47f]/80">{plan && amountIsValid ? `+${termPercent.toFixed(1)}% illustrative return over the term` : 'Estimate appears when the amount fits the plan'}</p>
           </div>
           <dl className="grid grid-cols-2 gap-3">
             {[
-              ['Per day', amountIsValid ? money(Math.round(amount * (daily / 100))) : '—'],
-              ['Per week', amountIsValid ? money(week) : '—'],
-              ['Per month', amountIsValid ? money(month) : '—'],
-              ['Whole term', amountIsValid ? money(profit) : '—'],
-              ['Deposit back', amountIsValid ? money(amount) : '—'],
-              ['Income', amountIsValid ? money(profit) : '—'],
+              ['Per day (illustrative)', amountIsValid ? money(Math.round(amount * (daily / 100))) : '—'],
+              ['Per week (illustrative)', amountIsValid ? money(week) : '—'],
+              ['Per month (illustrative)', amountIsValid ? money(month) : '—'],
+              ['Whole term income', amountIsValid ? money(profit) : '—'],
+              ['Principal', amountIsValid ? (principalReturned ? money(amount) : 'Not returned') : '—'],
+              [principalReturned ? 'Total at maturity' : 'Illustrative income', amountIsValid ? money(totalAtMaturity) : '—'],
             ].map(([label, value]) => (
               <div key={label} className="rounded-2xl bg-white/10 px-3 py-3">
                 <dt className="text-[11px] text-white/65">{label}</dt>
@@ -476,11 +504,14 @@ export function PlanCalculator({
           </dl>
           <div className="grid grid-cols-3 gap-2 text-[11px] leading-4 text-white/70">
             <p><span className="block text-white/45">Plan opens</span>{openedLabel}</p>
-            <p><span className="block text-white/45">First credit</span>{firstCredit}</p>
-            <p><span className="block text-white/45">Deposit back</span>{plan ? maturity : '—'}</p>
+            <p><span className="block text-white/45">{firstCreditLabel}</span>{firstCreditValue}</p>
+            <p><span className="block text-white/45">Principal</span>{plan ? (principalReturned ? `Back ${maturity}` : 'Per plan terms') : '—'}</p>
           </div>
-          <a href="/register" className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#b9f47f] px-4 py-3 text-center text-sm font-semibold text-[#071a18]">
-            {plan && amountIsValid ? `Open ${plan.name} for ${money(amount)}` : 'Create an account'}
+          <a
+            href={plan && amountIsValid ? planDepositHref(plan, amount) : '/dashboard/wallet?mode=deposit'}
+            className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#b9f47f] px-4 py-3 text-center text-sm font-semibold text-[#071a18]"
+          >
+            {plan && amountIsValid ? `Fund ${plan.name} with ${money(amount)}` : 'Open a funded account'}
           </a>
           <p className="text-[11px] leading-5 text-white/60">Estimate only. Actual returns follow the plan terms and your account ledger. {sourceNote ?? 'Figures follow the current plan catalogue.'}</p>
         </div>

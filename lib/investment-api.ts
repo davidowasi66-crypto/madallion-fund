@@ -111,7 +111,7 @@ export const planIsPaused = (plan: Partial<Plan> | undefined | null): boolean =>
   return status === 'paused' || status === 'archived'
 }
 
-const normalizePlan = (row: any): Plan | null => {
+export const normalizePlan = (row: any): Plan | null => {
   if (!row || typeof row !== 'object') return null
   const name = String(row.name ?? '').trim()
   const duration = Number(row.duration_days ?? 0)
@@ -155,6 +155,18 @@ const normalizePlan = (row: any): Plan | null => {
 
 export const getPlans = async (): Promise<PlanCatalogue> => {
   if (SANDBOX_MOCK) return { plans: await mockGetPlans(), source: 'fallback' }
+  if (typeof window !== 'undefined') {
+    try {
+      const response = await fetch('/api/plans', { cache: 'no-store', credentials: 'same-origin' })
+      if (response.ok) {
+        const payload = await response.json()
+        const plans = list(payload, ['plans', 'items', 'data'])
+          .map(normalizePlan)
+          .filter((plan): plan is Plan => plan !== null)
+        if (plans.length && payload?.source === 'live') return { plans, source: 'live' }
+      }
+    } catch {}
+  }
   try {
     const plans = list(await xanoAdminFunctionRequest('/fn_admin_plans'), ['plans', 'items', 'data'])
       .map(normalizePlan)

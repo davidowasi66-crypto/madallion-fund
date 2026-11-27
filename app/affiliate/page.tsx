@@ -9,6 +9,7 @@ import { getReferralCredits, getReferralMe } from '@/lib/member-routes'
 import { getReferralLeaderboard } from '@/lib/investment-api'
 import { MemberTabBar } from '@/components/member-tab-bar'
 import { ReferralCreditsHistory, ReferralTierProgress } from '@/components/referral-program-panels'
+import { ReferralShareActions } from '@/components/referral-share-actions'
 
 /** Programme tier labels — percentages are illustrative until admin overrides. */
 const programmeTiers = [
@@ -86,14 +87,17 @@ export default function AffiliatePage() {
   )
   const { data, isLoading } = useSWR(hasSession ? 'referral-leaderboard' : null, getReferralLeaderboard)
 
-  const inviteUrl = useMemo(() => {
+  const inviteCode = useMemo(() => {
     if (!hasSession) return ''
     const memberCode = referralInfo?.member?.referral_code?.trim()
     const validMemberCode = memberCode && /^[A-Za-z0-9_-]{1,64}$/.test(memberCode) ? memberCode : ''
-    const code = validMemberCode || pickReferralCode(referralInfo?.profile ?? null, userId)
-    if (!code) return ''
-    return `${referralSiteOrigin()}/?ref=${encodeURIComponent(code)}`
+    return validMemberCode || pickReferralCode(referralInfo?.profile ?? null, userId)
   }, [hasSession, referralInfo, userId])
+
+  const inviteUrl = useMemo(
+    () => (inviteCode ? `${referralSiteOrigin()}/?ref=${encodeURIComponent(inviteCode)}` : ''),
+    [inviteCode],
+  )
 
   const myStats = useMemo(() => {
     const rows = data?.rows ?? []
@@ -161,6 +165,11 @@ export default function AffiliatePage() {
           <p className="mt-3 break-all rounded-2xl bg-[#f4f8f3] px-4 py-3 font-mono text-xs leading-5 text-[#0b4537]">
             {inviteDisplay}
           </p>
+          {hasSession && inviteCode && (
+            <p className="mt-2 text-[11px] text-[#708079]">
+              Invite code <span className="font-mono font-semibold text-[#0b4537]">{inviteCode}</span>
+            </p>
+          )}
           {hasSession ? (
             <button
               type="button"
@@ -180,6 +189,8 @@ export default function AffiliatePage() {
             </Link>
           )}
         </section>
+
+        {hasSession && <ReferralShareActions inviteUrl={inviteUrl} code={inviteCode} />}
 
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div className="rounded-2xl bg-[#0b4537] p-4 text-white">
