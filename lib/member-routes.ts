@@ -84,6 +84,28 @@ export function memberSafeError(cause: unknown, fallback = 'Something went wrong
   return cleaned.length > 140 ? fallback : cleaned
 }
 
+function creditsFromReferralMe(me: ReferralMe | null): ReferralCredits | null {
+  if (!me) return null
+  const available = me.available ?? me.credits
+  const hasCreditData =
+    available != null ||
+    me.pending_hold != null ||
+    me.lifetime != null ||
+    me.cap != null ||
+    me.referrals != null ||
+    me.qualified != null
+  if (!hasCreditData) return null
+  return {
+    available: numField(available),
+    pending_hold: numField(me.pending_hold),
+    lifetime: numField(me.lifetime),
+    cap: numField(me.cap),
+    currency: 'NGN',
+    qualified: me.qualified,
+    referrals: me.referrals,
+  }
+}
+
 export async function getReferralCredits(): Promise<ReferralCredits | null> {
   try {
     const body = unwrapObject(await xanoRequest('/api:ledger-api/referral/credits', { method: 'GET' }, { auth: true }))
@@ -106,6 +128,8 @@ export async function getReferralCredits(): Promise<ReferralCredits | null> {
     if (/(?:^|\D)404(?:\D|$)|not found/i.test(message)) {
       return { available: 0, pending_hold: 0, lifetime: 0, cap: 0, currency: 'NGN', qualified: 0, referrals: 0 }
     }
+    const fallback = creditsFromReferralMe(await getReferralMe().catch(() => null))
+    if (fallback) return fallback
     throw cause
   }
 }
