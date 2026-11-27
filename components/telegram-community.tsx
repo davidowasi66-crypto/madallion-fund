@@ -1,11 +1,14 @@
 'use client'
 
 import { useEffect, useRef, useState } from 'react'
+import { usePathname } from 'next/navigation'
 import { ArrowUpRight, Headset, Users, X } from 'lucide-react'
+import { getXanoSession } from '@/lib/xano-auth'
 
 // Override with NEXT_PUBLIC_TELEGRAM_GROUP_URL / NEXT_PUBLIC_TELEGRAM_SUPPORT_URL.
 const GROUP_URL = process.env.NEXT_PUBLIC_TELEGRAM_GROUP_URL || 'https://t.me/madallionfund'
 const SUPPORT_URL = process.env.NEXT_PUBLIC_TELEGRAM_SUPPORT_URL || GROUP_URL
+const MEMBER_AREA_PREFIXES = ['/dashboard', '/affiliate']
 
 function TelegramMark({ size = 26 }: { size?: number }) {
   return (
@@ -16,8 +19,22 @@ function TelegramMark({ size = 26 }: { size?: number }) {
 }
 
 export function TelegramCommunity() {
+  const pathname = usePathname()
   const [open, setOpen] = useState(false)
+  const [authenticated, setAuthenticated] = useState(false)
+  const [checkedSession, setCheckedSession] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
+  const memberArea = MEMBER_AREA_PREFIXES.some((prefix) => pathname === prefix || pathname?.startsWith(`${prefix}/`))
+  const visible = checkedSession && authenticated && memberArea
+
+  useEffect(() => {
+    setAuthenticated(Boolean(getXanoSession()?.authenticated))
+    setCheckedSession(true)
+  }, [pathname])
+
+  useEffect(() => {
+    if (!visible) setOpen(false)
+  }, [visible])
 
   useEffect(() => {
     if (!open) return
@@ -34,6 +51,8 @@ export function TelegramCommunity() {
       document.removeEventListener('mousedown', onClick)
     }
   }, [open])
+
+  if (!visible) return null
 
   return (
     <div ref={rootRef} className="telegram-community">
