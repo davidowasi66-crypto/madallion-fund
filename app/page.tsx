@@ -6,16 +6,23 @@ import useSWR from 'swr'
 import {
   ArrowRight,
   BarChart3,
+  Calculator,
   Check,
   ChevronDown,
   CircleDollarSign,
   Clock3,
+  HelpCircle,
   Landmark,
+  Layers,
+  LayoutGrid,
   LockKeyhole,
+  LogIn,
   Menu,
+  Route,
   ShieldCheck,
   Sparkles,
   TrendingUp,
+  UserPlus,
   Wallet,
   X,
 } from 'lucide-react'
@@ -68,21 +75,25 @@ const trustItems = [
 const steps = [
   {
     number: '01',
+    icon: UserPlus,
     title: 'Create and fund',
     copy: 'Set up your account, choose a plan, and add a payout destination.',
   },
   {
     number: '02',
+    icon: Wallet,
     title: 'Fund your wallet',
     copy: 'Deposit NGN into your wallet. Every movement is recorded in your ledger.',
   },
   {
     number: '03',
+    icon: Layers,
     title: 'Choose a plan',
     copy: 'Compare rate, term, minimum, and principal treatment. Confirm the terms.',
   },
   {
     number: '04',
+    icon: TrendingUp,
     title: 'Track to maturity',
     copy: 'Follow progress and payout dates, then withdraw to your verified bank account.',
   },
@@ -177,13 +188,15 @@ export default function Home() {
           </nav>
 
           <div className="hidden items-center gap-3 lg:flex">
-            <Link href="/login" className="rounded-xl px-4 py-2.5 text-sm font-semibold text-[#0b4537]">
+            <Link href="/login" className="inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold text-[#0b4537]">
+              <LogIn size={16} aria-hidden="true" />
               Log in
             </Link>
             <Link
               href="/register"
-              className="rounded-xl bg-[#0b4537] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#123f34]"
+              className="inline-flex items-center gap-2 rounded-xl bg-[#0b4537] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#123f34]"
             >
+              <UserPlus size={16} aria-hidden="true" />
               Create account
             </Link>
           </div>
@@ -269,8 +282,9 @@ export default function Home() {
               </Link>
               <Link
                 href="/register"
-                className="inline-flex min-h-12 items-center justify-center rounded-xl border border-[#cbdacf] bg-white/70 px-5 py-3.5 text-sm font-semibold text-[#0b4537] transition hover:bg-white"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#cbdacf] bg-white/70 px-5 py-3.5 text-sm font-semibold text-[#0b4537] transition hover:bg-white"
               >
+                <UserPlus size={16} aria-hidden="true" />
                 Create free account
               </Link>
             </div>
@@ -381,7 +395,10 @@ export default function Home() {
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[.18em] text-[#b9f47f]">Plans</p>
+              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#b9f47f]">
+                <Layers size={14} aria-hidden="true" />
+                Plans
+              </p>
               <h2 className="mt-3 max-w-2xl text-4xl font-semibold tracking-[-.04em] sm:text-5xl">
                 Choose a term you can plan around.
               </h2>
@@ -422,7 +439,10 @@ export default function Home() {
 
       <section id="how-it-works" className="mx-auto max-w-7xl px-5 py-20 lg:px-8 lg:py-24">
         <div className="max-w-2xl">
-          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">How it works</p>
+          <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">
+            <Route size={14} aria-hidden="true" />
+            How it works
+          </p>
           <h2 className="mt-3 text-4xl font-semibold tracking-[-.04em] text-[#10251d] sm:text-5xl">
             A clear path from account to payout.
           </h2>
@@ -437,7 +457,12 @@ export default function Home() {
               key={step.number}
               className="rounded-2xl border border-[#e1e9e3] bg-white p-6 shadow-[0_8px_28px_rgba(25,78,53,.045)]"
             >
-              <span className="text-sm font-bold text-[#30794e]">{step.number}</span>
+              <div className="flex items-center justify-between">
+                <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#eef7eb] text-[#2f7a4a]">
+                  <step.icon size={19} aria-hidden="true" />
+                </span>
+                <span className="text-sm font-bold text-[#30794e]">{step.number}</span>
+              </div>
               <h3 className="mt-5 text-lg font-semibold text-[#173c30]">{step.title}</h3>
               <p className="mt-2 text-sm leading-6 text-[#708079]">{step.copy}</p>
             </article>
@@ -448,7 +473,10 @@ export default function Home() {
       <section id="calculator" className="border-y border-[#e1e9e3] bg-[#f1f7f0] px-5 py-20 lg:px-8 lg:py-24">
         <div className="mx-auto max-w-7xl">
           <div className="max-w-2xl">
-            <p className="text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">Plan calculator</p>
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">
+              <Calculator size={14} aria-hidden="true" />
+              Plan calculator
+            </p>
             <h2 className="mt-3 text-4xl font-semibold tracking-[-.04em] text-[#10251d] sm:text-5xl">
               See the numbers before you commit.
             </h2>
@@ -468,7 +496,10 @@ export default function Home() {
       <section id="safety" className="mx-auto max-w-7xl px-5 py-20 lg:px-8 lg:py-24">
         <div className="grid gap-10 lg:grid-cols-[.82fr_1.18fr] lg:items-start">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">Built for clarity</p>
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">
+              <ShieldCheck size={14} aria-hidden="true" />
+              Built for clarity
+            </p>
             <h2 className="mt-3 text-4xl font-semibold tracking-[-.04em] text-[#10251d] sm:text-5xl">
               Trust comes from what you can verify.
             </h2>
@@ -519,7 +550,10 @@ export default function Home() {
         <div className="rounded-[2rem] border border-[#dfe8e2] bg-white p-6 shadow-[0_18px_55px_rgba(16,45,33,.06)] sm:p-10">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
-              <p className="text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">Member tools</p>
+              <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">
+                <LayoutGrid size={14} aria-hidden="true" />
+                Member tools
+              </p>
               <h2 className="mt-3 max-w-2xl text-3xl font-semibold tracking-[-.04em] text-[#10251d] sm:text-4xl">
                 Keep your plan moving after you invest.
               </h2>
@@ -582,7 +616,10 @@ export default function Home() {
       </div>
 
       <section id="faq" className="mx-auto max-w-3xl px-5 py-20">
-        <p className="text-center text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">Investor questions</p>
+        <p className="flex items-center justify-center gap-2 text-center text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">
+          <HelpCircle size={14} aria-hidden="true" />
+          Investor questions
+        </p>
         <h2 className="mt-3 text-center text-4xl font-semibold tracking-[-.04em] text-[#10251d] sm:text-5xl">
           The details that matter.
         </h2>
@@ -608,7 +645,10 @@ export default function Home() {
           <div className="absolute -left-16 -top-16 h-48 w-48 rounded-full bg-[#b9f47f]/15 blur-3xl" aria-hidden="true" />
           <div className="absolute -bottom-20 -right-10 h-56 w-56 rounded-full bg-[#8bd7d0]/10 blur-3xl" aria-hidden="true" />
           <div className="relative">
-            <p className="text-xs font-bold uppercase tracking-[.18em] text-[#b9f47f]">Start with clarity</p>
+            <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#b9f47f]">
+              <Sparkles size={14} aria-hidden="true" />
+              Start with clarity
+            </p>
             <h2 className="mx-auto mt-3 max-w-2xl text-4xl font-semibold tracking-[-.04em] sm:text-5xl">
               Your next plan should make sense on paper.
             </h2>
@@ -624,8 +664,9 @@ export default function Home() {
               </Link>
               <Link
                 href="#plans"
-                className="inline-flex min-h-12 items-center justify-center rounded-xl border border-white/20 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10"
+                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/20 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-white/10"
               >
+                <BarChart3 size={16} aria-hidden="true" />
                 Compare plans
               </Link>
             </div>
@@ -660,14 +701,16 @@ export default function Home() {
         <div className="mx-auto flex max-w-lg gap-2">
           <Link
             href="#plans"
-            className="flex min-h-11 flex-1 items-center justify-center rounded-xl border border-[#cbdacf] px-4 py-2.5 text-sm font-semibold text-[#0b4537]"
+            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl border border-[#cbdacf] px-4 py-2.5 text-sm font-semibold text-[#0b4537]"
           >
+            <Layers size={16} aria-hidden="true" />
             View plans
           </Link>
           <Link
             href="/register"
-            className="flex min-h-11 flex-1 items-center justify-center rounded-xl bg-[#0b4537] px-4 py-2.5 text-sm font-semibold text-white"
+            className="flex min-h-11 flex-1 items-center justify-center gap-2 rounded-xl bg-[#0b4537] px-4 py-2.5 text-sm font-semibold text-white"
           >
+            <UserPlus size={16} aria-hidden="true" />
             Create account
           </Link>
         </div>
