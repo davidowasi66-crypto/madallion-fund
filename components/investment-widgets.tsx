@@ -14,6 +14,7 @@ import {
   getMyWallet,
   getPlans,
   planDailyRate,
+  planIsPaused,
   PLANS_KEY,
   unwrapList,
   type Investment,
@@ -420,14 +421,37 @@ export function PlanCalculator({
 }) {
   const { data: catalogue } = useSWR(PLANS_KEY, getPlans)
   const plans = plansProp?.length ? plansProp : catalogue?.plans ?? []
-  const [amount, setAmount] = useState(50_000)
+  const [amount, setAmount] = useState(0)
   const [selected, setSelected] = useState(0)
+
   const plan = plans[selected] ?? plans[0]
   const daily = planDailyRate(plan)
   const days = Math.max(0, Number(plan?.duration_days ?? 0))
-  const minimum = Math.max(0, Number(plan?.min_amount ?? 10_000))
-  const maximum = Math.max(minimum + 1, Number(plan?.max_amount ?? 5_000_000))
-  const amountIsValid = Number.isFinite(amount) && amount >= minimum && amount <= maximum
+  const minCandidate = Number(plan?.min_amount)
+  const maxCandidate = Number(plan?.max_amount)
+  const hasMinimum = Number.isFinite(minCandidate) && minCandidate > 0
+  const hasMaximum = Number.isFinite(maxCandidate) && maxCandidate > 0
+  const minimum = hasMinimum ? Math.round(minCandidate) : 0
+  const maximum = hasMaximum ? Math.round(maxCandidate) : 0
+
+  // Slider/step bounds fall back to a generous window when a plan omits min/max (e.g. admin-created plans).
+  const sliderFloor = hasMinimum ? minimum : 1_000
+  const sliderCeiling = hasMaximum ? maximum : Math.max(sliderFloor * 20, sliderFloor + 5_000_000)
+  const sliderStep = useMemo(() => Math.max(1_000, Math.round(sliderCeiling / 200 / 1_000) * 1_000), [sliderCeiling])
+
+  // Seed the deposit amount from the chosen plan and keep it inside the plan's range.
+  useEffect(() => {
+    setAmount((current) => {
+      const seed = hasMinimum ? minimum : hasMaximum ? Math.min(maximum, 50_000) : 50_000
+      if (current <= 0) return seed
+      const lower = hasMinimum ? minimum : current
+      const upper = hasMaximum ? maximum : current
+      return Math.min(upper, Math.max(lower, current))
+    })
+  }, [selected, plans.length, minimum, maximum, hasMinimum, hasMaximum])
+
+  const amountIsValid =
+    Number.isFinite(amount) && amount > 0 && (!hasMinimum || amount >= minimum) && (!hasMaximum || amount <= maximum)
   const profit = amountIsValid && Number.isFinite(daily) ? Math.round(amount * (daily / 100) * days) : 0
   const maturity = useMemo(() => {
     const d = new Date()
@@ -454,30 +478,44 @@ export function PlanCalculator({
   const firstCreditLabel = !payoutScheduleKnown ? 'Payout schedule' : dailyPayout ? 'First credit' : 'At maturity'
   const firstCreditValue = !payoutScheduleKnown ? 'Per plan terms' : dailyPayout ? firstCredit : maturity
 
+  const bestRate = plans.length ? Math.max(...plans.map((item) => planDailyRate(item))) : 0
+  const rangeHint = `${hasMinimum ? `Min ${money(minimum)}` : 'No minimum set'} · ${hasMaximum ? `Max ${money(maximum)}` : 'No stated cap'}`
+  const invalidMessage = `Enter an amount${hasMinimum ? ` of at least ${money(minimum)}` : ' greater than zero'}${hasMaximum ? ` and up to ${money(maximum)}` : ''}.`
+
   function choosePlan(index: number) {
-    const nextPlan = plans[index]
-    const nextMinimum = Math.max(0, Number(nextPlan?.min_amount ?? 10_000))
-    const nextMaximum = Math.max(nextMinimum + 1, Number(nextPlan?.max_amount ?? 5_000_000))
     setSelected(index)
-    setAmount((current) => Math.min(nextMaximum, Math.max(nextMinimum, current || nextMinimum)))
   }
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-[#dfe8e2] bg-white shadow-[0_18px_55px_rgba(16,45,33,.08)]" aria-labelledby="plan-calculator-title">
-      <div className="border-b border-[#e6eee8] bg-[#f7faf6] px-5 py-6 sm:px-8">
+    <section
+      className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/70 shadow-[0_24px_70px_rgba(16,45,33,.14)] backdrop-blur-2xl"
+      aria-labelledby="plan-calculator-title"
+    >
+      <span aria-hidden="true" className="pointer-events-none absolute -right-16 -top-16 h-52 w-52 rounded-full bg-[#b9f47f]/30 blur-3xl" />
+      <span aria-hidden="true" className="pointer-events-none absolute -bottom-20 -left-12 h-56 w-56 rounded-full bg-[#8bd7d0]/25 blur-3xl" />
+
+      <div className="relative border-b border-white/60 bg-white/50 px-5 py-6 backdrop-blur-xl sm:px-8">
         <p className="text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">Plan calculator</p>
         <h2 id="plan-calculator-title" className="mt-2 text-2xl font-semibold tracking-tight text-[#0b4537] sm:text-3xl">Choose a plan, see what it pays</h2>
         <p className="mt-2 max-w-2xl text-sm leading-6 text-[#60716b]">Income follows the plan&apos;s payout cadence, and principal treatment is shown before you commit. This is an estimate, not a promise.</p>
       </div>
-      <div className="grid lg:grid-cols-[1.05fr_.95fr]">
+      <div className="relative grid lg:grid-cols-[1.05fr_.95fr]">
         <div className="p-5 sm:p-7 lg:p-8">
-          <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#829088]">Plans</p>
-          <div className="mt-3 flex flex-col gap-2" role="listbox" aria-label="Investment plans">
-            {plans.length === 0 && <p className="rounded-2xl bg-[#f4f8f3] px-4 py-6 text-sm text-[#60716b]">Plans will show here when the catalogue is available.</p>}
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#829088]">Plans</p>
+            {plans.length > 0 && <p className="text-[11px] text-[#829088]">{plans.length} available</p>}
+          </div>
+          <div className="mt-3 flex max-h-[24rem] flex-col gap-2 overflow-y-auto pr-1" role="listbox" aria-label="Investment plans">
+            {plans.length === 0 && <p className="rounded-2xl bg-white/60 px-4 py-6 text-sm text-[#60716b] backdrop-blur">Plans will show here when the catalogue is available.</p>}
             {plans.map((item, index) => {
               const rate = planDailyRate(item)
               const span = Math.max(0, Number(item.duration_days ?? 0))
               const active = index === selected
+              const isBest = bestRate > 0 && rate === bestRate
+              const paused = planIsPaused(item)
+              const itemMin = Number(item.min_amount) > 0 ? money(Number(item.min_amount)) : null
+              const itemMax = Number(item.max_amount) > 0 ? money(Number(item.max_amount)) : null
+              const rangeLabel = itemMin && itemMax ? `${itemMin} – ${itemMax}` : itemMin ? `From ${itemMin}` : itemMax ? `Up to ${itemMax}` : 'Flexible range'
               return (
                 <button
                   key={item.id ?? index}
@@ -485,17 +523,31 @@ export function PlanCalculator({
                   role="option"
                   aria-selected={active}
                   onClick={() => choosePlan(index)}
-                  className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left transition ${
-                    active ? 'border-[#0b4537] bg-[#0b4537] text-white' : 'border-[#e1e9e3] bg-white text-[#173c30] hover:border-[#b9f47f]'
+                  className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-3 text-left backdrop-blur transition ${
+                    active
+                      ? 'border-transparent bg-[#0b4537] text-white shadow-[0_10px_30px_rgba(11,69,55,.35)]'
+                      : 'border-white/60 bg-white/50 text-[#173c30] hover:border-[#b9f47f] hover:bg-white/80'
                   }`}
                 >
-                  <span>
-                    <span className="block text-sm font-semibold">{item.name}</span>
+                  <span className="min-w-0">
+                    <span className="flex items-center gap-2 text-sm font-semibold">
+                      <span className="truncate">{item.name}</span>
+                      {isBest && (
+                        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[.1em] ${active ? 'bg-[#b9f47f]/20 text-[#b9f47f]' : 'bg-[#eef7eb] text-[#2f7a4a]'}`}>
+                          Best
+                        </span>
+                      )}
+                      {paused && (
+                        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[.1em] ${active ? 'bg-white/15 text-white/80' : 'bg-[#f3f5f2] text-[#829088]'}`}>
+                          Paused
+                        </span>
+                      )}
+                    </span>
                     <span className={`mt-0.5 block text-xs ${active ? 'text-white/70' : 'text-[#708079]'}`}>
-                      {span} days · {money(item.min_amount)} – {money(item.max_amount)}
+                      {span} days · {rangeLabel}
                     </span>
                   </span>
-                  <span className="text-right">
+                  <span className="shrink-0 text-right">
                     <span className={`block text-sm font-bold tabular-nums ${active ? 'text-[#b9f47f]' : 'text-[#0b4537]'}`}>{rate.toFixed(2)}% / day</span>
                     <span className={`block text-[11px] ${active ? 'text-white/70' : 'text-[#708079]'}`}>+{(rate * span).toFixed(1)}% over the term</span>
                   </span>
@@ -508,15 +560,15 @@ export function PlanCalculator({
             <div className="mt-5">
               <label className="text-sm font-medium text-[#60716b]" htmlFor="plan-amount">
                 Deposit amount
-                <div className="mt-2 flex min-h-12 items-center rounded-xl border border-[#dfe8e2] bg-[#fbfcfa] px-3 focus-within:border-[#75b95c] focus-within:ring-2 focus-within:ring-[#75b95c]/20">
+                <div className="mt-2 flex min-h-12 items-center rounded-xl border border-white/60 bg-white/60 px-3 backdrop-blur transition focus-within:border-[#75b95c] focus-within:ring-2 focus-within:ring-[#75b95c]/20">
                   <span className="mr-2 text-sm font-semibold text-[#829088]">₦</span>
                   <input
                     id="plan-amount"
                     type="number"
                     inputMode="numeric"
-                    min={minimum}
-                    max={maximum}
-                    step={10_000}
+                    min={hasMinimum ? minimum : 0}
+                    max={hasMaximum ? maximum : undefined}
+                    step={sliderStep}
                     value={Number.isFinite(amount) ? amount : ''}
                     onChange={(event) => setAmount(event.target.value === '' ? 0 : Number(event.target.value))}
                     className="min-w-0 w-full bg-transparent py-2 text-base font-semibold text-[#0b4537] outline-none"
@@ -524,31 +576,32 @@ export function PlanCalculator({
                   />
                 </div>
               </label>
-              <span id="calculator-range" className="mt-1.5 block text-xs text-[#829088]">Min {money(minimum)} · Max {money(maximum)}</span>
+              <span id="calculator-range" className="mt-1.5 block text-xs text-[#829088]">{rangeHint}</span>
               <input
                 type="range"
-                min={minimum}
-                max={maximum}
-                step={10_000}
-                value={Math.min(maximum, Math.max(minimum, amount || minimum))}
+                min={sliderFloor}
+                max={sliderCeiling}
+                step={sliderStep}
+                value={Math.min(sliderCeiling, Math.max(sliderFloor, amount || sliderFloor))}
                 onChange={(event) => setAmount(Number(event.target.value))}
                 className="mt-3 h-2 w-full cursor-pointer accent-[#0b4537]"
                 aria-label="Adjust deposit amount"
               />
-              {!amountIsValid && <p className="mt-3 text-xs font-medium text-[#b34f43]" role="status">Enter an amount between {money(minimum)} and {money(maximum)}.</p>}
+              {!amountIsValid && <p className="mt-3 text-xs font-medium text-[#b34f43]" role="status">{invalidMessage}</p>}
             </div>
           )}
         </div>
 
-        <div className="flex flex-col justify-between gap-5 bg-[#0b4537] p-5 text-white sm:p-7 lg:p-8">
-          <div>
+        <div className="relative flex flex-col justify-between gap-5 overflow-hidden bg-[#0b4537] p-5 text-white sm:p-7 lg:p-8">
+          <span aria-hidden="true" className="pointer-events-none absolute -right-12 -top-12 h-44 w-44 rounded-full bg-[#b9f47f]/15 blur-3xl" />
+          <div className="relative">
             <p className="text-xs font-semibold uppercase tracking-[.15em] text-[#b9f47f]">What you receive</p>
             <p className="mt-3 text-sm text-white/75">{plan ? `${plan.name} · ${daily.toFixed(2)}% a day · ${days} days` : 'Pick a plan'}</p>
             <p className="mt-2 text-xs text-white/60">{totalLabel}</p>
             <p className="mt-1 break-words text-3xl font-semibold tracking-tight text-[#b9f47f] sm:text-4xl">{amountIsValid && plan ? money(totalAtMaturity) : '—'}</p>
             <p className="mt-1 text-xs text-[#b9f47f]/80">{plan && amountIsValid ? `+${termPercent.toFixed(1)}% illustrative return over the term` : 'Estimate appears when the amount fits the plan'}</p>
           </div>
-          <dl className="grid grid-cols-2 gap-3">
+          <dl className="relative grid grid-cols-2 gap-3">
             {[
               ['Per day (illustrative)', amountIsValid ? money(Math.round(amount * (daily / 100))) : '—'],
               ['Per week (illustrative)', amountIsValid ? money(week) : '—'],
@@ -557,24 +610,24 @@ export function PlanCalculator({
               ['Principal', amountIsValid ? (principalReturned ? money(amount) : 'Not returned') : '—'],
               [principalReturned ? 'Total at maturity' : 'Illustrative income', amountIsValid ? money(totalAtMaturity) : '—'],
             ].map(([label, value]) => (
-              <div key={label} className="rounded-2xl bg-white/10 px-3 py-3">
+              <div key={label} className="rounded-2xl border border-white/10 bg-white/[.08] px-3 py-3 backdrop-blur">
                 <dt className="text-[11px] text-white/65">{label}</dt>
                 <dd className="mt-1 text-sm font-semibold tabular-nums">{value}</dd>
               </div>
             ))}
           </dl>
-          <div className="grid grid-cols-3 gap-2 text-[11px] leading-4 text-white/70">
+          <div className="relative grid grid-cols-3 gap-2 text-[11px] leading-4 text-white/70">
             <p><span className="block text-white/45">Plan opens</span>{openedLabel}</p>
             <p><span className="block text-white/45">{firstCreditLabel}</span>{firstCreditValue}</p>
             <p><span className="block text-white/45">Principal</span>{plan ? (principalReturned ? `Back ${maturity}` : 'Per plan terms') : '—'}</p>
           </div>
           <a
             href={plan && amountIsValid ? planDepositHref(plan, amount) : '/dashboard/wallet?mode=deposit'}
-            className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#b9f47f] px-4 py-3 text-center text-sm font-semibold text-[#071a18]"
+            className="relative inline-flex min-h-12 items-center justify-center rounded-xl bg-[#b9f47f] px-4 py-3 text-center text-sm font-semibold text-[#071a18] transition hover:bg-[#a9e86d]"
           >
             {plan && amountIsValid ? `Fund ${plan.name} with ${money(amount)}` : 'Open a funded account'}
           </a>
-          <p className="text-[11px] leading-5 text-white/60">Estimate only. Actual returns follow the plan terms and your account ledger. {sourceNote ?? 'Figures follow the current plan catalogue.'}</p>
+          <p className="relative text-[11px] leading-5 text-white/60">Estimate only. Actual returns follow the plan terms and your account ledger. {sourceNote ?? 'Figures follow the current plan catalogue.'}</p>
         </div>
       </div>
     </section>

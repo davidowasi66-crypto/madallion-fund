@@ -30,7 +30,7 @@ import { ActivityTicker } from '@/components/activity-ticker'
 import { PlanCalculator } from '@/components/investment-widgets'
 import { LandingPlanCard } from '@/components/landing-plan-card'
 import { DEFAULT_PLANS } from '@/lib/default-plans'
-import { getPlans, planDailyRate, planIsPaused, PLANS_KEY } from '@/lib/investment-api'
+import { getPlans, planDailyRate, planIsPaused, PLANS_KEY, type Plan } from '@/lib/investment-api'
 
 const BRAND = 'Madallion fund'
 
@@ -145,10 +145,19 @@ export default function Home() {
 
   const plans = catalogue?.plans?.length ? catalogue.plans : DEFAULT_PLANS
   const availablePlans = plans.filter((plan) => !planIsPaused(plan) && plan.sold_out !== true)
-  const displayPlans = (availablePlans.length ? availablePlans : plans).slice(0, 3)
+  const listablePlans = availablePlans.length ? availablePlans : plans
+  const displayPlans = listablePlans.slice(0, 6)
+  const extraPlanCount = Math.max(0, listablePlans.length - displayPlans.length)
   const spotlight = displayPlans[0] ?? DEFAULT_PLANS[0]
   const minimums = plans.map((plan) => Number(plan.min_amount ?? 0)).filter((value) => value > 0)
   const startingMinimum = minimums.length ? Math.min(...minimums) : 50_000
+  const bestRatePlan = plans.reduce<Plan | null>((best, plan) => {
+    return !best || planDailyRate(plan) > planDailyRate(best) ? plan : best
+  }, null)
+  const rateValues = plans.map(planDailyRate).filter((rate) => rate > 0)
+  const rateRange = rateValues.length
+    ? `${Math.min(...rateValues).toFixed(2)}% – ${Math.max(...rateValues).toFixed(2)}%`
+    : '—'
   const spotlightRate = planDailyRate(spotlight)
   const spotlightDays = Math.max(0, Number(spotlight.duration_days ?? 0))
   const spotlightMinimum = Math.max(0, Number(spotlight.min_amount ?? 0))
@@ -391,8 +400,13 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="plans" className="bg-[#0b4537] px-5 py-20 text-white lg:px-8">
-        <div className="mx-auto max-w-7xl">
+      <section id="plans" className="relative overflow-hidden bg-[#0b4537] px-5 py-20 text-white lg:px-8">
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <div className="absolute -left-24 top-10 h-80 w-80 rounded-full bg-[#b9f47f]/15 blur-3xl" />
+          <div className="absolute -right-16 bottom-0 h-96 w-96 rounded-full bg-[#8bd7d0]/12 blur-3xl" />
+          <div className="absolute left-1/3 top-1/2 h-72 w-72 -translate-y-1/2 rounded-full bg-[#2f7a4a]/40 blur-3xl" />
+        </div>
+        <div className="relative mx-auto max-w-7xl">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#b9f47f]">
@@ -408,8 +422,8 @@ export default function Home() {
             </div>
             <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
               <span
-                className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-semibold ${
-                  liveTerms ? 'bg-[#b9f47f]/15 text-[#b9f47f]' : 'bg-white/10 text-white/65'
+                className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-semibold backdrop-blur ${
+                  liveTerms ? 'border-[#b9f47f]/30 bg-[#b9f47f]/12 text-[#b9f47f]' : 'border-white/15 bg-white/[.06] text-white/65'
                 }`}
               >
                 <span className={`size-1.5 rounded-full ${liveTerms ? 'animate-pulse bg-[#b9f47f]' : 'bg-white/40'}`} aria-hidden="true" />
@@ -421,11 +435,41 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="mt-10 grid items-stretch gap-4 lg:grid-cols-3">
-            {displayPlans.map((plan, index) => (
-              <LandingPlanCard key={plan.id ?? index} plan={plan} featured={plan.featured === true} />
+          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            {[
+              { label: 'Live plans', value: String(plans.length) },
+              { label: 'Daily rate range', value: rateRange },
+              { label: 'Starting from', value: money(startingMinimum) },
+            ].map((stat) => (
+              <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/[.06] p-4 backdrop-blur-xl">
+                <p className="text-[10px] font-bold uppercase tracking-[.16em] text-[#b9f47f]/80">{stat.label}</p>
+                <p className="mt-1.5 text-xl font-semibold tracking-tight tabular-nums text-white">{stat.value}</p>
+              </div>
             ))}
           </div>
+
+          <div className="mt-6 grid items-stretch gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {displayPlans.map((plan, index) => (
+              <LandingPlanCard
+                key={plan.id ?? index}
+                plan={plan}
+                featured={plan.featured === true}
+                best={plan === bestRatePlan}
+              />
+            ))}
+          </div>
+
+          {extraPlanCount > 0 && (
+            <div className="mt-5">
+              <Link
+                href="/plans"
+                className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/[.06] px-4 py-2 text-xs font-semibold text-white/80 backdrop-blur-xl transition hover:border-[#b9f47f]/50 hover:text-white"
+              >
+                {extraPlanCount} more {extraPlanCount === 1 ? 'plan' : 'plans'} available
+                <ArrowRight size={13} aria-hidden="true" />
+              </Link>
+            </div>
+          )}
 
           <p className="mt-6 max-w-4xl text-xs leading-5 text-white/55">
             Rates and availability follow the current plan catalogue. Illustrative figures are not guarantees. Investments carry risk, and capital may be at risk. Read the{' '}
@@ -470,8 +514,13 @@ export default function Home() {
         </div>
       </section>
 
-      <section id="calculator" className="border-y border-[#e1e9e3] bg-[#f1f7f0] px-5 py-20 lg:px-8 lg:py-24">
-        <div className="mx-auto max-w-7xl">
+      <section id="calculator" className="relative overflow-hidden border-y border-[#e1e9e3] bg-[#f1f7f0] px-5 py-20 lg:px-8 lg:py-24">
+        <div className="pointer-events-none absolute inset-0" aria-hidden="true">
+          <div className="absolute -left-16 top-16 h-72 w-72 rounded-full bg-[#b9f47f]/50 blur-3xl" />
+          <div className="absolute -right-10 bottom-10 h-80 w-80 rounded-full bg-[#8bd7d0]/35 blur-3xl" />
+          <div className="absolute left-1/2 top-1/2 h-64 w-64 -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#0b4537]/10 blur-3xl" />
+        </div>
+        <div className="relative mx-auto max-w-7xl">
           <div className="max-w-2xl">
             <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">
               <Calculator size={14} aria-hidden="true" />
