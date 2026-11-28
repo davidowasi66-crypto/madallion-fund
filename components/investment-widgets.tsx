@@ -14,6 +14,7 @@ import {
   getMyWallet,
   getPlans,
   planDailyRate,
+  planIsPaused,
   PLANS_KEY,
   unwrapList,
   type Investment,
@@ -420,23 +421,34 @@ export function PlanCalculator({
 }) {
   const { data: catalogue } = useSWR(PLANS_KEY, getPlans)
   const plans = plansProp?.length ? plansProp : catalogue?.plans ?? []
-  const [amount, setAmount] = useState(50_000)
   const [selected, setSelected] = useState(0)
+  const [amount, setAmount] = useState<number | null>(null)
   const plan = plans[selected] ?? plans[0]
   const daily = planDailyRate(plan)
   const days = Math.max(0, Number(plan?.duration_days ?? 0))
-  const minimum = Math.max(0, Number(plan?.min_amount ?? 10_000))
-  const maximum = Math.max(minimum + 1, Number(plan?.max_amount ?? 5_000_000))
-  const amountIsValid = Number.isFinite(amount) && amount >= minimum && amount <= maximum
-  const profit = amountIsValid && Number.isFinite(daily) ? Math.round(amount * (daily / 100) * days) : 0
+  const rawMin = Number(plan?.min_amount)
+  const rawMax = Number(plan?.max_amount)
+  const hasMin = Number.isFinite(rawMin) && rawMin > 0
+  const hasMax = Number.isFinite(rawMax) && rawMax > 0
+  const minimum = hasMin ? rawMin : 0
+  const maximum = hasMax ? rawMax : null
+  const defaultAmount = hasMin ? rawMin : 50_000
+  const effectiveAmount = amount ?? defaultAmount
+  const amountIsValid =
+    Number.isFinite(effectiveAmount) &&
+    effectiveAmount > 0 &&
+    (!hasMin || effectiveAmount >= minimum) &&
+    (!hasMax || (maximum != null && effectiveAmount <= maximum))
+  const bestRate = plans.reduce((max, item) => Math.max(max, planDailyRate(item)), 0)
+  const profit = amountIsValid && Number.isFinite(daily) ? Math.round(effectiveAmount * (daily / 100) * days) : 0
   const maturity = useMemo(() => {
     const d = new Date()
     d.setDate(d.getDate() + days)
     return d.toLocaleDateString('en-NG', { day: 'numeric', month: 'short', year: 'numeric' })
   }, [days])
 
-  const week = amountIsValid ? Math.round(amount * (daily / 100) * 7) : 0
-  const month = amountIsValid ? Math.round(amount * (daily / 100) * 30) : 0
+  const week = amountIsValid ? Math.round(effectiveAmount * (daily / 100) * 7) : 0
+  const month = amountIsValid ? Math.round(effectiveAmount * (daily / 100) * 30) : 0
   const termPercent = days > 0 && Number.isFinite(daily) ? daily * days : 0
   const opens = useMemo(() => new Date(), [])
   const firstCredit = useMemo(() => {
@@ -449,17 +461,24 @@ export function PlanCalculator({
   const cadence = String(plan?.payout_cadence ?? '').toLowerCase()
   const dailyPayout = cadence === 'daily'
   const payoutScheduleKnown = cadence.length > 0
-  const totalAtMaturity = amountIsValid && plan ? (principalReturned ? amount + profit : profit) : 0
+  const totalAtMaturity = amountIsValid && plan ? (principalReturned ? effectiveAmount + profit : profit) : 0
   const totalLabel = principalReturned ? 'Illustrative total at maturity' : 'Illustrative income'
   const firstCreditLabel = !payoutScheduleKnown ? 'Payout schedule' : dailyPayout ? 'First credit' : 'At maturity'
   const firstCreditValue = !payoutScheduleKnown ? 'Per plan terms' : dailyPayout ? firstCredit : maturity
 
   function choosePlan(index: number) {
     const nextPlan = plans[index]
-    const nextMinimum = Math.max(0, Number(nextPlan?.min_amount ?? 10_000))
-    const nextMaximum = Math.max(nextMinimum + 1, Number(nextPlan?.max_amount ?? 5_000_000))
+    const nextMinRaw = Number(nextPlan?.min_amount)
+    const nextMin = Number.isFinite(nextMinRaw) && nextMinRaw > 0 ? nextMinRaw : 0
+    const nextMaxRaw = Number(nextPlan?.max_amount)
+    const nextMax = Number.isFinite(nextMaxRaw) && nextMaxRaw > 0 ? nextMaxRaw : null
     setSelected(index)
-    setAmount((current) => Math.min(nextMaximum, Math.max(nextMinimum, current || nextMinimum)))
+    setAmount((current) => {
+      let next = current && current > 0 ? current : nextMin || 50_000
+      if (nextMin && next < nextMin) next = nextMin
+      if (nextMax && next > nextMax) next = nextMax
+      return next
+    })
   }
 
   return (
@@ -471,13 +490,27 @@ export function PlanCalculator({
       </div>
       <div className="grid lg:grid-cols-[1.05fr_.95fr]">
         <div className="p-5 sm:p-7 lg:p-8">
-          <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#829088]">Plans</p>
-          <div className="mt-3 flex flex-col gap-2" role="listbox" aria-label="Investment plans">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] font-bold uppercase tracking-[.14em] text-[#829088]">Plans</p>
+            {plans.length > 0 && <span className="text-[11px] text-[#829088]">{plans.length} available</span>}
+          </div>
+          <div className="mt-3 flex max-h-[24rem] flex-col gap-2 overflow-y-auto pr-1" role="listbox" aria-label="Investment plans">
             {plans.length === 0 && <p className="rounded-2xl bg-[#f4f8f3] px-4 py-6 text-sm text-[#60716b]">Plans will show here when the catalogue is available.</p>}
             {plans.map((item, index) => {
               const rate = planDailyRate(item)
               const span = Math.max(0, Number(item.duration_days ?? 0))
               const active = index === selected
+              const itemMin = Number(item.min_amount)
+              const itemMax = Number(item.max_amount)
+              const knownMin = Number.isFinite(itemMin) && itemMin > 0
+              const knownMax = Number.isFinite(itemMax) && itemMax > 0
+              const range = knownMin && knownMax
+                ? `${money(itemMin)} – ${money(itemMax)}`
+                : knownMin
+                  ? `from ${money(itemMin)}`
+                  : 'No stated limits'
+              const unavailable = planIsPaused(item) || item.sold_out === true || item.availability_status === 'sold_out'
+              const isBest = rate > 0 && rate === bestRate
               return (
                 <button
                   key={item.id ?? index}
@@ -489,13 +522,25 @@ export function PlanCalculator({
                     active ? 'border-[#0b4537] bg-[#0b4537] text-white' : 'border-[#e1e9e3] bg-white text-[#173c30] hover:border-[#b9f47f]'
                   }`}
                 >
-                  <span>
-                    <span className="block text-sm font-semibold">{item.name}</span>
+                  <span className="min-w-0">
+                    <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                      <span className="truncate text-sm font-semibold">{item.name}</span>
+                      {isBest && (
+                        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[.1em] ${active ? 'bg-[#b9f47f] text-[#071a18]' : 'bg-[#0b4537] text-[#b9f47f]'}`}>
+                          Best rate
+                        </span>
+                      )}
+                      {unavailable && (
+                        <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[9px] font-bold uppercase tracking-[.1em] ${active ? 'bg-white/15 text-white/80' : 'bg-[#f0f2ef] text-[#829088]'}`}>
+                          Paused
+                        </span>
+                      )}
+                    </span>
                     <span className={`mt-0.5 block text-xs ${active ? 'text-white/70' : 'text-[#708079]'}`}>
-                      {span} days · {money(item.min_amount)} – {money(item.max_amount)}
+                      {span} days · {range}
                     </span>
                   </span>
-                  <span className="text-right">
+                  <span className="shrink-0 text-right">
                     <span className={`block text-sm font-bold tabular-nums ${active ? 'text-[#b9f47f]' : 'text-[#0b4537]'}`}>{rate.toFixed(2)}% / day</span>
                     <span className={`block text-[11px] ${active ? 'text-white/70' : 'text-[#708079]'}`}>+{(rate * span).toFixed(1)}% over the term</span>
                   </span>
@@ -514,28 +559,42 @@ export function PlanCalculator({
                     id="plan-amount"
                     type="number"
                     inputMode="numeric"
-                    min={minimum}
-                    max={maximum}
+                    min={hasMin ? minimum : 1}
+                    max={maximum ?? undefined}
                     step={10_000}
-                    value={Number.isFinite(amount) ? amount : ''}
+                    value={Number.isFinite(effectiveAmount) ? effectiveAmount : ''}
                     onChange={(event) => setAmount(event.target.value === '' ? 0 : Number(event.target.value))}
                     className="min-w-0 w-full bg-transparent py-2 text-base font-semibold text-[#0b4537] outline-none"
                     aria-describedby="calculator-range"
                   />
                 </div>
               </label>
-              <span id="calculator-range" className="mt-1.5 block text-xs text-[#829088]">Min {money(minimum)} · Max {money(maximum)}</span>
-              <input
-                type="range"
-                min={minimum}
-                max={maximum}
-                step={10_000}
-                value={Math.min(maximum, Math.max(minimum, amount || minimum))}
-                onChange={(event) => setAmount(Number(event.target.value))}
-                className="mt-3 h-2 w-full cursor-pointer accent-[#0b4537]"
-                aria-label="Adjust deposit amount"
-              />
-              {!amountIsValid && <p className="mt-3 text-xs font-medium text-[#b34f43]" role="status">Enter an amount between {money(minimum)} and {money(maximum)}.</p>}
+              <span id="calculator-range" className="mt-1.5 block text-xs text-[#829088]">
+                {hasMin ? `Min ${money(minimum)}` : 'No stated minimum'} · {maximum != null ? `Max ${money(maximum)}` : 'No stated maximum'}
+              </span>
+              {hasMin && maximum != null && (
+                <input
+                  type="range"
+                  min={minimum}
+                  max={maximum}
+                  step={10_000}
+                  value={Math.min(maximum, Math.max(minimum, effectiveAmount || minimum))}
+                  onChange={(event) => setAmount(Number(event.target.value))}
+                  className="mt-3 h-2 w-full cursor-pointer accent-[#0b4537]"
+                  aria-label="Adjust deposit amount"
+                />
+              )}
+              {!amountIsValid && (
+                <p className="mt-3 text-xs font-medium text-[#b34f43]" role="status">
+                  {hasMin && maximum != null
+                    ? `Enter an amount between ${money(minimum)} and ${money(maximum)}.`
+                    : hasMin
+                      ? `Enter an amount of at least ${money(minimum)}.`
+                      : maximum != null
+                        ? `Enter an amount up to ${money(maximum)}.`
+                        : 'Enter a valid amount to see your estimate.'}
+                </p>
+              )}
             </div>
           )}
         </div>
@@ -550,11 +609,11 @@ export function PlanCalculator({
           </div>
           <dl className="grid grid-cols-2 gap-3">
             {[
-              ['Per day (illustrative)', amountIsValid ? money(Math.round(amount * (daily / 100))) : '—'],
+              ['Per day (illustrative)', amountIsValid ? money(Math.round(effectiveAmount * (daily / 100))) : '—'],
               ['Per week (illustrative)', amountIsValid ? money(week) : '—'],
               ['Per month (illustrative)', amountIsValid ? money(month) : '—'],
               ['Whole term income', amountIsValid ? money(profit) : '—'],
-              ['Principal', amountIsValid ? (principalReturned ? money(amount) : 'Not returned') : '—'],
+              ['Principal', amountIsValid ? (principalReturned ? money(effectiveAmount) : 'Not returned') : '—'],
               [principalReturned ? 'Total at maturity' : 'Illustrative income', amountIsValid ? money(totalAtMaturity) : '—'],
             ].map(([label, value]) => (
               <div key={label} className="rounded-2xl bg-white/10 px-3 py-3">
@@ -569,10 +628,10 @@ export function PlanCalculator({
             <p><span className="block text-white/45">Principal</span>{plan ? (principalReturned ? `Back ${maturity}` : 'Per plan terms') : '—'}</p>
           </div>
           <a
-            href={plan && amountIsValid ? planDepositHref(plan, amount) : '/dashboard/wallet?mode=deposit'}
+            href={plan && amountIsValid ? planDepositHref(plan, effectiveAmount) : '/dashboard/wallet?mode=deposit'}
             className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#b9f47f] px-4 py-3 text-center text-sm font-semibold text-[#071a18]"
           >
-            {plan && amountIsValid ? `Fund ${plan.name} with ${money(amount)}` : 'Open a funded account'}
+            {plan && amountIsValid ? `Fund ${plan.name} with ${money(effectiveAmount)}` : 'Open a funded account'}
           </a>
           <p className="text-[11px] leading-5 text-white/60">Estimate only. Actual returns follow the plan terms and your account ledger. {sourceNote ?? 'Figures follow the current plan catalogue.'}</p>
         </div>

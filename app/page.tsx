@@ -146,7 +146,7 @@ export default function Home() {
   const plans = catalogue?.plans?.length ? catalogue.plans : DEFAULT_PLANS
   const availablePlans = plans.filter((plan) => !planIsPaused(plan) && plan.sold_out !== true)
   const catalogueForDisplay = availablePlans.length ? availablePlans : plans
-  const displayPlans = catalogueForDisplay.slice(0, 6)
+  const displayPlans = catalogueForDisplay.slice(0, 9)
   const hiddenPlanCount = Math.max(0, catalogueForDisplay.length - displayPlans.length)
   const spotlight = displayPlans[0] ?? DEFAULT_PLANS[0]
   const planKey = (plan: Plan) => String(plan.id ?? plan.name)
@@ -459,7 +459,9 @@ export default function Home() {
               <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white/55">
                 <Wallet size={12} aria-hidden="true" /> Minimum to start
               </p>
-              <p className="mt-1.5 text-lg font-semibold text-white">{money(startingMinimum)}</p>
+              <p className="mt-1.5 text-lg font-semibold text-white">
+                {minimums.length ? money(startingMinimum) : 'Set per plan'}
+              </p>
             </div>
           </div>
 

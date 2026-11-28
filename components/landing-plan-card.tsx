@@ -50,11 +50,11 @@ export function LandingPlanCard({ plan, featured, best = false }: { plan: Plan; 
       <dl className={`mt-6 space-y-3 border-t pt-5 text-sm ${rule}`}>
         <div className="flex items-center justify-between gap-4">
           <dt className={muted}>Minimum</dt>
-          <dd className="font-semibold">{minimum ? money(minimum) : '—'}</dd>
+          <dd className="font-semibold">{minimum ? money(minimum) : 'Set at deposit'}</dd>
         </div>
         <div className="flex items-center justify-between gap-4">
           <dt className={muted}>Maximum</dt>
-          <dd className="font-semibold">{maximum ? money(maximum) : '—'}</dd>
+          <dd className="font-semibold">{maximum ? money(maximum) : 'No stated cap'}</dd>
         </div>
         <div className="flex items-center justify-between gap-4">
           <dt className={muted}>Term</dt>
@@ -67,12 +67,16 @@ export function LandingPlanCard({ plan, featured, best = false }: { plan: Plan; 
       </dl>
 
       <div className={`mt-5 rounded-2xl p-4 ${featured ? 'bg-white/55' : 'bg-[#f4f8f3]'}`}>
-        <p className={`text-[10px] font-bold uppercase tracking-[.15em] ${muted}`}>Illustrative at minimum</p>
+        <p className={`text-[10px] font-bold uppercase tracking-[.15em] ${muted}`}>
+          {minimum ? 'Illustrative at minimum' : 'Illustrative earnings'}
+        </p>
         <p className="mt-1 text-lg font-semibold">{illustrativeEarnings == null ? '—' : money(illustrativeEarnings)}</p>
         <p className={`mt-1 text-[11px] leading-5 ${muted}`}>
           {minimum && days
             ? `${money(minimum)} for ${days} days. Not guaranteed.`
-            : 'Minimum and term are shown when the live plan loads.'}
+            : days
+              ? `${days}-day term. Choose your principal at deposit. Not guaranteed.`
+              : 'Terms are shown when the live plan loads.'}
         </p>
       </div>
 
