@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import useSWR from 'swr'
+import { Activity, ArrowDownLeft, ArrowUpRight } from 'lucide-react'
 import { xanoRequest } from '@/lib/xano-auth'
 import { antiThrottleSwrConfig } from '@/lib/swr'
 
@@ -118,6 +119,12 @@ function verb(type: ActivityKind) {
   return 'received'
 }
 
+function directionIcon(type: ActivityKind, size: number) {
+  return type === 'Withdrawal'
+    ? <ArrowUpRight size={size} aria-hidden="true" />
+    : <ArrowDownLeft size={size} aria-hidden="true" />
+}
+
 const SAMPLE_NAMES = [
   'Chidi Okeke',
   'Amina Bello',
@@ -229,7 +236,7 @@ function MemberActivityCard({ item, now }: { item: ActivityItem; now: number }) 
     <article className="w-[300px] shrink-0 rounded-xl border border-white/10 bg-[#0e2b26] px-3.5 py-3">
       <div className="flex items-center justify-between gap-2">
         <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.12em] ${memberTypeTone(item.type)}`}>
-          <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+          {directionIcon(item.type, 11)}
           {item.type}
         </span>
         <time dateTime={new Date(item.createdAt).toISOString()} className="text-[10px] font-medium text-[#91b0a2]">
@@ -249,7 +256,7 @@ function ActivityCard({ item, now }: { item: ActivityItem; now: number }) {
     <article className="w-[224px] shrink-0 rounded-2xl border border-[#e7eee8] bg-[#f7faf6] p-3.5">
       <div className="flex items-center justify-between gap-2">
         <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-[.12em] ${typeTone(item.type)}`}>
-          <span className="size-1.5 rounded-full bg-current" aria-hidden="true" />
+          {directionIcon(item.type, 11)}
           {item.type}
         </span>
         <time dateTime={new Date(item.createdAt).toISOString()} className="text-[10px] font-medium text-[#829088]">
@@ -319,7 +326,7 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
                 <div key={copy} className="flex shrink-0 items-center gap-6 pr-6" aria-hidden={copy === 1 ? true : undefined}>
                   {half.map((item, index) => (
                     <span key={`${item.id}-header-${copy}-${index}`} className={`inline-flex items-center gap-1.5 whitespace-nowrap text-[11px] ${isMemberHeader ? 'text-[#91b0a2]' : 'text-[#60716b]'}`}>
-                      <span className={`size-1.5 rounded-full ${isMemberHeader ? 'bg-[#b9f47f]' : 'bg-[#65a85c]'}`} aria-hidden="true" />
+                      {directionIcon(item.type, 12)}
                       <span className={`font-semibold ${isMemberHeader ? 'text-[#edf7f1]' : 'text-[#0b4537]'}`}>{item.displayName}</span>
                       <span className={isMemberHeader ? 'text-[#91b0a2]' : undefined}>{verb(item.type)}</span>
                       <span className={`font-semibold ${isMemberHeader ? 'text-[#b9f47f]' : 'text-[#0b4537]'}`}>{naira(item.amount)}</span>
@@ -349,10 +356,11 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
       <div className="mb-3 flex items-center justify-between gap-2">
         <div>
           <p
-            className={`text-[10px] font-bold uppercase tracking-[0.18em] ${
+            className={`flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[0.18em] ${
               isMember ? 'text-[#b9f47f]' : 'text-[#2f7a4a]'
             }`}
           >
+            <Activity size={12} aria-hidden="true" />
             Live ledger activity
           </p>
           <h2 className={`mt-0.5 text-base font-semibold sm:text-lg ${isMember ? 'text-[#edf7f1]' : 'text-[#0b4537]'}`}>

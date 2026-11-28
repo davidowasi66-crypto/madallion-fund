@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import useSWR from 'swr'
+import { Layers } from 'lucide-react'
 import { PlanCard } from '@/components/plan-card'
 import { PlanCalculator } from '@/components/investment-widgets'
 import { getPlans, PLANS_KEY } from '@/lib/investment-api'
@@ -29,7 +30,7 @@ export default function PlansPage() {
           Madallion fund
         </Link>
         <div className="mt-12 max-w-2xl sm:mt-20">
-          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">Live plan table</p>
+          <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]"><Layers size={14} aria-hidden="true" /> Live plan table</p>
           <h1 className="mt-3 text-5xl font-semibold tracking-[-.06em] text-[#0b4537]">
             Choose your pace of growth.
           </h1>

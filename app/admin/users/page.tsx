@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import useSWR from 'swr'
-import { Eye, X } from 'lucide-react'
+import { Eye, ShieldCheck, Users, X } from 'lucide-react'
 import { AdminShell, SectionCard } from '@/components/admin-shell'
 import { ReportTable, formatReportCell, labelize } from '@/components/admin-report-table'
 import { getAdminReferralLeaderboard, reportRows } from '@/lib/admin-reports-api'
@@ -96,7 +96,7 @@ export default function AdminUsersPage() {
         </p>
       )}
 
-      <SectionCard title="Registered members" action={users.isLoading ? 'Loading' : `${rows.length} users`}>
+      <SectionCard title="Registered members" action={users.isLoading ? 'Loading' : `${rows.length} users`} icon={Users}>
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead>
@@ -132,7 +132,7 @@ export default function AdminUsersPage() {
               ))}
               {!users.isLoading && rows.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="py-8 text-center text-slate-500">No users returned from fn_admin_user_list.</td>
+                  <td colSpan={7} className="py-8 text-center text-slate-500"><Users size={20} className="mx-auto mb-2 text-slate-600" />No users returned from fn_admin_user_list.</td>
                 </tr>
               )}
             </tbody>
@@ -141,7 +141,7 @@ export default function AdminUsersPage() {
       </SectionCard>
 
       <div className="mt-6">
-        <SectionCard title="Referral leaderboard" action={leaderboard.isLoading ? 'Loading' : leaderboard.data ? `${leaderboardRows.length} rows` : 'Route pending'}>
+        <SectionCard title="Referral leaderboard" action={leaderboard.isLoading ? 'Loading' : leaderboard.data ? `${leaderboardRows.length} rows` : 'Route pending'} icon={ShieldCheck}>
           {leaderboard.data === null ? (
             <p className="py-6 text-sm text-slate-400">
               The admin leaderboard route is not available yet. Create <code className="text-emerald-300">fn_referral_leaderboard</code> in the admin group.
@@ -198,7 +198,7 @@ export default function AdminUsersPage() {
                 <label className="block"><span className="text-xs text-slate-400">Amount (NGN)</span><input required type="number" min="0.01" step="0.01" value={adjust.amount} onChange={(e) => setAdjust({ ...adjust, amount: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
                 <label className="block"><span className="text-xs text-slate-400">Currency</span><input required value={adjust.currency} onChange={(e) => setAdjust({ ...adjust, currency: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
                 <label className="block lg:col-span-2"><span className="text-xs text-slate-400">Reason</span><input required value={adjust.reason} onChange={(e) => setAdjust({ ...adjust, reason: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
-                <div className="flex items-end lg:col-span-5"><button disabled={adjusting} className="rounded-lg bg-emerald-400 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-60">{adjusting ? 'Posting…' : 'Post adjustment'}</button></div>
+                <div className="flex items-end lg:col-span-5"><button disabled={adjusting} className="inline-flex items-center gap-2 rounded-lg bg-emerald-400 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-60"><ShieldCheck size={16} />{adjusting ? 'Posting…' : 'Post adjustment'}</button></div>
               </form>
               {adjustMessage && <p role="status" className="mt-3 text-xs text-emerald-300">{adjustMessage}</p>}
               {adjustError && <p role="alert" className="mt-3 text-xs text-red-300">{adjustError}</p>}

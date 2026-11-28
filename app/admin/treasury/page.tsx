@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import useSWR from 'swr'
+import { ArrowLeftRight, BookOpen, GitCompare, Landmark, PiggyBank, Receipt, Scale, TrendingDown, TrendingUp } from 'lucide-react'
 import { AdminShell, Metric, SectionCard } from '@/components/admin-shell'
 import { ReportTable } from '@/components/admin-report-table'
 import { getAdminDashboard, type AdminDashboardResponse } from '@/lib/xano-admin'
@@ -71,9 +72,9 @@ export default function TreasuryPage() {
           Settlement for the full position.
         </p>
         <div className="flex flex-wrap gap-2 text-xs">
-          <Link href="/admin/liabilities" className="rounded-lg border border-slate-700 px-3 py-2 text-slate-300 hover:border-emerald-400/50">Liability &amp; Settlement</Link>
-          <Link href="/admin/ledger" className="rounded-lg border border-slate-700 px-3 py-2 text-slate-300 hover:border-emerald-400/50">Ledger</Link>
-          <Link href="/admin/transactions" className="rounded-lg border border-slate-700 px-3 py-2 text-slate-300 hover:border-emerald-400/50">Transactions</Link>
+          <Link href="/admin/liabilities" className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-slate-300 hover:border-emerald-400/50"><Scale size={16} /> Liability &amp; Settlement</Link>
+          <Link href="/admin/ledger" className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-slate-300 hover:border-emerald-400/50"><BookOpen size={16} /> Ledger</Link>
+          <Link href="/admin/transactions" className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-slate-300 hover:border-emerald-400/50"><ArrowLeftRight size={16} /> Transactions</Link>
         </div>
       </div>
 
@@ -89,19 +90,20 @@ export default function TreasuryPage() {
       )}
 
       <div className="mt-6 grid gap-4 md:grid-cols-4">
-        <Metric label="Revenue" value={pnl.isLoading ? '…' : naira(revenue)} detail="Reported by fn_admin_pnl" tone="good" />
-        <Metric label="Expenses" value={pnl.isLoading ? '…' : naira(expenses)} detail="Reported by fn_admin_pnl" />
+        <Metric label="Revenue" value={pnl.isLoading ? '…' : naira(revenue)} detail="Reported by fn_admin_pnl" tone="good" icon={TrendingUp} />
+        <Metric label="Expenses" value={pnl.isLoading ? '…' : naira(expenses)} detail="Reported by fn_admin_pnl" icon={TrendingDown} />
         <Metric
           label="Net profit"
           value={pnl.isLoading ? '…' : naira(netProfit)}
           detail={margin == null ? 'Margin unavailable' : `${percent(margin)} margin`}
           tone={netProfit != null && netProfit < 0 ? 'warn' : 'good'}
+          icon={PiggyBank}
         />
-        <Metric label="Costs to date" value={dashboard.isLoading ? '…' : naira(costs)} detail="Dashboard and P&amp;L" />
+        <Metric label="Costs to date" value={dashboard.isLoading ? '…' : naira(costs)} detail="Dashboard and P&amp;L" icon={Receipt} />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <SectionCard title="Trial balance" action={trialBalance.isLoading ? 'Loading' : trialBalance.data ? 'Live Xano data' : 'Route pending'}>
+        <SectionCard title="Trial balance" action={trialBalance.isLoading ? 'Loading' : trialBalance.data ? 'Live Xano data' : 'Route pending'} icon={Scale}>
           <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-slate-300">
             <BalanceBadge value={balanced} />
             <span>Debits {naira(debits)}</span>
@@ -111,7 +113,7 @@ export default function TreasuryPage() {
           <ReportTable rows={trialRows} empty="No trial-balance rows returned." maxColumns={6} />
         </SectionCard>
 
-        <SectionCard title="Reconciliation" action={reconciliation.isLoading ? 'Loading' : reconciliation.data ? 'Live Xano data' : 'Route pending'}>
+        <SectionCard title="Reconciliation" action={reconciliation.isLoading ? 'Loading' : reconciliation.data ? 'Live Xano data' : 'Route pending'} icon={GitCompare}>
           <div className="mb-4 flex flex-wrap items-center gap-3 text-sm text-slate-300">
             <span>Matched {matched == null ? '—' : matched.toLocaleString('en-NG')}</span>
             <span className={unmatched ? 'text-amber-300' : 'text-emerald-300'}>Unmatched {unmatched == null ? '—' : unmatched.toLocaleString('en-NG')}</span>
@@ -122,7 +124,7 @@ export default function TreasuryPage() {
       </div>
 
       <div className="mt-6">
-        <SectionCard title="Profit &amp; loss" action={pnl.isLoading ? 'Loading' : pnl.data ? 'Live Xano data' : 'Route pending'}>
+        <SectionCard title="Profit &amp; loss" action={pnl.isLoading ? 'Loading' : pnl.data ? 'Live Xano data' : 'Route pending'} icon={TrendingUp}>
           <ReportTable rows={pnlRows} empty="No P&amp;L lines returned." maxColumns={7} />
           {!pnlRows.length && pnl.data && (
             <p className="mt-3 text-xs text-slate-500">
@@ -134,7 +136,7 @@ export default function TreasuryPage() {
       </div>
 
       <div className="mt-6">
-        <SectionCard title="Balance sheet position" action={position.isLoading ? 'Loading' : position.data ? 'Live Xano data' : 'Route pending'}>
+        <SectionCard title="Balance sheet position" action={position.isLoading ? 'Loading' : position.data ? 'Live Xano data' : 'Route pending'} icon={Landmark}>
           <div className="mb-4 flex flex-wrap gap-3 text-sm text-slate-300">
             <span>Assets {totalAssets == null ? '—' : naira(totalAssets)}</span>
             <span>Liabilities {totalLiabilities == null ? '—' : naira(totalLiabilities)}</span>

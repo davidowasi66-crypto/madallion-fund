@@ -8,6 +8,7 @@ import { ApprovalDecisionForm } from '@/components/approval-decision'
 import { backfillDepositLedgers } from '@/lib/admin-ops-api'
 import { reportRows } from '@/lib/admin-reports-api'
 import { getAdminPending } from '@/lib/xano-admin'
+import { ArrowDownToLine, ArrowUpFromLine, Check, ClipboardCheck, FlaskConical, Inbox, RefreshCw, Wrench } from 'lucide-react'
 
 const ngn = new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const lagosDate = new Intl.DateTimeFormat('en-NG', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Africa/Lagos' })
@@ -42,7 +43,7 @@ export default function ApprovalsPage() {
   }
 
   return <AdminShell eyebrow="Risk and controls" title="Approvals">
-    <SectionCard title="Pending approvals" action={isLoading ? 'Loading Xano data' : error ? 'Xano unavailable' : 'Live Xano data'}>
+    <SectionCard title="Pending approvals" action={isLoading ? 'Loading Xano data' : error ? 'Xano unavailable' : 'Live Xano data'} icon={ClipboardCheck}>
       <p className="mb-4 max-w-2xl text-xs leading-5 text-slate-400">Every decision records who decided, the reason, and the note in the Xano audit log before money moves.</p>
       <p className="mb-4 max-w-2xl text-xs leading-5 text-amber-200/80">
         If Xano says “different ledger”, the deposit account and the ledger posting account do not match. If it says
@@ -50,8 +51,9 @@ export default function ApprovalsPage() {
         before retrying.
       </p>
       <div className="mb-5 flex flex-wrap items-center gap-2" role="tablist" aria-label="Approval type">
-        {(['deposits', 'withdrawals'] as const).map((value) => <button key={value} role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={`rounded-lg px-3 py-2 text-sm ${tab === value ? 'bg-emerald-500/15 text-emerald-300' : 'text-slate-400 hover:bg-slate-800'}`}>{value[0].toUpperCase() + value.slice(1)}</button>)}
-        <button type="button" onClick={() => void mutate()} className="ml-auto rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:border-emerald-400/50">
+        {(['deposits', 'withdrawals'] as const).map((value) => <button key={value} role="tab" aria-selected={tab === value} onClick={() => setTab(value)} className={`inline-flex items-center gap-2 rounded-lg px-3 py-2 text-sm ${tab === value ? 'bg-emerald-500/15 text-emerald-300' : 'text-slate-400 hover:bg-slate-800'}`}>{value === 'deposits' ? <ArrowDownToLine size={16} /> : <ArrowUpFromLine size={16} />}{value[0].toUpperCase() + value.slice(1)}</button>)}
+        <button type="button" onClick={() => void mutate()} className="ml-auto inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 hover:border-emerald-400/50">
+          <RefreshCw size={16} />
           Refresh queue
         </button>
       </div>
@@ -95,7 +97,7 @@ export default function ApprovalsPage() {
               ))}
               {!isLoading && !data?.items?.length && (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-500">No pending {tab}.</td>
+                  <td colSpan={8} className="py-8 text-center text-slate-500"><Inbox size={20} className="mx-auto mb-2 text-slate-600" />No pending {tab}.</td>
                 </tr>
               )}
             </tbody>
@@ -105,16 +107,18 @@ export default function ApprovalsPage() {
     </SectionCard>
 
     <div className="mt-6">
-      <SectionCard title="Ledger repair" action="Deposit ↔ account alignment">
+      <SectionCard title="Ledger repair" action="Deposit ↔ account alignment" icon={Wrench}>
         <p className="max-w-2xl text-xs leading-5 text-slate-400">
           The “different ledger” error means a deposit points at an account in another ledger. Run a dry run first. The
           apply step only updates deposits whose account ledger is authoritative.
         </p>
         <div className="mt-4 flex flex-wrap gap-2">
-          <button type="button" onClick={() => void runRepair(true)} disabled={repairBusy != null} className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:border-emerald-400/50 disabled:opacity-50">
+          <button type="button" onClick={() => void runRepair(true)} disabled={repairBusy != null} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:border-emerald-400/50 disabled:opacity-50">
+            <FlaskConical size={16} />
             {repairBusy === 'dry' ? 'Checking…' : 'Dry run'}
           </button>
-          <button type="button" onClick={() => void runRepair(false)} disabled={repairBusy != null} className="rounded-lg bg-emerald-400/15 px-3 py-2 text-xs font-medium text-emerald-300 disabled:opacity-50">
+          <button type="button" onClick={() => void runRepair(false)} disabled={repairBusy != null} className="inline-flex items-center gap-2 rounded-lg bg-emerald-400/15 px-3 py-2 text-xs font-medium text-emerald-300 disabled:opacity-50">
+            <Check size={16} />
             {repairBusy === 'apply' ? 'Applying…' : 'Apply safe fixes'}
           </button>
         </div>

@@ -2,6 +2,7 @@
 
 import useSWR from 'swr'
 import { useState } from 'react'
+import { Handshake, Link2, Pencil, Plus, Users, X } from 'lucide-react'
 import { AdminShell, SectionCard } from '@/components/admin-shell'
 import { getAdminPartners, reportRows } from '@/lib/admin-reports-api'
 import { recordPartnerSettlement, saveAdminPartner } from '@/lib/admin-ops-api'
@@ -127,7 +128,7 @@ export default function PartnersPage() {
       {failure && <div role="alert" className="mt-4 rounded-lg border border-red-400/20 bg-red-400/5 p-3 text-sm text-red-200">{failure}</div>}
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.3fr_0.7fr]">
-        <SectionCard title="Partner list" action={isLoading ? 'Loading' : error ? 'Xano unavailable' : `${partners.length} partners`}>
+        <SectionCard title="Partner list" action={isLoading ? 'Loading' : error ? 'Xano unavailable' : `${partners.length} partners`} icon={Handshake}>
           {error ? (
             <p className="text-sm text-red-300">Unable to load partners: {error.message}</p>
           ) : (
@@ -155,15 +156,15 @@ export default function PartnersPage() {
                       </td>
                       <td className="py-3 pr-4 text-slate-300">{asText(row.bank_name) || '—'}</td>
                       <td className="py-3">
-                        <button type="button" onClick={() => startEdit(row)} className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:border-emerald-400/50">
-                          Edit
+                        <button type="button" onClick={() => startEdit(row)} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:border-emerald-400/50">
+                          <Pencil size={16} /> Edit
                         </button>
                       </td>
                     </tr>
                   ))}
                   {!isLoading && partners.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="py-8 text-center text-slate-500">No partners returned from Xano yet.</td>
+                      <td colSpan={6} className="py-8 text-center text-slate-500"><Handshake size={20} className="mx-auto mb-2 text-slate-600" />No partners returned from Xano yet.</td>
                     </tr>
                   )}
                 </tbody>
@@ -172,7 +173,7 @@ export default function PartnersPage() {
           )}
         </SectionCard>
 
-        <SectionCard title={editingId ? 'Edit partner' : 'Add partner'} action="fn_admin_save_partner">
+        <SectionCard title={editingId ? 'Edit partner' : 'Add partner'} action="fn_admin_save_partner" icon={Users}>
           <form onSubmit={submitPartner} className="space-y-3">
             <label className="block"><span className="text-xs text-slate-400">Name</span><input required value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
             <div className="grid grid-cols-2 gap-3">
@@ -191,15 +192,15 @@ export default function PartnersPage() {
             </div>
             <label className="block"><span className="text-xs text-slate-400">Notes</span><textarea value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
             <div className="flex justify-end gap-2">
-              {editingId && <button type="button" onClick={() => { setEditingId(null); setForm(emptyPartner) }} className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300">Cancel</button>}
-              <button disabled={saving} className="rounded-lg bg-emerald-400 px-3 py-2 text-xs font-semibold text-slate-950 disabled:opacity-60">{saving ? 'Saving…' : editingId ? 'Save partner' : 'Create partner'}</button>
+              {editingId && <button type="button" onClick={() => { setEditingId(null); setForm(emptyPartner) }} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300"><X size={16} /> Cancel</button>}
+              <button disabled={saving} className="inline-flex items-center gap-2 rounded-lg bg-emerald-400 px-3 py-2 text-xs font-semibold text-slate-950 disabled:opacity-60"><Plus size={16} />{saving ? 'Saving…' : editingId ? 'Save partner' : 'Create partner'}</button>
             </div>
           </form>
         </SectionCard>
       </div>
 
       <div className="mt-6">
-        <SectionCard title="Record partner settlement" action="fn_admin_record_partner_settlement">
+        <SectionCard title="Record partner settlement" action="fn_admin_record_partner_settlement" icon={Link2}>
           <form onSubmit={submitSettlement} className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
             <label className="block"><span className="text-xs text-slate-400">Partner</span><select required value={settlement.partner_id} onChange={(e) => setSettlement({ ...settlement, partner_id: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"><option value="">Select partner</option>{partners.map((row) => <option key={partnerId(row)} value={partnerId(row)}>{asText(row.name)}</option>)}</select></label>
             <label className="block"><span className="text-xs text-slate-400">Period start</span><input required type="datetime-local" value={settlement.period_start} onChange={(e) => setSettlement({ ...settlement, period_start: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
@@ -210,7 +211,7 @@ export default function PartnersPage() {
             <label className="block"><span className="text-xs text-slate-400">Net settled</span><input required type="number" min="0" step="0.01" value={settlement.net_settled} onChange={(e) => setSettlement({ ...settlement, net_settled: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
             <label className="block"><span className="text-xs text-slate-400">Status</span><select value={settlement.status} onChange={(e) => setSettlement({ ...settlement, status: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"><option value="pending">Pending</option><option value="matched">Matched</option><option value="discrepancy">Discrepancy</option></select></label>
             <label className="block md:col-span-2 xl:col-span-3"><span className="text-xs text-slate-400">Proof URL (optional)</span><input value={settlement.proof_url} onChange={(e) => setSettlement({ ...settlement, proof_url: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
-            <div className="flex items-end"><button disabled={settling} className="w-full rounded-lg bg-emerald-400 px-3 py-2 text-xs font-semibold text-slate-950 disabled:opacity-60">{settling ? 'Recording…' : 'Record settlement'}</button></div>
+            <div className="flex items-end"><button disabled={settling} className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-emerald-400 px-3 py-2 text-xs font-semibold text-slate-950 disabled:opacity-60"><Plus size={16} />{settling ? 'Recording…' : 'Record settlement'}</button></div>
           </form>
         </SectionCard>
       </div>

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react'
 import useSWR from 'swr'
 import { AdminShell, Metric, SectionCard } from '@/components/admin-shell'
 import { ReportTable } from '@/components/admin-report-table'
-import { ArrowUpRight, CalendarDays, CircleAlert, TrendingUp } from 'lucide-react'
+import { ArrowUpRight, BookOpen, CalendarDays, CircleAlert, Landmark, Scale, TrendingDown, TrendingUp } from 'lucide-react'
 import { xanoAdminDashboard, xanoAdminPending, xanoLedgerDashboard, getFirstValue } from '@/lib/xano-client'
 import { getAdminReconciliation, reportBoolean, reportNumber, reportRows } from '@/lib/admin-reports-api'
 import { getLedgerTrialBalance } from '@/lib/xano-ledger'
@@ -88,14 +88,14 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-4">
-        <Metric label="Net balance" value={loading ? '…' : String(ledgerSummary.netBalance)} detail="Across all wallets" tone="good" />
-        <Metric label="Pending movement" value={loading ? '…' : String(ledgerSummary.pendingMovement)} detail="Awaiting settlement" tone="warn" />
-        <Metric label="Investor inflows" value={loading ? '…' : String(ledgerSummary.investorInflows)} detail="This month" />
-        <Metric label="Investor outflows" value={loading ? '…' : String(ledgerSummary.investorOutflows)} detail="This month" />
+        <Metric label="Net balance" value={loading ? '…' : String(ledgerSummary.netBalance)} detail="Across all wallets" tone="good" icon={Landmark} />
+        <Metric label="Pending movement" value={loading ? '…' : String(ledgerSummary.pendingMovement)} detail="Awaiting settlement" tone="warn" icon={CircleAlert} />
+        <Metric label="Investor inflows" value={loading ? '…' : String(ledgerSummary.investorInflows)} detail="This month" icon={TrendingUp} />
+        <Metric label="Investor outflows" value={loading ? '…' : String(ledgerSummary.investorOutflows)} detail="This month" icon={TrendingDown} />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <SectionCard title="Trial balance" action={trial.isLoading ? 'Loading' : trial.data ? 'Live ledger data' : 'Unavailable'}>
+        <SectionCard title="Trial balance" action={trial.isLoading ? 'Loading' : trial.data ? 'Live ledger data' : 'Unavailable'} icon={Scale}>
           <div className="mb-4 flex flex-wrap gap-3 text-sm text-slate-300">
             <span className={trialBalanced === false ? 'text-red-300' : trialBalanced ? 'text-emerald-300' : 'text-slate-400'}>
               {trialBalanced == null ? 'Status unavailable' : trialBalanced ? 'Balanced' : 'Out of balance'}
@@ -107,7 +107,7 @@ export default function AdminDashboardPage() {
           <ReportTable rows={trialRows} empty="No trial-balance rows returned." maxColumns={6} />
         </SectionCard>
 
-        <SectionCard title="Reconciliation" action={recon.isLoading ? 'Loading' : recon.data ? 'Live Xano data' : 'Unavailable'}>
+        <SectionCard title="Reconciliation" action={recon.isLoading ? 'Loading' : recon.data ? 'Live Xano data' : 'Unavailable'} icon={Landmark}>
           <div className="mb-4 flex flex-wrap gap-3 text-sm text-slate-300">
             <span>Matched {countLabel(reconMatched)}</span>
             <span className={reconUnmatched ? 'text-amber-300' : 'text-emerald-300'}>Unmatched {countLabel(reconUnmatched)}</span>
@@ -118,7 +118,7 @@ export default function AdminDashboardPage() {
       </div>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-        <SectionCard title="Accruals" action="Live">
+        <SectionCard title="Accruals" action="Live" icon={CalendarDays}>
           <div className="space-y-3">
             {fallbackRows.map(([day, value, accrual]) => (
               <div key={day} className="grid grid-cols-[1.3fr_.9fr_.9fr] gap-3 rounded-lg border border-slate-800 bg-slate-900/40 p-3 text-sm text-slate-300">
@@ -130,7 +130,7 @@ export default function AdminDashboardPage() {
           </div>
         </SectionCard>
 
-        <SectionCard title="Operational notes" action="Attention">
+        <SectionCard title="Operational notes" action="Attention" icon={BookOpen}>
           <div className="space-y-4 text-sm text-slate-300">
             <div className="flex items-start gap-3 rounded-lg border border-slate-800 bg-slate-900/40 p-3">
               <CircleAlert size={16} className="mt-0.5 text-amber-300" />

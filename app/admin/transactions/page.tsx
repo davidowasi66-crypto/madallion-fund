@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { ArrowLeftRight, Eye, RefreshCw, X } from 'lucide-react'
 import { AdminShell, SectionCard } from '@/components/admin-shell'
 import { ReportTable, formatReportCell, labelize } from '@/components/admin-report-table'
 import { reportRows } from '@/lib/admin-reports-api'
@@ -106,7 +107,7 @@ export default function AdminTransactionsPage() {
           {error}
         </p>
       )}
-      <SectionCard title="Ledger entries" action={loading ? 'Loading' : `${rows.length} entries`}>
+      <SectionCard title="Ledger entries" action={loading ? 'Loading' : `${rows.length} entries`} icon={ArrowLeftRight}>
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead>
@@ -132,8 +133,8 @@ export default function AdminTransactionsPage() {
                   <td className="py-3 pr-4 font-medium">{naira(row.amount ?? row.value)}</td>
                   <td className="py-3 pr-4">{row.status ?? '—'}</td>
                   <td className="py-3">
-                    <button onClick={() => void openDetail(row)} className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:border-emerald-400/50">
-                      View
+                    <button onClick={() => void openDetail(row)} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:border-emerald-400/50">
+                      <Eye size={16} /> View
                     </button>
                   </td>
                 </tr>
@@ -141,6 +142,7 @@ export default function AdminTransactionsPage() {
               {!loading && rows.length === 0 && (
                 <tr>
                   <td colSpan={6} className="py-8 text-center text-slate-500">
+                    <ArrowLeftRight size={20} className="mx-auto mb-2 text-slate-600" />
                     No transactions returned from ledger-api.
                   </td>
                 </tr>
@@ -163,7 +165,7 @@ export default function AdminTransactionsPage() {
                 <p className="text-[10px] uppercase tracking-[.18em] text-emerald-300">Transaction detail</p>
                 <h2 className="mt-2 text-xl font-semibold text-white">#{String(detail.id ?? detail.transaction_id ?? '')}</h2>
               </div>
-              <button onClick={() => setDetail(null)} className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300">Close</button>
+              <button onClick={() => setDetail(null)} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300"><X size={16} /> Close</button>
             </div>
 
             {detailScalars.length > 0 && (
@@ -191,8 +193,8 @@ export default function AdminTransactionsPage() {
               </p>
               <div className="mt-3 flex flex-col gap-2 sm:flex-row">
                 <input value={reverseReason} onChange={(e) => setReverseReason(e.target.value)} placeholder="Reason for reversal" className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" />
-                <button onClick={() => void submitReverse()} disabled={reversing || !reverseReason.trim()} className="rounded-lg bg-amber-400 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-60">
-                  {reversing ? 'Reversing…' : 'Reverse'}
+                <button onClick={() => void submitReverse()} disabled={reversing || !reverseReason.trim()} className="inline-flex items-center gap-2 rounded-lg bg-amber-400 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-60">
+                  <RefreshCw size={16} />{reversing ? 'Reversing…' : 'Reverse'}
                 </button>
               </div>
               {reverseMessage && <p role="status" className="mt-3 text-xs text-emerald-300">{reverseMessage}</p>}

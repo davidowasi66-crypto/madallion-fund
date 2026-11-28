@@ -4,12 +4,15 @@ import Link from 'next/link'
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
+  Activity,
   ArrowDownLeft,
   ArrowRight,
   ArrowUpRight,
   Bell,
   ChevronRight,
   Clock3,
+  FileText,
+  Layers,
   LogOut,
   Menu,
   Wallet,
@@ -292,7 +295,12 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                     <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#8fbfa8]">
                       {mode === 'deposit' ? 'Deposit' : 'Withdraw'}
                     </p>
-                    <h1 className="mt-1 text-2xl font-semibold tracking-tight">
+                    <h1 className="mt-1 flex items-center gap-2 text-2xl font-semibold tracking-tight">
+                      {mode === 'deposit' ? (
+                        <ArrowDownLeft size={20} className="text-[#b9f47f]" />
+                      ) : (
+                        <ArrowUpRight size={20} className="text-[#b9f47f]" />
+                      )}
                       {mode === 'deposit' ? 'Add funds' : 'Cash out'}
                     </h1>
                     <p className="mt-1 text-sm text-[#a8c7b8]">
@@ -308,8 +316,9 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                   </div>
                   <Link
                     href="/dashboard/activity"
-                    className="shrink-0 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs text-[#dcebe4]"
+                    className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs text-[#dcebe4]"
                   >
+                    <Clock3 size={14} />
                     History
                   </Link>
                 </div>
@@ -318,19 +327,21 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                   <button
                     type="button"
                     onClick={() => setMode('deposit')}
-                    className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
+                    className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition ${
                       mode === 'deposit' ? 'bg-[#b9f47f] text-[#071a18]' : 'text-[#a8c7b8]'
                     }`}
                   >
+                    <ArrowDownLeft size={16} />
                     Deposit
                   </button>
                   <button
                     type="button"
                     onClick={() => setMode('withdraw')}
-                    className={`flex-1 rounded-xl py-2.5 text-sm font-semibold transition ${
+                    className={`inline-flex flex-1 items-center justify-center gap-2 rounded-xl py-2.5 text-sm font-semibold transition ${
                       mode === 'withdraw' ? 'bg-[#b9f47f] text-[#071a18]' : 'text-[#a8c7b8]'
                     }`}
                   >
+                    <ArrowUpRight size={16} />
                     Withdraw
                   </button>
                 </div>
@@ -415,9 +426,10 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
               <button
                 type="button"
                 disabled={amountNum <= 0 || Boolean(amountError) || submitting || (mode === 'withdraw' && !payoutReady)}
-                className="mt-5 w-full rounded-2xl bg-gradient-to-r from-[#b9f47f] to-[#65a85c] py-4 text-sm font-semibold text-[#071a18] shadow-[0_10px_24px_rgba(101,168,92,.22)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45"
+                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#b9f47f] to-[#65a85c] py-4 text-sm font-semibold text-[#071a18] shadow-[0_10px_24px_rgba(101,168,92,.22)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45"
                 onClick={submitWalletAction}
               >
+                {mode === 'deposit' ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}
                 {submitting ? 'Submitting…' : mode === 'deposit' ? 'Continue deposit' : 'Withdraw'}
               </button>
               {actionMessage && (
@@ -434,7 +446,10 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
 
               <section className="mt-6 mb-8">
                 <div className="flex items-center justify-between">
-                  <h2 className="text-lg font-semibold text-[#0b4537] lg:text-[#edf7f1]">Your accounts</h2>
+                  <h2 className="flex items-center gap-1.5 text-lg font-semibold text-[#0b4537] lg:text-[#edf7f1]">
+                    <Wallet size={16} className="text-[#2f7a4a] lg:text-[#b9f47f]" />
+                    Your accounts
+                  </h2>
                   <span className="text-xs text-[#708079]">{loading ? '…' : `${rows.length} total`}</span>
                 </div>
                 {loading && <p className="mt-4 text-sm text-[#708079]">Loading accounts…</p>}
@@ -481,7 +496,10 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                   <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[#dfe8e2] bg-white p-5 shadow-2xl">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="text-xs uppercase tracking-[0.18em] text-[#65a85c]">Account ledger</p>
+                        <p className="flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-[#65a85c]">
+                          <FileText size={14} />
+                          Account ledger
+                        </p>
                         <h2 className="mt-1 text-lg font-semibold text-[#0b4537]">
                           {String(accountDetail.account.name ?? accountDetail.account.account_name ?? 'Account')}
                         </h2>
@@ -534,7 +552,14 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                 </button>
                 <div>
                   <p className="text-xs uppercase tracking-[0.22em] text-[#65a85c] lg:text-[#719486]">Member workspace</p>
-                  <h1 className="mt-1 text-xl font-semibold text-[#0b4537] lg:text-white">{title}</h1>
+                  <h1 className="mt-1 flex items-center gap-2 text-xl font-semibold text-[#0b4537] lg:text-white">
+                    {section === 'investments' ? (
+                      <Layers size={20} className="text-[#2f7a4a] lg:text-[#b9f47f]" />
+                    ) : (
+                      <Activity size={20} className="text-[#2f7a4a] lg:text-[#b9f47f]" />
+                    )}
+                    {title}
+                  </h1>
                 </div>
                 <Link href="/dashboard/notifications" aria-label="Notifications" className="ml-auto inline-flex size-10 shrink-0 items-center justify-center rounded-full border border-[#dfe8e2] text-[#0b4537] hover:bg-[#f4f8f3] lg:border-white/15 lg:text-[#b9f47f] lg:hover:bg-white/5">
                   <Bell size={18} aria-hidden="true" />
@@ -558,6 +583,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                   <MaturityNudges investments={investments} />
                   {investments.length === 0 ? (
                     <div className="rounded-3xl border border-dashed border-[#dfe8e2] bg-white p-7 lg:border-white/10 lg:bg-transparent">
+                      <Layers size={20} className="mb-2 block text-[#a9b7b0] lg:text-[#63897b]" />
                       <p className="font-medium text-[#0b4537] lg:text-white">No investments yet</p>
                       <p className="mt-2 text-sm text-[#708079]">
                         Your investments will appear here after you subscribe to a plan.
@@ -645,6 +671,7 @@ function Transaction({ row, memberName }: { row: Row; memberName: string }) {
 function Empty({ text }: { text: string }) {
   return (
     <p className="rounded-2xl border border-dashed border-[#dfe8e2] px-4 py-8 text-center text-sm text-[#708079] lg:border-white/10">
+      <FileText size={20} className="mx-auto mb-2 block text-[#a9b7b0] lg:text-[#63897b]" />
       {text}
     </p>
   )

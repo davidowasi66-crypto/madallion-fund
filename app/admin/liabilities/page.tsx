@@ -12,6 +12,26 @@ import {
   type AdminPendingResponse,
 } from '@/lib/xano-admin'
 import { getAdminLiabilityReport, reportRows, type ReportPayload } from '@/lib/admin-reports-api'
+import {
+  ArrowDownToLine,
+  ArrowLeftRight,
+  ArrowUpFromLine,
+  Banknote,
+  CalendarClock,
+  ClipboardCheck,
+  Coins,
+  FileText,
+  Hourglass,
+  Inbox,
+  Landmark,
+  Network,
+  Package,
+  Receipt,
+  Scale,
+  ShieldCheck,
+  TrendingUp,
+  Wallet,
+} from 'lucide-react'
 
 const naira = (value: unknown) => `₦${Math.round(Number(value || 0)).toLocaleString('en-NG')}`
 const count = (value: unknown) => Number(value || 0).toLocaleString('en-NG')
@@ -195,28 +215,28 @@ export default function LiabilitiesPage() {
       )}
 
       <div className="mt-6 grid gap-4 md:grid-cols-4">
-        <Metric label="Total liabilities" value={isLoading ? '…' : naira(data?.position.liabilities.total)} detail="What the platform owes members" tone="warn" />
-        <Metric label="Assets" value={isLoading ? '…' : naira(data?.position.assets.total)} detail="Current position" tone="good" />
-        <Metric label="Equity" value={isLoading ? '…' : naira(data?.position.equity.net)} detail={data ? `Surplus ${data.position.equity.surplus_ratio}% · ${data.position.equity.surplus_status}` : 'Net position'} />
-        <Metric label="Active principal" value={isLoading ? '…' : naira(data?.aum.active_principal)} detail="Locked member principal" />
+        <Metric label="Total liabilities" value={isLoading ? '…' : naira(data?.position.liabilities.total)} detail="What the platform owes members" tone="warn" icon={Scale} />
+        <Metric label="Assets" value={isLoading ? '…' : naira(data?.position.assets.total)} detail="Current position" tone="good" icon={Landmark} />
+        <Metric label="Equity" value={isLoading ? '…' : naira(data?.position.equity.net)} detail={data ? `Surplus ${data.position.equity.surplus_ratio}% · ${data.position.equity.surplus_status}` : 'Net position'} icon={TrendingUp} />
+        <Metric label="Active principal" value={isLoading ? '…' : naira(data?.aum.active_principal)} detail="Locked member principal" icon={Wallet} />
       </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-4">
-        <Metric label="Accrued today" value={isLoading ? '…' : naira(data?.today.interest_accrued)} detail="Interest posted today" />
-        <Metric label="Daily interest due" value={isLoading ? '…' : naira(data?.interest_forecast.daily_interest_due)} detail="Forecast run-rate" tone="warn" />
-        <Metric label="Coverage" value={isLoading ? '…' : `${data?.interest_forecast.coverage_days ?? 0} days`} detail="At the current payout pace" />
-        <Metric label="Maturities in 30 days" value={isLoading ? '…' : naira(data?.interest_forecast.maturities_30d)} detail="Principal and yield due" tone="warn" />
+        <Metric label="Accrued today" value={isLoading ? '…' : naira(data?.today.interest_accrued)} detail="Interest posted today" icon={Coins} />
+        <Metric label="Daily interest due" value={isLoading ? '…' : naira(data?.interest_forecast.daily_interest_due)} detail="Forecast run-rate" tone="warn" icon={CalendarClock} />
+        <Metric label="Coverage" value={isLoading ? '…' : `${data?.interest_forecast.coverage_days ?? 0} days`} detail="At the current payout pace" icon={ShieldCheck} />
+        <Metric label="Maturities in 30 days" value={isLoading ? '…' : naira(data?.interest_forecast.maturities_30d)} detail="Principal and yield due" tone="warn" icon={Hourglass} />
       </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-4">
-        <Metric label="Pending deposits" value={isLoading ? '…' : count(data?.counts.pending_deposits)} detail="Awaiting approval" />
-        <Metric label="Pending withdrawals" value={isLoading ? '…' : count(data?.counts.pending_withdrawals)} detail="Awaiting approval" tone="warn" />
-        <Metric label="Lifetime net inflow" value={isLoading ? '…' : naira(data?.lifetime.net_inflow)} detail={`Credited ${naira(data?.lifetime.total_credited)} · Debited ${naira(data?.lifetime.total_debited)}`} tone="good" />
-        <Metric label="Costs to date" value={isLoading ? '…' : naira(data?.costs_to_date)} detail="Recorded operating costs" />
+        <Metric label="Pending deposits" value={isLoading ? '…' : count(data?.counts.pending_deposits)} detail="Awaiting approval" icon={ArrowDownToLine} />
+        <Metric label="Pending withdrawals" value={isLoading ? '…' : count(data?.counts.pending_withdrawals)} detail="Awaiting approval" tone="warn" icon={ArrowUpFromLine} />
+        <Metric label="Lifetime net inflow" value={isLoading ? '…' : naira(data?.lifetime.net_inflow)} detail={`Credited ${naira(data?.lifetime.total_credited)} · Debited ${naira(data?.lifetime.total_debited)}`} tone="good" icon={TrendingUp} />
+        <Metric label="Costs to date" value={isLoading ? '…' : naira(data?.costs_to_date)} detail="Recorded operating costs" icon={Receipt} />
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <SectionCard title="Liability vs assets" action={isLoading ? 'Loading' : 'Ledger position'}>
+        <SectionCard title="Liability vs assets" action={isLoading ? 'Loading' : 'Ledger position'} icon={Scale}>
           <div className="space-y-4">
             {liabilityMix.map((item) => (
               <div key={item.name}>
@@ -229,11 +249,11 @@ export default function LiabilitiesPage() {
                 </div>
               </div>
             ))}
-            {!isLoading && liabilityMix.length === 0 && <p className="text-sm text-slate-500">No liability chart returned by Xano.</p>}
+            {!isLoading && liabilityMix.length === 0 && <p className="text-sm text-slate-500"><Inbox size={16} className="mr-2 inline text-slate-600" />No liability chart returned by Xano.</p>}
           </div>
         </SectionCard>
 
-        <SectionCard title="Plan mix" action={isLoading ? 'Loading' : `${data?.charts.plan_mix.length ?? 0} plans`}>
+        <SectionCard title="Plan mix" action={isLoading ? 'Loading' : `${data?.charts.plan_mix.length ?? 0} plans`} icon={Package}>
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead>
@@ -253,7 +273,7 @@ export default function LiabilitiesPage() {
                 ))}
                 {!isLoading && (data?.charts.plan_mix.length ?? 0) === 0 && (
                   <tr>
-                    <td colSpan={3} className="py-6 text-center text-slate-500">No plan mix returned.</td>
+                    <td colSpan={3} className="py-6 text-center text-slate-500"><Inbox size={20} className="mx-auto mb-2 text-slate-600" />No plan mix returned.</td>
                   </tr>
                 )}
               </tbody>
@@ -263,7 +283,7 @@ export default function LiabilitiesPage() {
       </div>
 
       <div className="mt-6 grid gap-6 lg:grid-cols-2">
-        <SectionCard title="Cashflow" action={isLoading ? 'Loading' : 'Recent movement'}>
+        <SectionCard title="Cashflow" action={isLoading ? 'Loading' : 'Recent movement'} icon={ArrowLeftRight}>
           <div className="space-y-3">
             {cashflow.map((item, index) => {
               const row = item as Record<string, unknown>
@@ -281,11 +301,11 @@ export default function LiabilitiesPage() {
                 </div>
               )
             })}
-            {!isLoading && cashflow.length === 0 && <p className="text-sm text-slate-500">No cashflow series returned.</p>}
+            {!isLoading && cashflow.length === 0 && <p className="text-sm text-slate-500"><Inbox size={16} className="mr-2 inline text-slate-600" />No cashflow series returned.</p>}
           </div>
         </SectionCard>
 
-        <SectionCard title="Channel performance" action={liabilityReport.data ? 'Xano lifetime totals' : deposits.isLoading || withdrawals.isLoading ? 'Loading' : `${effectiveChannels.length} channels`}>
+        <SectionCard title="Channel performance" action={liabilityReport.data ? 'Xano lifetime totals' : deposits.isLoading || withdrawals.isLoading ? 'Loading' : `${effectiveChannels.length} channels`} icon={Network}>
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead>
@@ -307,7 +327,7 @@ export default function LiabilitiesPage() {
                 ))}
                 {!deposits.isLoading && !withdrawals.isLoading && effectiveChannels.length === 0 && (
                   <tr>
-                    <td colSpan={4} className="py-6 text-center text-slate-500">No channel movements in the current queue.</td>
+                    <td colSpan={4} className="py-6 text-center text-slate-500"><Inbox size={20} className="mx-auto mb-2 text-slate-600" />No channel movements in the current queue.</td>
                   </tr>
                 )}
               </tbody>
@@ -322,7 +342,7 @@ export default function LiabilitiesPage() {
       </div>
 
       <div className="mt-6">
-        <SectionCard title="Liability report" action={liabilityReport.isLoading ? 'Loading' : liabilityReport.data ? 'Live Xano data' : 'Unavailable'}>
+        <SectionCard title="Liability report" action={liabilityReport.isLoading ? 'Loading' : liabilityReport.data ? 'Live Xano data' : 'Unavailable'} icon={FileText}>
           <ReportTable
             rows={reportRows(liabilityReport.data, ['items', 'rows', 'liabilities', 'by_channel', 'channels'])}
             empty="No liability rows returned."
@@ -332,7 +352,7 @@ export default function LiabilitiesPage() {
       </div>
 
       <div className="mt-6">
-        <SectionCard title="Monnify-equivalent capabilities" action="What you get without a gateway">
+        <SectionCard title="Monnify-equivalent capabilities" action="What you get without a gateway" icon={ClipboardCheck}>
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead>
@@ -371,19 +391,19 @@ export default function LiabilitiesPage() {
 
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <Link href="/admin/deposits" className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-sm text-slate-300 hover:border-emerald-400/40">
-          <p className="font-medium text-white">Deposits</p>
+          <p className="flex items-center gap-2 font-medium text-white"><ArrowDownToLine size={16} />Deposits</p>
           <p className="mt-1 text-xs text-slate-400">Record and review collections.</p>
         </Link>
         <Link href="/admin/disbursements" className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-sm text-slate-300 hover:border-emerald-400/40">
-          <p className="font-medium text-white">Disbursements</p>
+          <p className="flex items-center gap-2 font-medium text-white"><Banknote size={16} />Disbursements</p>
           <p className="mt-1 text-xs text-slate-400">Record payouts and track settlement.</p>
         </Link>
         <Link href="/admin/channels" className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-sm text-slate-300 hover:border-emerald-400/40">
-          <p className="font-medium text-white">Money Channels</p>
+          <p className="flex items-center gap-2 font-medium text-white"><Network size={16} />Money Channels</p>
           <p className="mt-1 text-xs text-slate-400">Add or pause bank, OTC, and cash routes.</p>
         </Link>
         <Link href="/admin/accruals" className="rounded-xl border border-slate-800 bg-slate-900/40 p-4 text-sm text-slate-300 hover:border-emerald-400/40">
-          <p className="font-medium text-white">Accruals & Maturity</p>
+          <p className="flex items-center gap-2 font-medium text-white"><CalendarClock size={16} />Accruals & Maturity</p>
           <p className="mt-1 text-xs text-slate-400">See per-plan accruals and maturities.</p>
         </Link>
       </div>

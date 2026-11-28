@@ -7,6 +7,7 @@ import { getAdminInvestments, type AdminInvestmentsResponse } from '@/lib/xano-a
 import { getAdminPlanAccruals, reportNumber, reportRows, type ReportPayload } from '@/lib/admin-reports-api'
 import { runAccrual } from '@/lib/admin-ops-api'
 import { toTimestamp } from '@/lib/pending-route'
+import { Bell, CalendarClock, Coins, Inbox, Play, Search, TrendingUp, Wallet } from 'lucide-react'
 
 type Investment = AdminInvestmentsResponse['items'][number]
 
@@ -181,10 +182,10 @@ export default function AccrualsPage() {
       </p>
 
       <div className="mt-6 grid gap-4 md:grid-cols-4">
-        <Metric label="Total principal" value={naira(totals.principal)} detail="Across returned investments" tone="good" />
-        <Metric label="Accrued to date" value={naira(totals.accrued)} detail="Posted by the ledger" />
-        <Metric label="Projected yield" value={naira(totals.projected)} detail="At each plan's maturity" />
-        <Metric label="Due in 7 days" value={String(totals.dueSoon)} detail="Active contracts maturing soon" tone="warn" />
+        <Metric label="Total principal" value={naira(totals.principal)} detail="Across returned investments" tone="good" icon={Wallet} />
+        <Metric label="Accrued to date" value={naira(totals.accrued)} detail="Posted by the ledger" icon={Coins} />
+        <Metric label="Projected yield" value={naira(totals.projected)} detail="At each plan's maturity" icon={TrendingUp} />
+        <Metric label="Due in 7 days" value={String(totals.dueSoon)} detail="Active contracts maturing soon" tone="warn" icon={Bell} />
       </div>
 
       {error && (
@@ -194,12 +195,13 @@ export default function AccrualsPage() {
       )}
 
       <div className="mt-6">
-        <SectionCard title="Accrual engine" action="POST /api:ledger-api/accrual/run">
+        <SectionCard title="Accrual engine" action="POST /api:ledger-api/accrual/run" icon={Play}>
           <p className="max-w-3xl text-xs leading-5 text-slate-400">
             Runs the daily interest accrual and matured principal return engine with idempotency protection. Run it after
             reviewing the plan totals below.
           </p>
-          <button type="button" onClick={() => void runEngine()} disabled={running} className="mt-4 rounded-lg bg-emerald-400 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-60">
+          <button type="button" onClick={() => void runEngine()} disabled={running} className="mt-4 inline-flex items-center gap-2 rounded-lg bg-emerald-400 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-60">
+            <Play size={16} />
             {running ? 'Running engine…' : 'Run accrual engine'}
           </button>
           {runMessage && <p role="status" className="mt-3 text-xs text-emerald-300">{runMessage}</p>}
@@ -208,7 +210,7 @@ export default function AccrualsPage() {
       </div>
 
       <div className="mt-6">
-        <SectionCard title="Accruals by plan" action={isLoading ? 'Loading' : `${effectiveSummaries.length} plans`}>
+        <SectionCard title="Accruals by plan" action={isLoading ? 'Loading' : `${effectiveSummaries.length} plans`} icon={Coins}>
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
               <thead>
@@ -240,7 +242,7 @@ export default function AccrualsPage() {
                 ))}
                 {!isLoading && effectiveSummaries.length === 0 && (
                   <tr>
-                    <td colSpan={9} className="py-8 text-center text-slate-500">No investment records returned from the ledger.</td>
+                    <td colSpan={9} className="py-8 text-center text-slate-500"><Inbox size={20} className="mx-auto mb-2 text-slate-600" />No investment records returned from the ledger.</td>
                   </tr>
                 )}
               </tbody>
@@ -250,7 +252,7 @@ export default function AccrualsPage() {
       </div>
 
       <div className="mt-6">
-        <SectionCard title="Maturity tracker" action={isLoading ? 'Loading' : `${rows.length} contracts`}>
+        <SectionCard title="Maturity tracker" action={isLoading ? 'Loading' : `${rows.length} contracts`} icon={CalendarClock}>
           <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center">
             <label className="flex items-center gap-2 text-xs text-slate-400">
               Plan
@@ -314,7 +316,7 @@ export default function AccrualsPage() {
                 })}
                 {!isLoading && rows.length === 0 && (
                   <tr>
-                    <td colSpan={8} className="py-8 text-center text-slate-500">No contracts match these filters.</td>
+                    <td colSpan={8} className="py-8 text-center text-slate-500"><Search size={20} className="mx-auto mb-2 text-slate-600" />No contracts match these filters.</td>
                   </tr>
                 )}
               </tbody>

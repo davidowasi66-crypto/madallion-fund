@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { ArrowRight, FileCheck2 } from 'lucide-react'
 import { ActivityTicker } from '@/components/activity-ticker'
 import { PaymentProofGallery } from '@/components/payment-proof-gallery'
 
@@ -8,7 +9,7 @@ export default function ProofPage() {
       <div className="mx-auto max-w-5xl">
         <Link href="/" className="font-bold text-[#0b4537]">Madallion fund</Link>
         <header className="mt-20 max-w-2xl">
-          <p className="text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">Public ledger activity</p>
+          <p className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]"><FileCheck2 size={14} aria-hidden="true" /> Public ledger activity</p>
           <h1 className="mt-3 text-4xl font-semibold tracking-[-.06em] text-[#0b4537] sm:text-5xl">Proof, in public.</h1>
           <p className="mt-5 text-base leading-7 text-[#60716b] sm:text-lg">
             Recent deposits, withdrawals, and payouts appear here only when returned by the ledger. Investor names are masked.
@@ -18,7 +19,8 @@ export default function ProofPage() {
           <ActivityTicker variant="landing" />
         </section>
         <PaymentProofGallery />
-        <Link href="/register" className="mt-8 inline-flex rounded-xl bg-[#0b4537] px-5 py-3 text-sm font-semibold text-white">
+        <Link href="/register" className="mt-8 inline-flex items-center gap-2 rounded-xl bg-[#0b4537] px-5 py-3 text-sm font-semibold text-white">
+          <ArrowRight size={16} aria-hidden="true" />
           Create your account
         </Link>
       </div>

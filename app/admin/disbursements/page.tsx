@@ -5,6 +5,7 @@ import useSWR from 'swr'
 import { AdminShell, SectionCard } from '@/components/admin-shell'
 import { OtcRecordForm } from '@/components/otc-record-form'
 import { getAdminPending, type AdminPendingResponse } from '@/lib/xano-admin'
+import { Banknote, ClipboardCheck, Inbox, Send } from 'lucide-react'
 
 const naira = (value: unknown) => `₦${Number(value || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`
 
@@ -19,7 +20,7 @@ export default function DisbursementsPage() {
   return (
     <AdminShell eyebrow="Money controls" title="Disbursements">
       <div className="mb-6">
-        <SectionCard title="New disbursement" action="Creates a pending payout">
+        <SectionCard title="New disbursement" action="Creates a pending payout" icon={Banknote}>
           <OtcRecordForm kind="withdrawal" onRecorded={() => void mutate()} />
         </SectionCard>
       </div>
@@ -27,10 +28,12 @@ export default function DisbursementsPage() {
       <SectionCard
         title="Payout queue"
         action={isLoading ? 'Loading' : error ? 'Xano unavailable' : `${rows.length} rows`}
+        icon={Send}
       >
         <div className="mb-4 flex flex-col gap-2 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between">
           <p>Disbursements stay pending until an admin approves them in Approvals. Approval calls the ledger settlement function.</p>
-          <Link href="/admin/approvals" className="font-medium text-emerald-300 underline">
+          <Link href="/admin/approvals" className="inline-flex items-center gap-2 font-medium text-emerald-300 underline">
+            <ClipboardCheck size={16} />
             Open approvals
           </Link>
         </div>
@@ -80,7 +83,7 @@ export default function DisbursementsPage() {
               ))}
               {!isLoading && rows.length === 0 && (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-500">No payouts in the queue.</td>
+                  <td colSpan={8} className="py-8 text-center text-slate-500"><Inbox size={20} className="mx-auto mb-2 text-slate-600" />No payouts in the queue.</td>
                 </tr>
               )}
             </tbody>

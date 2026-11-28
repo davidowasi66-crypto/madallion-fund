@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import { AdminShell, SectionCard } from '@/components/admin-shell'
 import { OtcRecordForm } from '@/components/otc-record-form'
 import { getAdminPending, type AdminPendingResponse } from '@/lib/xano-admin'
+import { ArrowDownToLine, BadgeCheck, Inbox } from 'lucide-react'
 
 const naira = (v: unknown) => `₦${Number(v || 0).toLocaleString('en-NG', { maximumFractionDigits: 0 })}`
 
@@ -43,11 +44,11 @@ export default function AdminDepositsPage() {
         </p>
       )}
       <div className="mb-6">
-        <SectionCard title="Record OTC or manual deposit" action="Creates a pending row">
+        <SectionCard title="Record OTC or manual deposit" action="Creates a pending row" icon={ArrowDownToLine}>
           <OtcRecordForm kind="deposit" onRecorded={() => setRefreshKey((value) => value + 1)} />
         </SectionCard>
       </div>
-      <SectionCard title="Pending & recent deposits" action={loading ? 'Loading' : `${rows.length} rows`}>
+      <SectionCard title="Pending & recent deposits" action={loading ? 'Loading' : `${rows.length} rows`} icon={BadgeCheck}>
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead>
@@ -90,6 +91,7 @@ export default function AdminDepositsPage() {
               {!loading && rows.length === 0 && (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-slate-500">
+                    <Inbox size={20} className="mx-auto mb-2 text-slate-600" />
                     No deposits in the pending queue.
                   </td>
                 </tr>

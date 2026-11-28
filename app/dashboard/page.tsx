@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { useEffect, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import {
+  Activity,
   ArrowDownLeft,
   ArrowUpRight,
   Bell,
@@ -317,7 +318,10 @@ export default function DashboardPage() {
 
             <div className="mt-6 rounded-3xl border border-white/10 bg-black/20 p-5 backdrop-blur-sm">
               <div className="flex items-center justify-between">
-                <p className="text-xs uppercase tracking-[0.16em] text-[#8eaea0]">Available balance</p>
+                <p className="flex items-center gap-1.5 text-xs uppercase tracking-[0.16em] text-[#8eaea0]">
+                  <Wallet size={16} className="text-[#b9f47f]" />
+                  Available balance
+                </p>
                 <button
                   type="button"
                   onClick={() => setHideBalance((v) => !v)}
@@ -347,11 +351,17 @@ export default function DashboardPage() {
               </div>
               <div className="mt-4 grid grid-cols-2 gap-3 text-center">
                 <div className="rounded-2xl bg-white/5 px-3 py-3">
-                  <p className="text-[10px] uppercase tracking-[0.14em] text-[#8eaea0]">Deposits</p>
+                  <p className="flex items-center justify-center gap-1.5 text-[10px] uppercase tracking-[0.14em] text-[#8eaea0]">
+                    <ArrowDownLeft size={16} />
+                    Deposits
+                  </p>
                   <p className="mt-1 text-sm font-semibold">{hideBalance ? '•••' : toMoney(deposits, '₦0')}</p>
                 </div>
                 <div className="rounded-2xl bg-white/5 px-3 py-3">
-                  <p className="text-[10px] uppercase tracking-[0.14em] text-[#8eaea0]">Withdrawals</p>
+                  <p className="flex items-center justify-center gap-1.5 text-[10px] uppercase tracking-[0.14em] text-[#8eaea0]">
+                    <ArrowUpRight size={16} />
+                    Withdrawals
+                  </p>
                   <p className="mt-1 text-sm font-semibold">{hideBalance ? '•••' : toMoney(withdrawals, '₦0')}</p>
                 </div>
               </div>
@@ -395,10 +405,14 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#65a85c]">Activity center</p>
-                <h2 className="mt-1 text-lg font-semibold text-[#0b4537]">Latest movements</h2>
+                <h2 className="mt-1 flex items-center gap-1.5 text-lg font-semibold text-[#0b4537]">
+                  <Activity size={16} className="text-[#65a85c]" />
+                  Latest movements
+                </h2>
               </div>
-              <Link href="/dashboard/activity" className="text-sm font-semibold text-[#0b4537]">
+              <Link href="/dashboard/activity" className="inline-flex items-center gap-1 text-sm font-semibold text-[#0b4537]">
                 View all
+                <ChevronRight size={15} />
               </Link>
             </div>
             <div className="mt-4 divide-y divide-[#e7eee8]">
@@ -413,7 +427,10 @@ export default function DashboardPage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#65a85c]">Wallets</p>
-                <h2 className="mt-1 text-lg font-semibold text-[#0b4537]">Your accounts</h2>
+                <h2 className="mt-1 flex items-center gap-1.5 text-lg font-semibold text-[#0b4537]">
+                  <Wallet size={16} className="text-[#65a85c]" />
+                  Your accounts
+                </h2>
               </div>
               <span className="text-xs text-[#708079]">{accounts.length} total</span>
             </div>
@@ -464,8 +481,9 @@ export default function DashboardPage() {
               <button
                 disabled={!statementAccount || statementLoading}
                 onClick={() => void loadStatement(statementAccount)}
-                className="rounded-xl bg-[#0b4537] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-xl bg-[#0b4537] px-4 py-2 text-sm font-semibold text-white disabled:opacity-50"
               >
+                <FileText size={16} />
                 {statementLoading ? 'Loading…' : 'Load statement'}
               </button>
             </div>
@@ -549,7 +567,8 @@ function AccountRow({ account, onStatement }: { account: Row; onStatement: () =>
       </div>
       <div className="text-right">
         <p className="text-sm font-semibold text-[#0b4537]">{toMoney(amount, '₦0')}</p>
-        <button onClick={onStatement} className="mt-1 text-xs font-medium text-[#2f7a4a]">
+        <button onClick={onStatement} className="mt-1 inline-flex items-center gap-1.5 text-xs font-medium text-[#2f7a4a]">
+          <FileText size={14} />
           View statement
         </button>
       </div>
@@ -601,5 +620,10 @@ function StatementBalance({ label, value }: { label: string; value: unknown }) {
 }
 
 function Empty({ text }: { text: string }) {
-  return <p className="rounded-2xl border border-dashed border-[#dfe8e2] px-4 py-8 text-center text-sm text-[#708079]">{text}</p>
+  return (
+    <p className="rounded-2xl border border-dashed border-[#dfe8e2] px-4 py-8 text-center text-sm text-[#708079]">
+      <FileText size={20} className="mx-auto mb-2 block text-[#a9b7b0]" />
+      {text}
+    </p>
+  )
 }

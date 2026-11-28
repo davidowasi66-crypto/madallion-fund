@@ -2,7 +2,7 @@
 
 import useSWR from 'swr'
 import { useMemo, useState } from 'react'
-import { Pause, Pencil, Play, Plus, RefreshCw, Trash2, X } from 'lucide-react'
+import { CalendarClock, Package, Pause, Pencil, Percent, Play, Plus, RefreshCw, Trash2, X } from 'lucide-react'
 import { AdminShell, Metric, SectionCard } from '@/components/admin-shell'
 import { ReportTable } from '@/components/admin-report-table'
 import { getAdminPlanPerformance, reportRows, type ReportPayload } from '@/lib/admin-reports-api'
@@ -74,18 +74,18 @@ export default function PlansAdminPage() {
 
   return <AdminShell eyebrow="Product controls" title="Investment Plans & Yield Tiers">
     <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end"><div><p className="max-w-2xl text-sm leading-6 text-slate-400">Create, edit, pause, or remove yield tiers. Pause blocks new subscriptions only — existing member contracts keep their locked rate until maturity.</p></div><button onClick={() => setDraft(emptyPlan)} className="inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-400 px-4 py-2.5 text-sm font-semibold text-slate-950"><Plus size={16} /> Create New Plan</button></div>
-    <div className="mt-6 grid gap-4 md:grid-cols-3"><Metric label="Total active plans" value={String(plans.length)} detail="Live yield tiers" tone="good" /><Metric label="Total AUM across plans" value={naira(totals.aum)} detail="Locked principal" /><Metric label="Active subscriptions" value={String(totals.investors)} detail="Currently earning" /></div>
+    <div className="mt-6 grid gap-4 md:grid-cols-3"><Metric label="Total active plans" value={String(plans.length)} detail="Live yield tiers" tone="good" icon={Package} /><Metric label="Total AUM across plans" value={naira(totals.aum)} detail="Locked principal" icon={Percent} /><Metric label="Active subscriptions" value={String(totals.investors)} detail="Currently earning" icon={CalendarClock} /></div>
     {message && <div role="status" className="mt-5 rounded-lg border border-emerald-400/20 bg-emerald-400/5 p-3 text-sm text-emerald-200">{message}</div>}
     {failure && <div role="alert" className="mt-5 rounded-lg border border-red-400/20 bg-red-400/5 p-3 text-sm text-red-200">{failure}</div>}
     {error && <div role="alert" className="mt-5 rounded-lg border border-red-400/20 bg-red-400/5 p-3 text-sm text-red-200">Unable to load plans. Check administrator access or the Xano admin API.</div>}
-    <SectionCard title="Live plan catalogue" action={isLoading ? 'Loading' : `${plans.length} plans`}>
+    <SectionCard title="Live plan catalogue" action={isLoading ? 'Loading' : `${plans.length} plans`} icon={Package}>
       <div className="overflow-x-auto"><table className="w-full min-w-[860px] text-left text-sm"><thead className="border-b border-slate-800 text-[10px] uppercase tracking-[.16em] text-slate-500"><tr><th className="pb-3">Plan</th><th className="pb-3">Daily rate</th><th className="pb-3">Duration</th><th className="pb-3">Status</th><th className="pb-3">Settlement</th><th className="pb-3">Investors</th><th className="pb-3">Locked AUM</th><th className="pb-3 text-right">Actions</th></tr></thead><tbody className="divide-y divide-slate-800/70">{isLoading ? Array.from({ length: 4 }).map((_, index) => <tr key={index}><td colSpan={8} className="py-5"><div className="h-5 animate-pulse rounded bg-slate-800" /></td></tr>) : plans.map(plan => {
         const paused = pausedOf(plan)
         return <tr key={plan.id}><td className="py-4 font-medium text-white">{plan.name}<span className="block text-xs text-slate-500">{plan.description}</span></td><td className="py-4 text-emerald-300">{rate(plan.daily_rate_bps)} / day<span className="block text-xs text-slate-500">{plan.daily_rate_bps} bps</span></td><td className="py-4 text-slate-300">{plan.duration_days} days</td><td className="py-4"><span className={`rounded-full px-2.5 py-1 text-xs ${paused ? 'bg-amber-400/10 text-amber-300' : 'bg-emerald-400/10 text-emerald-300'}`}>{paused ? 'Paused' : 'Active'}</span></td><td className="py-4"><span className="rounded-full bg-emerald-400/10 px-2.5 py-1 text-xs text-emerald-300">{plan.principal_returned ? 'Principal returned' : 'Yield only'}</span></td><td className="py-4 text-slate-300">{plan.active_investments}</td><td className="py-4 text-slate-300">{naira(plan.total_aum_cents)}</td><td className="py-4 text-right"><div className="inline-flex flex-wrap justify-end gap-2"><button onClick={() => setDraft(plan)} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-200 hover:border-emerald-400/50"><Pencil size={13} /> Edit</button><button disabled={togglingId === plan.id} onClick={() => togglePause(plan)} className="inline-flex items-center gap-1.5 rounded-lg border border-amber-400/30 px-3 py-2 text-xs text-amber-200 hover:border-amber-400/60 disabled:opacity-60">{togglingId === plan.id ? <RefreshCw className="animate-spin" size={13} /> : paused ? <Play size={13} /> : <Pause size={13} />}{paused ? 'Resume' : 'Pause'}</button><button onClick={() => { setFailure(''); setConfirmDelete(plan) }} className="inline-flex items-center gap-1.5 rounded-lg border border-red-400/30 px-3 py-2 text-xs text-red-300 hover:border-red-400/60"><Trash2 size={13} /> Remove</button></div></td></tr>
-      })}</tbody></table>{!isLoading && plans.length === 0 && <div className="py-12 text-center text-sm text-slate-500">No plans returned from Xano yet.</div>}</div>
+      })}</tbody></table>{!isLoading && plans.length === 0 && <div className="py-12 text-center text-sm text-slate-500"><Package size={20} className="mx-auto mb-2 text-slate-600" />No plans returned from Xano yet.</div>}</div>
     </SectionCard>
     <div className="mt-6">
-      <SectionCard title="Plan performance" action={performance.isLoading ? 'Loading' : performance.data ? 'Live Xano data' : 'Route pending'}>
+      <SectionCard title="Plan performance" action={performance.isLoading ? 'Loading' : performance.data ? 'Live Xano data' : 'Route pending'} icon={Percent}>
         <ReportTable rows={performanceRows} empty="No plan performance rows returned." maxColumns={7} />
       </SectionCard>
     </div>

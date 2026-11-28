@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import useSWR from 'swr'
-import { Pause, Pencil, Play, Plus, RefreshCw, Trash2, X } from 'lucide-react'
+import { Landmark, Network, Pause, Pencil, Play, Plus, RefreshCw, Trash2, X } from 'lucide-react'
 import { AdminShell, Metric, SectionCard } from '@/components/admin-shell'
 import {
   deleteMoneyChannel,
@@ -133,9 +133,9 @@ export default function MoneyChannelsPage() {
       </div>
 
       <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <Metric label="Channels" value={String(channels.length)} detail="Configured money routes" tone="good" />
-        <Metric label="Active" value={String(activeCount)} detail="Available in forms" />
-        <Metric label="Paused" value={String(channels.length - activeCount)} detail="Hidden from new records" tone="warn" />
+        <Metric label="Channels" value={String(channels.length)} detail="Configured money routes" tone="good" icon={Network} />
+        <Metric label="Active" value={String(activeCount)} detail="Available in forms" icon={Landmark} />
+        <Metric label="Paused" value={String(channels.length - activeCount)} detail="Hidden from new records" tone="warn" icon={Pause} />
       </div>
 
       {message && <div role="status" className="mt-5 rounded-lg border border-emerald-400/20 bg-emerald-400/5 p-3 text-sm text-emerald-200">{message}</div>}
@@ -143,7 +143,7 @@ export default function MoneyChannelsPage() {
       {error && <div role="alert" className="mt-5 rounded-lg border border-red-400/20 bg-red-400/5 p-3 text-sm text-red-200">Unable to load channels: {error.message}</div>}
 
       <div className="mt-6">
-        <SectionCard title="Channel catalogue" action={isLoading ? 'Loading' : pending ? 'Xano route pending' : `${channels.length} channels`}>
+        <SectionCard title="Channel catalogue" action={isLoading ? 'Loading' : pending ? 'Xano route pending' : `${channels.length} channels`} icon={Network}>
           {pending ? (
             <p className="py-8 text-center text-sm text-slate-400">
               Money channels need the <code className="text-emerald-300">fn_admin_list_channels</code> route in Xano. Until then the forms use the built-in channels.
@@ -201,7 +201,7 @@ export default function MoneyChannelsPage() {
                   ))}
                   {!isLoading && channels.length === 0 && (
                     <tr>
-                      <td colSpan={7} className="py-10 text-center text-slate-500">No channels yet. Add the first one.</td>
+                      <td colSpan={7} className="py-10 text-center text-slate-500"><Network size={20} className="mx-auto mb-2 text-slate-600" />No channels yet. Add the first one.</td>
                     </tr>
                   )}
                 </tbody>

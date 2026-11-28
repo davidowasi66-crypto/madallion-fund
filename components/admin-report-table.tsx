@@ -1,5 +1,7 @@
 'use client'
 
+import { TableProperties } from 'lucide-react'
+
 const PREFERRED = [
   'created_at',
   'date',
@@ -67,7 +69,7 @@ export function ReportTable({
   columns?: string[]
   maxColumns?: number
 }) {
-  if (!rows.length) return <p className="py-6 text-center text-sm text-slate-500">{empty}</p>
+  if (!rows.length) return <p className="py-6 text-center text-sm text-slate-500"><TableProperties size={20} className="mx-auto mb-2 text-slate-600" />{empty}</p>
 
   const available = Array.from(new Set(rows.flatMap((row) => Object.keys(row))))
   const ordered = [

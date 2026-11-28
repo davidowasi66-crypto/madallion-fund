@@ -8,6 +8,7 @@ import {
   postLedgerTransaction,
   seedLedger,
 } from '@/lib/admin-ops-api'
+import { ArrowLeftRight, Database, Play, Plus, Sprout, Trash2, Wallet } from 'lucide-react'
 
 type Entry = {
   account_id: string
@@ -180,17 +181,17 @@ export default function LedgerToolsPage() {
       </p>
 
       <div className="mt-6 grid gap-6 xl:grid-cols-2">
-        <SectionCard title="Create ledger" action="POST /api:ledger-api/ledgers">
+        <SectionCard title="Create ledger" action="POST /api:ledger-api/ledgers" icon={Database}>
           <form onSubmit={submitLedger} className="space-y-3">
             <label className="block"><span className="text-xs text-slate-400">Name</span><input required value={ledgerForm.name} onChange={(e) => setLedgerForm({ ...ledgerForm, name: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
             <label className="block"><span className="text-xs text-slate-400">Description</span><input value={ledgerForm.description} onChange={(e) => setLedgerForm({ ...ledgerForm, description: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
             <label className="block"><span className="text-xs text-slate-400">Metadata JSON</span><textarea value={ledgerForm.metadata} onChange={(e) => setLedgerForm({ ...ledgerForm, metadata: e.target.value })} rows={2} placeholder='{"owner":"treasury"}' className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-xs text-white" /></label>
-            <button disabled={busy === 'ledger'} className="rounded-lg bg-emerald-400 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-60">{busy === 'ledger' ? 'Creating…' : 'Create ledger'}</button>
+            <button disabled={busy === 'ledger'} className="inline-flex items-center gap-2 rounded-lg bg-emerald-400 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-60"><Plus size={16} />{busy === 'ledger' ? 'Creating…' : 'Create ledger'}</button>
             {result.ledger?.text && <p className={result.ledger.ok ? 'text-xs text-emerald-300' : 'text-xs text-red-300'}>{result.ledger.text}</p>}
           </form>
         </SectionCard>
 
-        <SectionCard title="Create account" action="POST /api:ledger-api/accounts">
+        <SectionCard title="Create account" action="POST /api:ledger-api/accounts" icon={Wallet}>
           <form onSubmit={submitAccount} className="space-y-3">
             <div className="grid grid-cols-2 gap-3">
               <label className="block"><span className="text-xs text-slate-400">Ledger ID</span><input required type="number" min="1" value={accountForm.ledger_id} onChange={(e) => setAccountForm({ ...accountForm, ledger_id: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
@@ -202,14 +203,14 @@ export default function LedgerToolsPage() {
               <label className="block"><span className="text-xs text-slate-400">Currency</span><input required value={accountForm.currency} onChange={(e) => setAccountForm({ ...accountForm, currency: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
             </div>
             <label className="block"><span className="text-xs text-slate-400">Metadata JSON</span><textarea value={accountForm.metadata} onChange={(e) => setAccountForm({ ...accountForm, metadata: e.target.value })} rows={2} placeholder='{"user_id":123}' className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 font-mono text-xs text-white" /></label>
-            <button disabled={busy === 'account'} className="rounded-lg bg-emerald-400 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-60">{busy === 'account' ? 'Creating…' : 'Create account'}</button>
+            <button disabled={busy === 'account'} className="inline-flex items-center gap-2 rounded-lg bg-emerald-400 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-60"><Plus size={16} />{busy === 'account' ? 'Creating…' : 'Create account'}</button>
             {result.account?.text && <p className={result.account.ok ? 'text-xs text-emerald-300' : 'text-xs text-red-300'}>{result.account.text}</p>}
           </form>
         </SectionCard>
       </div>
 
       <div className="mt-6">
-        <SectionCard title="Post double-entry transaction" action="POST /api:ledger-api/transactions">
+        <SectionCard title="Post double-entry transaction" action="POST /api:ledger-api/transactions" icon={ArrowLeftRight}>
           <form onSubmit={submitTransaction} className="space-y-3">
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
               <label className="block"><span className="text-xs text-slate-400">Ledger ID</span><input required type="number" min="1" value={txForm.ledger_id} onChange={(e) => setTxForm({ ...txForm, ledger_id: e.target.value })} className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" /></label>
@@ -234,27 +235,27 @@ export default function LedgerToolsPage() {
                   <select value={entry.type} onChange={(e) => setEntries(entries.map((item, i) => i === index ? { ...item, type: e.target.value as 'debit' | 'credit' } : item))} className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white"><option value="debit">Debit</option><option value="credit">Credit</option></select>
                   <input required type="number" min="0.01" step="0.01" placeholder="Amount (NGN)" value={entry.amount} onChange={(e) => setEntries(entries.map((item, i) => i === index ? { ...item, amount: e.target.value } : item))} className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" />
                   <input placeholder="Narration" value={entry.narration} onChange={(e) => setEntries(entries.map((item, i) => i === index ? { ...item, narration: e.target.value } : item))} className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-white" />
-                  <button type="button" disabled={entries.length <= 2} onClick={() => setEntries(entries.filter((_, i) => i !== index))} className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 disabled:opacity-40">Remove</button>
+                  <button type="button" disabled={entries.length <= 2} onClick={() => setEntries(entries.filter((_, i) => i !== index))} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300 disabled:opacity-40"><Trash2 size={16} />Remove</button>
                 </div>
               ))}
-              <button type="button" onClick={() => setEntries([...entries, newEntry('debit')])} className="rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300">Add line</button>
+              <button type="button" onClick={() => setEntries([...entries, newEntry('debit')])} className="inline-flex items-center gap-2 rounded-lg border border-slate-700 px-3 py-2 text-xs text-slate-300"><Plus size={16} />Add line</button>
             </div>
 
-            <button disabled={busy === 'tx' || !balanced} className="rounded-lg bg-emerald-400 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-60">{busy === 'tx' ? 'Posting…' : 'Post transaction'}</button>
+            <button disabled={busy === 'tx' || !balanced} className="inline-flex items-center gap-2 rounded-lg bg-emerald-400 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-60"><Play size={16} />{busy === 'tx' ? 'Posting…' : 'Post transaction'}</button>
             {result.tx?.text && <p className={result.tx.ok ? 'text-xs text-emerald-300' : 'text-xs text-red-300'}>{result.tx.text}</p>}
           </form>
         </SectionCard>
       </div>
 
       <div className="mt-6">
-        <SectionCard title="Demo seed" action="POST /api:ledger-api/admin/seed">
+        <SectionCard title="Demo seed" action="POST /api:ledger-api/admin/seed" icon={Sprout}>
           <p className="max-w-3xl text-xs leading-5 text-amber-200/80">
             Populates sample ledgers, accounts, plans, investments, and transactions. This is for a fresh demo
             environment only; running it against production data can duplicate records.
           </p>
           <div className="mt-4 flex flex-col gap-2 sm:flex-row">
             <input value={seedConfirm} onChange={(e) => setSeedConfirm(e.target.value)} placeholder="Type SEED to confirm" className="w-full max-w-xs rounded-lg border border-amber-400/30 bg-slate-900 px-3 py-2 text-sm text-white" />
-            <button disabled={seedConfirm !== 'SEED' || busy === 'seed'} onClick={() => void submitSeed()} className="rounded-lg bg-amber-400 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-50">{busy === 'seed' ? 'Seeding…' : 'Run demo seed'}</button>
+            <button disabled={seedConfirm !== 'SEED' || busy === 'seed'} onClick={() => void submitSeed()} className="inline-flex items-center gap-2 rounded-lg bg-amber-400 px-4 py-2 text-xs font-semibold text-slate-950 disabled:opacity-50"><Play size={16} />{busy === 'seed' ? 'Seeding…' : 'Run demo seed'}</button>
           </div>
           {result.seed?.text && <p className={result.seed.ok ? 'mt-3 text-xs text-emerald-300' : 'mt-3 text-xs text-red-300'}>{result.seed.text}</p>}
         </SectionCard>

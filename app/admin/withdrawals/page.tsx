@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { ArrowUpFromLine, Banknote } from 'lucide-react'
 import { AdminShell, SectionCard } from '@/components/admin-shell'
 import { OtcRecordForm } from '@/components/otc-record-form'
 import { getAdminPending, type AdminPendingResponse } from '@/lib/xano-admin'
@@ -43,11 +44,11 @@ export default function AdminWithdrawalsPage() {
         </p>
       )}
       <div className="mb-6">
-        <SectionCard title="Record OTC or manual payout" action="Creates a pending row">
+        <SectionCard title="Record OTC or manual payout" action="Creates a pending row" icon={Banknote}>
           <OtcRecordForm kind="withdrawal" onRecorded={() => setRefreshKey((value) => value + 1)} />
         </SectionCard>
       </div>
-      <SectionCard title="Pending & recent withdrawals" action={loading ? 'Loading' : `${rows.length} rows`}>
+      <SectionCard title="Pending & recent withdrawals" action={loading ? 'Loading' : `${rows.length} rows`} icon={ArrowUpFromLine}>
         <div className="overflow-x-auto">
           <table className="min-w-full text-left text-sm">
             <thead>
@@ -90,6 +91,7 @@ export default function AdminWithdrawalsPage() {
               {!loading && rows.length === 0 && (
                 <tr>
                   <td colSpan={8} className="py-8 text-center text-slate-500">
+                    <ArrowUpFromLine size={20} className="mx-auto mb-2 text-slate-600" />
                     No withdrawals in the pending queue.
                   </td>
                 </tr>

@@ -3,6 +3,7 @@
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { FormEvent, Suspense, useState } from 'react'
+import { Lock, Mail, User, UserPlus } from 'lucide-react'
 import { saveXanoSession, xanoSignup } from '@/lib/xano-auth'
 import { clearStoredReferralCode, storedReferralCode } from '@/lib/referral-link'
 
@@ -45,5 +46,5 @@ function RegisterForm() {
     }
   }
 
-  return <main className="auth-page"><div className="auth-card"><Link href="/" className="auth-back">← Back to home</Link><p className="eyebrow">Start building</p><h1>Create your account</h1><p className="auth-description">Set up your Madallion investor account.</p><form onSubmit={handleSubmit} className="auth-form"><label>Full name<input type="text" autoComplete="name" required value={name} onChange={(event) => setName(event.target.value)} /></label><label>Email<input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label><label>Password<input type="password" autoComplete="new-password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} /></label>{error ? <p role="alert" className="auth-error">{error}</p> : null}<button type="submit" disabled={loading}>{loading ? 'Creating account…' : 'Create account'}</button></form><p className="auth-footer">Already registered? <Link href="/login">Sign in</Link></p></div></main>
+  return <main className="auth-page"><div className="auth-card"><Link href="/" className="auth-back">← Back to home</Link><p className="eyebrow inline-flex items-center gap-1.5"><UserPlus size={14} aria-hidden="true" /> Start building</p><h1>Create your account</h1><p className="auth-description">Set up your Madallion investor account.</p><form onSubmit={handleSubmit} className="auth-form"><label><span className="inline-flex items-center gap-1.5"><User size={16} aria-hidden="true" /> Full name</span><input type="text" autoComplete="name" required value={name} onChange={(event) => setName(event.target.value)} /></label><label><span className="inline-flex items-center gap-1.5"><Mail size={16} aria-hidden="true" /> Email</span><input type="email" autoComplete="email" required value={email} onChange={(event) => setEmail(event.target.value)} /></label><label><span className="inline-flex items-center gap-1.5"><Lock size={16} aria-hidden="true" /> Password</span><input type="password" autoComplete="new-password" required minLength={8} value={password} onChange={(event) => setPassword(event.target.value)} /></label>{error ? <p role="alert" className="auth-error">{error}</p> : null}<button type="submit" disabled={loading}>{loading ? 'Creating account…' : <><UserPlus size={16} aria-hidden="true" /> Create account</>}</button></form><p className="auth-footer">Already registered? <Link href="/login">Sign in</Link></p></div></main>
 }
