@@ -35,7 +35,7 @@ export function PlanSubscribe({ plan, variant = 'light' }: { plan: Plan; variant
     variant === 'dark'
       ? 'bg-[#0b4537] text-white hover:bg-[#123f34]'
       : plan.featured
-        ? 'bg-[#b9f47f] text-[#071a18] hover:bg-[#a9e86d]'
+        ? 'soft-3d-button'
         : 'bg-[#0b4537] text-white hover:bg-[#123f34]'
 
   if (authenticated === null) return null

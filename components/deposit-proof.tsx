@@ -60,7 +60,7 @@ export function DepositProof({ amount }: { amount: number }) {
   }
 
   return (
-    <section className="mt-4 rounded-3xl border border-[#dfe8e2] bg-white p-4 shadow-sm" aria-labelledby="deposit-proof-title">
+    <section className="mt-4 rounded-3xl border border-[#dfe8e2] soft-3d p-4" aria-labelledby="deposit-proof-title">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#65a85c]">Already transferred?</p>

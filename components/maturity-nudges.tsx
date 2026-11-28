@@ -78,7 +78,7 @@ export function MaturityNudges({ investments }: { investments: Investment[] }) {
       </div>
 
       <div className="mt-4 flex flex-wrap gap-2">
-        <Link href="/plans" className="inline-flex items-center gap-1.5 rounded-xl bg-[#b9f47f] px-3 py-2 text-xs font-semibold text-[#071a18]">
+        <Link href="/plans" className="soft-3d-button inline-flex items-center gap-1.5 rounded-xl px-3 py-2 text-xs font-semibold">
           <RotateCw size={13} aria-hidden="true" /> Reinvest in a plan
         </Link>
         <Link href="/dashboard/notifications" className="inline-flex items-center gap-1.5 rounded-xl border border-[#dfe8e2] px-3 py-2 text-xs font-semibold text-[#0b4537] lg:border-white/15 lg:text-white">

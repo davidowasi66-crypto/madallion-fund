@@ -395,7 +395,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
               {mode === 'withdraw' && (
                 <>
                   <PayoutDestinationCard onReady={handlePayoutReady} />
-                  <section className="mt-3 rounded-3xl border border-[#dfe8e2] bg-white p-4 shadow-sm">
+                  <section className="mt-3 rounded-3xl border border-[#dfe8e2] soft-3d p-4 shadow-sm">
                     <ul className="flex flex-col gap-2 text-xs text-[#60716b]">
                       <li className="flex items-center gap-2">
                         <Clock3 size={14} className="text-[#65a85c]" />
@@ -412,7 +412,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
 
               {mode === 'deposit' && (
                 <>
-                  <section className="mt-4 rounded-3xl border border-[#dfe8e2] bg-white p-4 shadow-sm">
+                  <section className="mt-4 rounded-3xl border border-[#dfe8e2] soft-3d p-4 shadow-sm">
                     <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#65a85c]">How deposits work</p>
                     <p className="mt-2 text-sm leading-6 text-[#60716b]">
                       Choose an amount, then complete funding through your configured payment channel. Credited balances
@@ -426,7 +426,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
               <button
                 type="button"
                 disabled={amountNum <= 0 || Boolean(amountError) || submitting || (mode === 'withdraw' && !payoutReady)}
-                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-[#b9f47f] to-[#65a85c] py-4 text-sm font-semibold text-[#071a18] shadow-[0_10px_24px_rgba(101,168,92,.22)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-45"
+                className="soft-3d-button mt-5 w-full rounded-2xl py-4 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-45"
                 onClick={submitWalletAction}
               >
                 {mode === 'deposit' ? <ArrowDownLeft size={16} /> : <ArrowUpRight size={16} />}
@@ -459,7 +459,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                       rows.map((row, index) => (
                         <article
                           key={row.id ?? row.account_id ?? index}
-                          className="rounded-2xl border border-[#dfe8e2] bg-white p-5 shadow-sm lg:border-white/10 lg:bg-[#0b2420]"
+                          className="rounded-2xl border border-[#dfe8e2] soft-3d-responsive p-5 lg:border-white/10"
                         >
                           <div className="flex items-start justify-between gap-4">
                             <div>
@@ -493,7 +493,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
 
               {accountDetail && (
                 <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50 p-4 backdrop-blur-sm sm:items-center">
-                  <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[#dfe8e2] bg-white p-5 shadow-2xl">
+                  <div className="max-h-[85vh] w-full max-w-2xl overflow-y-auto rounded-2xl border border-[#dfe8e2] soft-3d p-5 shadow-2xl">
                     <div className="flex items-start justify-between gap-3">
                       <div>
                         <p className="flex items-center gap-1.5 text-xs uppercase tracking-[0.18em] text-[#65a85c]">
@@ -591,7 +591,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                       </p>
                       <Link
                         href="/plans"
-                        className="mt-5 inline-flex items-center gap-2 rounded-xl bg-[#b9f47f] px-4 py-3 text-sm font-semibold text-[#071a18]"
+                        className="soft-3d-button mt-5 inline-flex items-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold"
                       >
                         Explore plans <ArrowRight size={15} />
                       </Link>
@@ -616,7 +616,7 @@ export default function MemberWorkspacePage({ section }: { section: Section }) {
                 </div>
               )}
               {!loading && !error && section === 'activity' && (
-                <div className="mt-6 divide-y divide-[#e7eee8] rounded-2xl border border-[#dfe8e2] bg-white px-5 lg:divide-white/10 lg:border-white/10 lg:bg-[#0b2420]">
+                <div className="mt-6 divide-y divide-[#e7eee8] rounded-2xl border border-[#dfe8e2] soft-3d-responsive px-5 lg:divide-white/10 lg:border-white/10">
                   {rows.length ? (
                     rows.map((row, index) => <Transaction key={row.id ?? index} row={row} memberName={memberName} />)
                   ) : (

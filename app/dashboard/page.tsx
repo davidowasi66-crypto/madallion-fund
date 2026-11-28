@@ -226,13 +226,13 @@ export default function DashboardPage() {
   if (isAdmin) {
     return (
       <main className="min-h-screen bg-[#071a18] px-5 py-10 text-[#edf7f1]">
-        <section className="mx-auto max-w-3xl rounded-3xl border border-white/10 bg-[#0b2420] p-8">
+        <section className="mx-auto max-w-3xl rounded-3xl border border-white/10 soft-3d-dark p-8">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#b9f47f]">Administrator access</p>
           <h1 className="mt-3 text-3xl font-semibold">Welcome{profile?.name ? `, ${profile.name}` : ''}</h1>
           <p className="mt-3 text-sm text-[#aac1b7]">Open the admin workspace to manage ledger operations.</p>
           <Link
             href="/admin"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-[#b9f47f] px-5 py-3 text-sm font-semibold text-[#071a18]"
+            className="soft-3d-button mt-6 inline-flex items-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold"
           >
             Open admin dashboard <ChevronRight size={16} />
           </Link>
@@ -401,7 +401,7 @@ export default function DashboardPage() {
             <MemberMaturityPreview walletBalance={balance} />
           </div>
 
-          <section className="mt-6 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm">
+          <section className="mt-6 rounded-3xl border border-[#dfe8e2] soft-3d p-5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#65a85c]">Activity center</p>
@@ -423,7 +423,7 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          <section className="mt-6 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm">
+          <section className="mt-6 rounded-3xl border border-[#dfe8e2] soft-3d p-5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#65a85c]">Wallets</p>
@@ -449,7 +449,7 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          <section className="mt-6 mb-8 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm">
+          <section className="mt-6 mb-8 rounded-3xl border border-[#dfe8e2] soft-3d p-5">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#65a85c]">Official statement</p>
@@ -546,7 +546,7 @@ function QuickTile({
     rose: 'bg-[#fff0e8] text-[#c45c2a]',
   }
   return (
-    <Link href={href} className="flex flex-col items-center gap-2 rounded-2xl border border-[#e7eee8] bg-white p-3 shadow-sm">
+    <Link href={href} className="flex flex-col items-center gap-2 rounded-2xl border border-[#e7eee8] soft-3d p-3">
       <span className={`rounded-xl p-2.5 ${tones[tone]}`}>{icon}</span>
       <span className="text-[11px] font-medium text-[#0b4537]">{label}</span>
     </Link>
@@ -558,7 +558,7 @@ function AccountRow({ account, onStatement }: { account: Row; onStatement: () =>
   const amount = account.balance ?? account.current_balance ?? account.amount
   const status = String(account.status ?? 'active')
   return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#e7eee8] bg-[#f4f8f3] px-4 py-3">
+    <div className="flex items-center justify-between gap-3 rounded-2xl border border-[#e7eee8] soft-3d-soft px-4 py-3">
       <div>
         <p className="text-sm font-semibold text-[#0b4537]">{name}</p>
         <p className="mt-1 text-xs text-[#708079]">
@@ -612,7 +612,7 @@ function TransactionRow({ transaction }: { transaction: Row }) {
 
 function StatementBalance({ label, value }: { label: string; value: unknown }) {
   return (
-    <div className="rounded-xl border border-[#e7eee8] bg-[#f4f8f3] p-4">
+    <div className="rounded-xl border border-[#e7eee8] soft-3d-soft p-4">
       <p className="text-xs text-[#708079]">{label}</p>
       <p className="mt-2 font-semibold text-[#0b4537]">{toMoney(value, '₦0')}</p>
     </div>

@@ -87,7 +87,7 @@ export function PayoutDestinationCard({ onReady }: { onReady: (ready: boolean) =
   const maskedAccount = destination?.account_number_masked ?? (destination?.account_number_last4 ? `•••• ${destination.account_number_last4}` : '')
 
   return (
-    <section className="mt-4 rounded-3xl border border-[#dfe8e2] bg-white p-4 shadow-sm" aria-labelledby="payout-destination-title">
+    <section className="mt-4 rounded-3xl border border-[#dfe8e2] soft-3d p-4" aria-labelledby="payout-destination-title">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#65a85c]">Destination</p>

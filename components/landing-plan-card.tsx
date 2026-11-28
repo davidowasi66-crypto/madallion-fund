@@ -20,8 +20,8 @@ export function LandingPlanCard({ plan, featured }: { plan: Plan; featured: bool
 
   return (
     <article
-      className={`relative flex flex-col overflow-hidden rounded-3xl border p-6 shadow-[0_18px_55px_rgba(16,45,33,.12)] sm:p-7 ${
-        featured ? 'border-[#b9f47f] bg-[#b9f47f] text-[#071a18]' : 'border-white/10 bg-white text-[#0b4537]'
+      className={`relative flex flex-col overflow-hidden rounded-3xl border p-6 sm:p-7 ${
+        featured ? 'soft-3d-lime border-[#b9f47f] text-[#071a18]' : 'soft-3d border-[#dfe8e2] text-[#0b4537]'
       }`}
     >
       {featured && (

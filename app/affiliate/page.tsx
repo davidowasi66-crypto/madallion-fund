@@ -161,7 +161,7 @@ export default function AffiliatePage() {
       </div>
 
       <div className="mx-auto max-w-lg px-5 sm:px-8">
-        <section className="-mt-5 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm">
+        <section className="-mt-5 rounded-3xl border border-[#dfe8e2] soft-3d p-5">
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#65a85c]">Your invite link</p>
           <p className="mt-3 break-all rounded-2xl bg-[#f4f8f3] px-4 py-3 font-mono text-xs leading-5 text-[#0b4537]">
             {inviteDisplay}
@@ -176,7 +176,7 @@ export default function AffiliatePage() {
               type="button"
               disabled={!inviteUrl}
               onClick={() => void copyInvite()}
-              className="mt-4 flex w-full items-center justify-center gap-2 rounded-2xl bg-[#b9f47f] py-3.5 text-sm font-semibold text-[#071a18] disabled:cursor-not-allowed disabled:opacity-50"
+              className="soft-3d-button mt-4 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
             >
               {copied ? <Check size={16} /> : <Copy size={16} />}
               {copied ? 'Copied' : 'Copy invite link'}
@@ -191,7 +191,7 @@ export default function AffiliatePage() {
           )}
         </section>
 
-        <section className="mt-4 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm" aria-labelledby="referral-terms-title">
+        <section className="mt-4 rounded-3xl border border-[#dfe8e2] soft-3d p-5" aria-labelledby="referral-terms-title">
           <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#65a85c]">Commission terms</p>
           <h2 id="referral-terms-title" className="mt-1 text-lg font-semibold text-[#0b4537]">How you earn</h2>
           <ol className="mt-4 space-y-3">
@@ -222,22 +222,22 @@ export default function AffiliatePage() {
         {hasSession && <ReferralShareActions inviteUrl={inviteUrl} code={inviteCode} />}
 
         <div className="mt-4 grid grid-cols-2 gap-3">
-          <div className="rounded-2xl bg-[#0b4537] p-4 text-white">
+          <div className="rounded-2xl border border-white/10 soft-3d-dark p-4 text-white">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#8fbfa8]">Commission earned</p>
             <p className="mt-2 text-xl font-semibold">{myStats.available ? money(myStats.earned) : credits ? money(credits.lifetime, credits.currency) : '—'}</p>
           </div>
-          <div className="rounded-2xl border border-[#dfe8e2] bg-white p-4">
+          <div className="rounded-2xl border border-[#dfe8e2] soft-3d p-4">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-[#65a85c]">Referrals</p>
             <p className="mt-2 text-xl font-semibold text-[#0b4537]">{myStats.available ? myStats.referrals : credits?.referrals != null ? credits.referrals : '—'}</p>
           </div>
-          <div className="rounded-2xl border border-[#dfe8e2] bg-white p-4">
+          <div className="rounded-2xl border border-[#dfe8e2] soft-3d p-4">
             <div className="flex items-center gap-2 text-[#65a85c]">
               <Users size={14} />
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em]">Active</p>
             </div>
             <p className="mt-2 text-xl font-semibold text-[#0b4537]">{myStats.available ? myStats.referrals : credits?.referrals != null ? credits.referrals : '—'}</p>
           </div>
-          <div className="rounded-2xl border border-[#dfe8e2] bg-white p-4">
+          <div className="rounded-2xl border border-[#dfe8e2] soft-3d p-4">
             <div className="flex items-center gap-2 text-[#65a85c]">
               <TrendingUp size={14} />
               <p className="text-[10px] font-semibold uppercase tracking-[0.16em]">Rank</p>
@@ -246,7 +246,7 @@ export default function AffiliatePage() {
           </div>
         </div>
 
-        <section className="mt-4 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm" aria-labelledby="referral-credit-title">
+        <section className="mt-4 rounded-3xl border border-[#dfe8e2] soft-3d p-5" aria-labelledby="referral-credit-title">
           <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#65a85c]">Referral ledger</p>
           <h2 id="referral-credit-title" className="mt-1 text-lg font-semibold text-[#0b4537]">Credit status</h2>
           <div className="mt-4 grid grid-cols-2 gap-3">
@@ -256,7 +256,7 @@ export default function AffiliatePage() {
               ['Lifetime credited', credits?.lifetime],
               ['Per-member cap', credits?.cap],
             ].map(([label, amount]) => (
-              <div key={label} className="rounded-2xl bg-[#f4f8f3] p-3">
+              <div key={label} className="rounded-2xl border border-[#dfe8e2] soft-3d-soft p-3">
                 <p className="text-[10px] font-semibold uppercase tracking-[.12em] text-[#829088]">{label}</p>
                 <p className="mt-2 text-sm font-semibold text-[#60716b]">
                   {!hasSession ? 'Sign in' : creditsLoading ? 'Loading…' : credits ? money(amount, credits.currency) : 'Unavailable'}
@@ -290,7 +290,7 @@ export default function AffiliatePage() {
           </>
         )}
 
-        <section className="mt-6 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm">
+        <section className="mt-6 rounded-3xl border border-[#dfe8e2] soft-3d p-5">
           <h2 className="text-lg font-semibold text-[#0b4537]">Commission tiers</h2>
           <p className="mt-1 text-xs text-[#708079]">
             Exact percentages are set in your admin programme settings. Structure only shown here.
@@ -318,7 +318,7 @@ export default function AffiliatePage() {
           </p>
         </section>
 
-        <section id="leaderboard" className="mt-6 mb-10 scroll-mt-24 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm sm:p-6">
+        <section id="leaderboard" className="mt-6 mb-10 scroll-mt-24 rounded-3xl border border-[#dfe8e2] soft-3d p-5 sm:p-6">
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#65a85c]">Community</p>

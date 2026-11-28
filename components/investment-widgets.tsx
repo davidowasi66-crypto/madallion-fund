@@ -127,7 +127,7 @@ export function MemberMaturityPreview({ walletBalance = 0 }: { walletBalance?: n
 
   return (
     <section
-      className="mt-5 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm sm:p-6"
+      className="mt-5 rounded-3xl border border-[#dfe8e2] soft-3d p-5 sm:p-6"
       aria-labelledby="maturity-preview-title"
     >
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -276,7 +276,7 @@ export function MaturityProgressBar({
         : `${percent}% to maturity`
 
   return (
-    <div className={`rounded-2xl border p-4 ${light ? 'border-[#e7eee8] bg-[#f4f8f3]' : 'border-white/10 bg-[#0e2b26]'}`}>
+    <div className={`rounded-2xl border p-4 ${light ? 'border-[#e7eee8] soft-3d-soft' : 'border-white/10 soft-3d-dark'}`}>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className={`font-semibold ${textTone}`}>{planLabel}</p>
@@ -362,7 +362,7 @@ export function PortfolioSummary({ investments }: { investments: Investment[] })
 }
 
 function SummaryMetric({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-2xl border border-white/10 bg-[#0b2420] p-4"><p className="text-xs text-[#8eaea0]">{label}</p><p className="mt-2 text-lg font-semibold text-white">{value}</p></div>
+  return <div className="rounded-2xl border border-white/10 soft-3d-dark p-4"><p className="text-xs text-[#8eaea0]">{label}</p><p className="mt-2 text-lg font-semibold text-white">{value}</p></div>
 }
 
 export function AutoCompoundToggle({ investment }: { investment: Investment }) {
@@ -377,7 +377,7 @@ export function AutoCompoundToggle({ investment }: { investment: Investment }) {
     : 'Rate unavailable'
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#dfe8e2] bg-white p-4">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#dfe8e2] soft-3d p-4">
       <div>
         <p className="text-sm font-semibold text-[#0b4537]">Auto-compound preview</p>
         <p className="mt-1 text-xs text-[#708079]">Compounding changes your effective rate. This preview is not saved; Xano must enable the rollover preference before it can apply to your investment.</p>
@@ -463,7 +463,7 @@ export function PlanCalculator({
   }
 
   return (
-    <section className="overflow-hidden rounded-3xl border border-[#dfe8e2] bg-white shadow-[0_18px_55px_rgba(16,45,33,.08)]" aria-labelledby="plan-calculator-title">
+    <section className="overflow-hidden rounded-3xl border border-[#dfe8e2] soft-3d" aria-labelledby="plan-calculator-title">
       <div className="border-b border-[#e6eee8] bg-[#f7faf6] px-5 py-6 sm:px-8">
         <p className="text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">Plan calculator</p>
         <h2 id="plan-calculator-title" className="mt-2 text-2xl font-semibold tracking-tight text-[#0b4537] sm:text-3xl">Choose a plan, see what it pays</h2>
@@ -570,7 +570,7 @@ export function PlanCalculator({
           </div>
           <a
             href={plan && amountIsValid ? planDepositHref(plan, amount) : '/dashboard/wallet?mode=deposit'}
-            className="inline-flex min-h-12 items-center justify-center rounded-xl bg-[#b9f47f] px-4 py-3 text-center text-sm font-semibold text-[#071a18]"
+            className="soft-3d-button inline-flex min-h-12 items-center justify-center rounded-xl px-4 py-3 text-center text-sm font-semibold"
           >
             {plan && amountIsValid ? `Fund ${plan.name} with ${money(amount)}` : 'Open a funded account'}
           </a>

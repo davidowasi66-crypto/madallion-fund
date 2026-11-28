@@ -18,7 +18,7 @@ export function ReferralTierProgress({ qualified }: { qualified: number | null }
   const tier = referralTier(qualified ?? 0)
 
   return (
-    <section className="mt-4 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm" aria-labelledby="referral-tier-title">
+    <section className="mt-4 rounded-3xl border border-[#dfe8e2] soft-3d p-5" aria-labelledby="referral-tier-title">
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[.18em] text-[#65a85c]">Milestone progress</p>
@@ -71,7 +71,7 @@ export function ReferralCreditsHistory() {
     data && data.cap > 0 ? Math.min(100, Math.round((data.lifetime / data.cap) * 100)) : null
 
   return (
-    <section className="mt-4 rounded-3xl border border-[#dfe8e2] bg-white p-5 shadow-sm" aria-labelledby="referral-history-title">
+    <section className="mt-4 rounded-3xl border border-[#dfe8e2] soft-3d p-5" aria-labelledby="referral-history-title">
       <div className="flex items-start justify-between gap-3">
         <div>
           <h2 id="referral-history-title" className="text-lg font-semibold text-[#0b4537]">Credit summary</h2>
@@ -93,26 +93,26 @@ export function ReferralCreditsHistory() {
         ) : (
           <>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl bg-[#f4f8f3] p-4">
+              <div className="rounded-2xl border border-[#dfe8e2] soft-3d-soft p-4">
                 <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#829088]">Available</p>
                 <p className="mt-1 text-lg font-semibold text-[#0b4537]">{money(data.available, data.currency)}</p>
                 {data.pending_hold > 0 && (
                   <p className="mt-1 text-[11px] text-[#a36d2c]">{money(data.pending_hold, data.currency)} on hold</p>
                 )}
               </div>
-              <div className="rounded-2xl bg-[#f4f8f3] p-4">
+              <div className="rounded-2xl border border-[#dfe8e2] soft-3d-soft p-4">
                 <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#829088]">Lifetime earned</p>
                 <p className="mt-1 text-lg font-semibold text-[#0b4537]">{money(data.lifetime, data.currency)}</p>
                 {data.cap > 0 && <p className="mt-1 text-[11px] text-[#829088]">Cap {money(data.cap, data.currency)}</p>}
               </div>
-              <div className="rounded-2xl bg-[#f4f8f3] p-4">
+              <div className="rounded-2xl border border-[#dfe8e2] soft-3d-soft p-4">
                 <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#829088]">Referrals</p>
                 <p className="mt-1 text-lg font-semibold text-[#0b4537]">{data.referrals ?? '—'}</p>
                 <p className="mt-1 text-[11px] text-[#829088]">
                   {Number.isFinite(qualifiedCount) ? `${qualifiedCount} qualified` : 'Qualification pending'}
                 </p>
               </div>
-              <div className="rounded-2xl bg-[#f4f8f3] p-4">
+              <div className="rounded-2xl border border-[#dfe8e2] soft-3d-soft p-4">
                 <p className="text-[10px] font-bold uppercase tracking-[.14em] text-[#829088]">Hold policy</p>
                 <p className="mt-1 text-sm font-semibold text-[#0b4537]">
                   {data.pending_hold > 0 ? 'Some credit is still on hold' : 'No credit on hold'}

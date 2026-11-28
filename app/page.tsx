@@ -128,7 +128,7 @@ const faqs: Array<[string, string]> = [
 
 function TrustItem({ icon: Icon, title, copy }: { icon: typeof ShieldCheck; title: string; copy: string }) {
   return (
-    <div className="rounded-2xl border border-[#dfe8e2] bg-white p-5 shadow-[0_8px_28px_rgba(25,78,53,.045)]">
+    <div className="rounded-2xl border border-[#dfe8e2] soft-3d p-5">
       <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#eef7eb] text-[#2f7a4a]">
         <Icon size={19} aria-hidden="true" />
       </span>
@@ -371,7 +371,7 @@ export default function Home() {
 
               <Link
                 href="#plans"
-                className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#b9f47f] px-4 py-3 text-sm font-semibold text-[#071a18] transition hover:bg-[#a9e86d]"
+                className="soft-3d-button mt-5 inline-flex w-full items-center justify-center gap-2 rounded-xl px-4 py-3 text-sm font-semibold"
               >
                 See this plan <ArrowRight size={15} aria-hidden="true" />
               </Link>
@@ -455,7 +455,7 @@ export default function Home() {
           {steps.map((step) => (
             <article
               key={step.number}
-              className="rounded-2xl border border-[#e1e9e3] bg-white p-6 shadow-[0_8px_28px_rgba(25,78,53,.045)]"
+              className="rounded-2xl border border-[#e1e9e3] soft-3d p-6"
             >
               <div className="flex items-center justify-between">
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#eef7eb] text-[#2f7a4a]">
@@ -533,7 +533,7 @@ export default function Home() {
             ].map(({ icon: Icon, title, copy }) => (
               <article
                 key={title}
-                className="rounded-2xl border border-[#dfe8e2] bg-white p-5 shadow-[0_8px_28px_rgba(25,78,53,.045)]"
+                className="rounded-2xl border border-[#dfe8e2] soft-3d p-5"
               >
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#eef7eb] text-[#2f7a4a]">
                   <Icon size={19} aria-hidden="true" />
@@ -547,7 +547,7 @@ export default function Home() {
       </section>
 
       <section className="mx-auto max-w-7xl px-5 pb-20 lg:px-8">
-        <div className="rounded-[2rem] border border-[#dfe8e2] bg-white p-6 shadow-[0_18px_55px_rgba(16,45,33,.06)] sm:p-10">
+        <div className="rounded-[2rem] border border-[#dfe8e2] soft-3d p-6 sm:p-10">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
             <div>
               <p className="flex items-center gap-2 text-xs font-bold uppercase tracking-[.18em] text-[#65a85c]">
@@ -590,7 +590,7 @@ export default function Home() {
               <Link
                 key={title}
                 href={href}
-                className="group rounded-2xl border border-[#e1e9e3] bg-[#fbfcfa] p-5 transition hover:border-[#b9f47f] hover:bg-white"
+                className="group rounded-2xl border border-[#e1e9e3] soft-3d-soft p-5 transition hover:border-[#b9f47f]"
               >
                 <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#eef7eb] text-[#2f7a4a]">
                   <Icon size={19} aria-hidden="true" />
@@ -658,7 +658,7 @@ export default function Home() {
             <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
               <Link
                 href="/register"
-                className="inline-flex min-h-12 items-center justify-center gap-2 rounded-xl bg-[#b9f47f] px-5 py-3.5 text-sm font-semibold text-[#071a18] transition hover:bg-[#a9e86d]"
+                className="soft-3d-button inline-flex min-h-12 items-center justify-center gap-2 rounded-xl px-5 py-3.5 text-sm font-semibold"
               >
                 Create free account <ArrowRight size={16} aria-hidden="true" />
               </Link>

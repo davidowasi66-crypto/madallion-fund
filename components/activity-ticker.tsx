@@ -233,7 +233,7 @@ function memberTypeTone(type: ActivityKind) {
 
 function MemberActivityCard({ item, now }: { item: ActivityItem; now: number }) {
   return (
-    <article className="w-[300px] shrink-0 rounded-xl border border-white/10 bg-[#0e2b26] px-3.5 py-3">
+    <article className="soft-3d-dark w-[300px] shrink-0 rounded-xl border border-white/10 px-3.5 py-3">
       <div className="flex items-center justify-between gap-2">
         <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[9px] font-bold uppercase tracking-[.12em] ${memberTypeTone(item.type)}`}>
           {directionIcon(item.type, 11)}
@@ -253,7 +253,7 @@ function MemberActivityCard({ item, now }: { item: ActivityItem; now: number }) 
 
 function ActivityCard({ item, now }: { item: ActivityItem; now: number }) {
   return (
-    <article className="w-[224px] shrink-0 rounded-2xl border border-[#e7eee8] bg-[#f7faf6] p-3.5">
+    <article className="soft-3d w-[224px] shrink-0 rounded-2xl border border-[#e7eee8] p-3.5">
       <div className="flex items-center justify-between gap-2">
         <span className={`inline-flex items-center gap-1.5 rounded-full px-2 py-1 text-[9px] font-bold uppercase tracking-[.12em] ${typeTone(item.type)}`}>
           {directionIcon(item.type, 11)}
@@ -316,7 +316,7 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
   if (isHeader) {
     return (
       <div
-        className={isMemberHeader ? 'overflow-hidden rounded-xl border border-white/10 bg-[#0a211e] py-2' : 'border-t border-[#dfe8e2]/80 bg-[#fbfcfa] py-2'}
+        className={isMemberHeader ? 'soft-3d-dark overflow-hidden rounded-xl border border-white/10 py-2' : 'border-t border-[#dfe8e2]/80 bg-[#fbfcfa] py-2'}
         aria-label="Recent member activity"
       >
         <div className="relative overflow-hidden activity-marquee-mask">
@@ -349,8 +349,8 @@ export function ActivityTicker({ variant = 'landing' }: ActivityTickerProps) {
       aria-label="Live ledger activity"
       className={
         isMember
-          ? 'rounded-2xl border border-white/10 bg-[#0b2420] p-3 sm:p-4'
-          : 'rounded-2xl border border-[#e1e9e3] bg-white p-4 sm:p-5'
+          ? 'soft-3d-dark rounded-2xl border border-white/10 p-3 sm:p-4'
+          : 'soft-3d rounded-2xl border border-[#e1e9e3] p-4 sm:p-5'
       }
     >
       <div className="mb-3 flex items-center justify-between gap-2">

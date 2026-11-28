@@ -13,9 +13,9 @@ export function PlanCard({ plan }: { plan: Plan }) {
 
   return (
     <article
-      className={`group motion-safe-lift relative overflow-hidden rounded-3xl border bg-white p-6 shadow-[0_8px_28px_rgba(25,78,53,.055)] sm:p-7 hover:shadow-[0_24px_60px_rgba(25,78,53,.13)] ${
+      className={`soft-3d group motion-safe-lift relative overflow-hidden rounded-3xl border p-6 sm:p-7 ${
         plan.featured
-          ? 'border-[#b9f47f] shadow-[0_0_0_1px_rgba(185,244,127,.28)]'
+          ? 'border-[#b9f47f]'
           : 'border-[#dfe8e2]'
       } ${soldOut ? 'opacity-50' : ''}`}
     >
