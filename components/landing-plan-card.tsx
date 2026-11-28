@@ -1,12 +1,12 @@
 import Link from 'next/link'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, TrendingUp } from 'lucide-react'
 import { PlanSubscribe } from '@/components/plan-subscribe'
 import { planDailyRate, planIsPaused, type Plan } from '@/lib/investment-api'
 import { registerForPlanHref } from '@/lib/plan-links'
 
 const money = (value: number) => `₦${Number(value).toLocaleString('en-NG')}`
 
-export function LandingPlanCard({ plan, featured }: { plan: Plan; featured: boolean }) {
+export function LandingPlanCard({ plan, featured, best = false }: { plan: Plan; featured: boolean; best?: boolean }) {
   const rate = planDailyRate(plan)
   const days = Math.max(0, Number(plan.duration_days ?? 0))
   const minimum = Math.max(0, Number(plan.min_amount ?? 0))
@@ -22,7 +22,7 @@ export function LandingPlanCard({ plan, featured }: { plan: Plan; featured: bool
     <article
       className={`relative flex flex-col overflow-hidden rounded-3xl border p-6 shadow-[0_18px_55px_rgba(16,45,33,.12)] sm:p-7 ${
         featured ? 'border-[#b9f47f] bg-[#b9f47f] text-[#071a18]' : 'border-white/10 bg-white text-[#0b4537]'
-      }`}
+      } ${best && !featured ? 'ring-2 ring-[#b9f47f] ring-offset-2 ring-offset-[#0b4537]' : ''}`}
     >
       {featured && (
         <span className="absolute right-5 top-5 rounded-full bg-[#0b4537] px-3 py-1 text-[10px] font-bold uppercase tracking-[.14em] text-[#b9f47f]">
@@ -36,9 +36,14 @@ export function LandingPlanCard({ plan, featured }: { plan: Plan; featured: bool
         {plan.description ?? 'A transparent plan for intentional growth.'}
       </p>
 
-      <div className="mt-6 flex items-end gap-2">
+      <div className="mt-6 flex flex-wrap items-end gap-2">
         <span className="text-5xl font-semibold tracking-[-.055em]">{rate.toFixed(2)}%</span>
         <span className={`pb-2 text-sm font-medium ${muted}`}>/ day</span>
+        {best && (
+          <span className="mb-2 inline-flex items-center gap-1 rounded-full bg-[#0b4537] px-2 py-0.5 text-[10px] font-bold uppercase tracking-[.12em] text-[#b9f47f]">
+            <TrendingUp size={11} aria-hidden="true" /> Best rate
+          </span>
+        )}
       </div>
       <p className={`mt-1 text-xs ${muted}`}>Illustrative rate over a {days}-day term</p>
 

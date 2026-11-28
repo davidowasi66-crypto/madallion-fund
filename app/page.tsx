@@ -30,7 +30,7 @@ import { ActivityTicker } from '@/components/activity-ticker'
 import { PlanCalculator } from '@/components/investment-widgets'
 import { LandingPlanCard } from '@/components/landing-plan-card'
 import { DEFAULT_PLANS } from '@/lib/default-plans'
-import { getPlans, planDailyRate, planIsPaused, PLANS_KEY } from '@/lib/investment-api'
+import { getPlans, planDailyRate, planIsPaused, PLANS_KEY, type Plan } from '@/lib/investment-api'
 
 const BRAND = 'Madallion fund'
 
@@ -145,8 +145,19 @@ export default function Home() {
 
   const plans = catalogue?.plans?.length ? catalogue.plans : DEFAULT_PLANS
   const availablePlans = plans.filter((plan) => !planIsPaused(plan) && plan.sold_out !== true)
-  const displayPlans = (availablePlans.length ? availablePlans : plans).slice(0, 3)
+  const catalogueForDisplay = availablePlans.length ? availablePlans : plans
+  const displayPlans = catalogueForDisplay.slice(0, 6)
+  const hiddenPlanCount = Math.max(0, catalogueForDisplay.length - displayPlans.length)
   const spotlight = displayPlans[0] ?? DEFAULT_PLANS[0]
+  const planKey = (plan: Plan) => String(plan.id ?? plan.name)
+  const planRates = displayPlans.map((plan) => planDailyRate(plan)).filter((rate) => rate > 0)
+  const lowestRate = planRates.length ? Math.min(...planRates) : 0
+  const highestRate = planRates.length ? Math.max(...planRates) : 0
+  const bestRatePlan = displayPlans.reduce<Plan | null>(
+    (best, plan) => (best == null || planDailyRate(plan) > planDailyRate(best) ? plan : best),
+    null,
+  )
+  const bestRateValue = bestRatePlan ? planDailyRate(bestRatePlan) : 0
   const minimums = plans.map((plan) => Number(plan.min_amount ?? 0)).filter((value) => value > 0)
   const startingMinimum = minimums.length ? Math.min(...minimums) : 50_000
   const spotlightRate = planDailyRate(spotlight)
@@ -403,17 +414,22 @@ export default function Home() {
                 Choose a term you can plan around.
               </h2>
               <p className="mt-4 max-w-2xl text-sm leading-7 text-white/65">
-                Compare the rate, term, minimum, and principal treatment before you commit. Availability follows the live plan catalogue.
+                Compare the rate, term, minimum, and principal treatment before you commit. Every card shows the same terms, so you can line them up side by side.
               </p>
             </div>
             <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
               <span
                 className={`inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-[10px] font-semibold ${
-                  liveTerms ? 'bg-[#b9f47f]/15 text-[#b9f47f]' : 'bg-white/10 text-white/65'
+                  liveTerms ? 'bg-[#b9f47f]/15 text-[#b9f47f]' : 'border border-white/15 bg-white/5 text-white/70'
                 }`}
+                title={
+                  liveTerms
+                    ? 'Rates and availability come from the live investment system.'
+                    : 'Showing public sample terms until the live catalogue responds.'
+                }
               >
                 <span className={`size-1.5 rounded-full ${liveTerms ? 'animate-pulse bg-[#b9f47f]' : 'bg-white/40'}`} aria-hidden="true" />
-                {liveTerms ? 'Live plan catalogue' : 'Sample terms until live catalogue loads'}
+                {liveTerms ? 'Live plan catalogue' : 'Sample terms — live catalogue loading'}
               </span>
               <Link href="/plans" className="inline-flex items-center gap-2 text-sm font-semibold text-[#b9f47f]">
                 Full plan table <ArrowRight size={15} aria-hidden="true" />
@@ -421,11 +437,64 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="mt-10 grid items-stretch gap-4 lg:grid-cols-3">
+          <div className="mt-8 grid gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5">
+              <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white/55">
+                <Layers size={12} aria-hidden="true" /> Plans to compare
+              </p>
+              <p className="mt-1.5 text-lg font-semibold text-white">
+                {displayPlans.length}
+                {hiddenPlanCount > 0 && <span className="text-sm font-medium text-white/60"> of {catalogueForDisplay.length}</span>}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5">
+              <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white/55">
+                <TrendingUp size={12} aria-hidden="true" /> Daily rate range
+              </p>
+              <p className="mt-1.5 text-lg font-semibold tabular-nums text-white">
+                {highestRate > 0 ? `${lowestRate.toFixed(2)}% – ${highestRate.toFixed(2)}%` : '—'}
+              </p>
+            </div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 px-4 py-3.5">
+              <p className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-[.14em] text-white/55">
+                <Wallet size={12} aria-hidden="true" /> Minimum to start
+              </p>
+              <p className="mt-1.5 text-lg font-semibold text-white">{money(startingMinimum)}</p>
+            </div>
+          </div>
+
+          <p className="mt-4 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/60">
+            <TrendingUp size={13} className="text-[#b9f47f]" aria-hidden="true" />
+            {bestRatePlan && bestRateValue > 0 ? (
+              <>
+                Best daily rate: <span className="font-semibold text-[#b9f47f]">{bestRatePlan.name}</span> at {bestRateValue.toFixed(2)}% per day.
+              </>
+            ) : (
+              'Rates and terms load from the current plan catalogue.'
+            )}
+          </p>
+
+          <div className="mt-8 grid items-stretch gap-4 sm:grid-cols-2 xl:grid-cols-3">
             {displayPlans.map((plan, index) => (
-              <LandingPlanCard key={plan.id ?? index} plan={plan} featured={plan.featured === true} />
+              <LandingPlanCard
+                key={plan.id ?? index}
+                plan={plan}
+                featured={plan.featured === true}
+                best={bestRateValue > 0 && bestRatePlan != null && planKey(plan) === planKey(bestRatePlan)}
+              />
             ))}
           </div>
+
+          {hiddenPlanCount > 0 && (
+            <div className="mt-6 flex flex-col items-start gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-sm text-white/70">
+                {hiddenPlanCount} more {hiddenPlanCount === 1 ? 'plan' : 'plans'} available in the full catalogue.
+              </p>
+              <Link href="/plans" className="inline-flex items-center gap-2 text-sm font-semibold text-[#b9f47f]">
+                Compare all plans <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+            </div>
+          )}
 
           <p className="mt-6 max-w-4xl text-xs leading-5 text-white/55">
             Rates and availability follow the current plan catalogue. Illustrative figures are not guarantees. Investments carry risk, and capital may be at risk. Read the{' '}
